@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(\"C:/Keil_v5/UV4/UV4.exe\" -j0 -b \"MDK-ARM/lcd.uvprojx\")",
+      "Bash(ST-LINK_CLI.exe -c SWD -P \"MDK-ARM/lcd/lcd.hex\" -V after_programming -Rst)",
+      "Bash(grep -E \"\\\\.\\(h|c\\)$\")",
+      "Bash(find ./lcd -maxdepth 2 -type f \\\\\\(-name *.uvprojx -o -name CMakeLists.txt -o -name Makefile -o -name *.ioc -o -name *.ld \\\\\\))",
+      "Bash(wc:*)",
+      "Bash(\"C:/Keil_v5/UV4/UV4.exe\" -j0 -b \"lcd/MDK-ARM/lcd.uvprojx\")",
+      "Bash(echo \"Exit: $?\")",
+      "Bash(ST-LINK_CLI.exe -c SWD -P \"lcd/MDK-ARM/lcd/lcd.hex\" -V after_programming -Rst)",
+      "Bash(echo \"Flash exit: $?\")",
+      "Bash(python:*)",
+      "Bash(echo \"Monitor exit: $?\")",
+      "Bash(echo \"Flash: $?\")",
+      "Bash(ST-LINK_CLI.exe -c SWD UR -r32 0x20000000 16)",
+      "Bash(ST-LINK_CLI.exe -c SWD HotPlug -r32 0x20000000 16)"
+    ]
+  }
+}

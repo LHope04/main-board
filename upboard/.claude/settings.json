@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(start python:*)",
+      "Bash(ST-LINK_CLI.exe -c SWD -Rst)"
+    ]
+  }
+}

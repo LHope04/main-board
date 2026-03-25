@@ -39,7 +39,7 @@
 PUTCHAR_PROTOTYPE
 {
     
-    HAL_UART_Transmit(&huart3, (uint8_t *)&ch, 1, 10);
+    HAL_UART_Transmit(&huart2, (uint8_t *)&ch, 1, 10);
     return ch;
 }
 /* USER CODE END PTD */
@@ -55,21 +55,20 @@ typedef struct {
 } INA226_Device;
 
 /* * 根据电路图初始化：
- * 图1 (I2C3): Rshunt = 0.006 Ohm. 设 LSB=1mA(0.001), CAL = 0.00512/(0.001*0.006) = 853 (0x0355)
- * 图2 (I2C1): Rshunt = 0.1 Ohm.   设 LSB=0.1mA(0.0001), CAL = 0.00512/(0.0001*0.1) = 512 (0x0200)
+ * 每路IIC各一个设备，地址均为 0x40 (二进制 1000000)，HAL左移一位后为 0x80
+ * I2C1: Rshunt = 0.1 Ohm.   设 LSB=0.1mA(0.0001), CAL = 0.00512/(0.0001*0.1) = 512 (0x0200)
+ * I2C2: Rshunt = 0.006 Ohm. 设 LSB=1mA(0.001), CAL = 0.00512/(0.001*0.006) = 853 (0x0355)
+ * I2C3: Rshunt = 0.006 Ohm. 设 LSB=1mA(0.001), CAL = 0.00512/(0.001*0.006) = 853 (0x0355)
  */
-INA226_Device sensors[6] = {
+INA226_Device sensors[3] = {
     // I2C1 (Rshunt = 100mr, LSB = 0.1mA)
-    {&hi2c1, 0x80, 0x0200, 0.0001f}, // v1: 水泵
-    {&hi2c1, 0x82, 0x0200, 0.0001f}, // v2: 风扇
-    
-    // I2C2 (Rshunt = 6mr, LSB = 1mA) -> 校准值修正为 0x0355
-    {&hi2c2, 0x88, 0x0355, 0.0012f},  // v3: 24v输入
-    {&hi2c2, 0x8A, 0x0355, 0.0012f},  // v4: 锂电池
-    
+    {&hi2c1, 0x88, 0x0200, 0.0001f}, // v1: 水泵
+
+    // I2C2 (Rshunt = 6mr, LSB = 1mA)
+    {&hi2c2, 0x88, 0x0355, 0.0012f},  // v2: 24v输入
+
     // I2C3 (Rshunt = 6mr, LSB = 1mA)
-    {&hi2c3, 0x88, 0x0355, 0.0012f},  // v5: 输入总功率
-    {&hi2c3, 0x82, 0x0355, 0.0012f}   // v6: 压缩机功率
+    {&hi2c3, 0x88, 0x0355, 0.0012f},  // v3: 输入总功率
 };
 
 // 通用写寄存器
@@ -225,20 +224,11 @@ int main(void)
   MX_I2C2_Init();
   MX_I2C1_Init();
   MX_I2C3_Init();
-  MX_USART3_UART_Init();
+  MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
-// 1. 初始化模拟IIC引脚
-//  INA226_SoftI2C_Init(); 
- // INA226_Init();
- for(int i = 0; i < 6; i++) {
+ for(int i = 0; i < 3; i++) {
     INA226_InitDevice(&sensors[i]);
-}
-  // 2. 初始化两个INA226芯片（配置寄存器和校准寄存器）
- // INA226_Init(DEVICE1_ADDR);
-  //HAL_Delay(10); // 稍微延时确保稳定
-  //INA226_Init(DEVICE2_ADDR);
-// 强制解锁 I2C 总线
-
+ }
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -248,29 +238,17 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-		
-		
-for (int i = 0; i < 6; i++) {
-        // 1. 更新数据
+    for (int i = 0; i < 3; i++) {
         INA226_UpdateData(&sensors[i]);
-        
     }
-//		INA226_UpdateData(&sensors[2]);
-for (int i = 0; i < 6; i++) {
-        // 1. 更新数据
-
-        
-        // 2. 格式化输出到 USART3
-        printf("v%d = %.3fV, i%d = %.3fA, p%d = %.3fW\r\n", 
-               i + 1, sensors[i].v, 
-               i + 1, sensors[i].i, 
+    for (int i = 0; i < 3; i++) {
+        printf("v%d = %.3fV, i%d = %.3fA, p%d = %.3fW\r\n",
+               i + 1, sensors[i].v,
+               i + 1, sensors[i].i,
                i + 1, sensors[i].p);
-	HAL_Delay(10);
     }
-//		uint8_t ab = 1;
-//HAL_UART_Transmit(&huart3, (uint8_t *)ab, 1, 10);
-HAL_Delay(10);
-		iii++;
+    HAL_Delay(500);
+    iii++;
   }
   /* USER CODE END 3 */
 }

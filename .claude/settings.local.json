@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python:*)",
+      "Bash(\"C:/Keil_v5/UV4/UV4.exe\" -j0 -b \"C:/Users/q7591/Documents/GitHub/main-board/upboard/MDK-ARM/upboard.uvprojx\" sleep 15 grep -E \"Error\\\\\\(s\\\\\\)|Warning\\\\\\(s\\\\\\)|Program Size\" \"C:/Users/q7591/Documents/GitHub/main-board/upboard/MDK-ARM/upboard/upboard.build_log.htm\")",
+      "Bash(\"C:/Keil_v5/UV4/UV4.exe\" -j0 -b \"C:/Users/q7591/Documents/GitHub/main-board/upboard/MDK-ARM/upboard.uvprojx\")",
+      "Bash(ST-LINK_CLI.exe -c SWD -P \"C:/Users/q7591/Documents/GitHub/main-board/upboard/MDK-ARM/upboard/upboard.hex\" -V after_programming -Rst 2>&1)"
+    ]
+  }
+}
