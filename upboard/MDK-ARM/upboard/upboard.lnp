@@ -22,6 +22,10 @@
 "upboard\stm32f4xx_hal.o"
 "upboard\stm32f4xx_hal_exti.o"
 "upboard\stm32f4xx_hal_uart.o"
+"upboard\stm32f4xx_hal_adc.o"
+"upboard\stm32f4xx_hal_adc_ex.o"
+"upboard\stm32f4xx_hal_tim.o"
+"upboard\stm32f4xx_hal_tim_ex.o"
 "upboard\system_stm32f4xx.o"
 --library_type=microlib --strict --scatter "upboard\upboard.sct"
 --summary_stderr --info summarysizes --map --load_addr_map_info --xref --callgraph --symbols

@@ -11,32 +11,45 @@ Use this skill when the task requires repeated code-edit, build, flash, and veri
 
 Do NOT assume fixed paths. Discover them first:
 
-```bash11
-# Find Keil project file
-find . -name "*.uvprojx" 2>/dev/null
-
-# Derive hex and build log paths from the project file
-# Example: if project is lcd/MDK-ARM/lcd.uvprojx
-#   hex      -> lcd/MDK-ARM/lcd/lcd.hex
-#   build log-> lcd/MDK-ARM/lcd/lcd.build_log.htm
-```
-
-Find the serial monitor script:
 ```bash
-find . -name "serial_monitor.py" 2>/dev/null
+# 1. Find Keil executable
+KEIL=$(find /c/Keil_v5 /c/Keil /c/Keil_MDK -name "UV4.exe" 2>/dev/null | head -1)
+echo "Keil: $KEIL"
+
+# 2. Find Keil project file
+PROJ=$(find . -name "*.uvprojx" 2>/dev/null | head -1)
+echo "Project: $PROJ"
+
+# 3. Derive target name, hex and build log from project path
+# Example: foo/MDK-ARM/bar.uvprojx → target=bar
+#   hex      -> foo/MDK-ARM/bar/bar.hex
+#   build log-> foo/MDK-ARM/bar/bar.build_log.htm
+TARGET=$(basename "$PROJ" .uvprojx)
+PROJ_DIR=$(dirname "$PROJ")
+HEX="$PROJ_DIR/$TARGET/$TARGET.hex"
+LOG="$PROJ_DIR/$TARGET/$TARGET.build_log.htm"
+MAP="$PROJ_DIR/$TARGET/$TARGET.map"
+echo "Hex: $HEX  Log: $LOG"
+
+# 4. Find serial monitor script (OPTIONAL — not all projects have one)
+SERIAL_MON=$(find . -name "serial_monitor.py" 2>/dev/null | head -1)
+echo "Serial monitor: ${SERIAL_MON:-NOT FOUND — will use memory reads only}"
+
+# 5. Find Python binary with pyserial (only needed if SERIAL_MON exists)
+if [ -n "$SERIAL_MON" ]; then
+  PYBIN=$(python -c "import serial; import sys; print(sys.executable)" 2>/dev/null)
+  echo "Python: $PYBIN"
+fi
 ```
 
-Find the Python binary that has pyserial:
-```bash
-python -c "import serial; print(serial.__file__)" 2>/dev/null || \
-  "C:/Python314/python.exe" -c "import serial; print(serial.__file__)" 2>/dev/null
-```
-
-Save these four paths before continuing:
-- `PROJ` — path to `.uvprojx`
-- `HEX`  — path to `.hex`
-- `LOG`  — path to `.build_log.htm`
-- `PYBIN` — python binary with pyserial
+Save these paths before continuing:
+- `KEIL`       — path to `UV4.exe`
+- `PROJ`       — path to `.uvprojx`
+- `HEX`        — path to `.hex`
+- `LOG`        — path to `.build_log.htm`
+- `MAP`        — path to `.map` (for symbol addresses)
+- `SERIAL_MON` — path to serial monitor script (**optional**, empty if not found)
+- `PYBIN`      — python binary with pyserial (only needed if `SERIAL_MON` exists)
 
 ## Default Loop
 
@@ -46,10 +59,10 @@ Save these four paths before continuing:
    - markers
    - `snprintf` + `uart_send_string` prints (**not** `printf` — see Pitfalls)
    - variables readable with ST-Link
-3. Compile (bash syntax, not PowerShell):
+3. Compile (bash syntax, not PowerShell), using `$KEIL` discovered in Step 0:
 
 ```bash
-"C:/Keil_v5/UV4/UV4.exe" -j0 -b "$PROJ"
+"$KEIL" -j0 -b "$PROJ"
 ```
 
 4. Check build result:
@@ -68,45 +81,66 @@ ST-LINK_CLI.exe -c SWD -P "$HEX" -V after_programming -Rst
 
 6. Treat flashing as successful only if output contains `Verification...OK` and `Programming Complete`.
 
-7. Verify behavior — use serial log AND/OR memory reads:
+7. Verify behavior — **always try memory reads first; fall back to serial only if memory reads cannot prove the behavior**.
 
-**Serial log** (start monitor first, then wait, then read):
+**Primary: Memory read (non-invasive HotPlug — never halts CPU)**:
 ```bash
-# Start monitor in background
-"$PYBIN" tools/serial_monitor.py <COM_PORT> &
+# Look up symbol address in map file
+grep "symbol_name" "$MAP"
+
+# Read one word at a time (count > 2 is unreliable on some ST-LINK versions)
+ST-LINK_CLI.exe -c SWD HotPlug -r32 <address> 1
+
+# Read multiple variables individually and correlate
+ST-LINK_CLI.exe -c SWD HotPlug -r32 <addr1> 1
+ST-LINK_CLI.exe -c SWD HotPlug -r32 <addr2> 1
+```
+
+Memory reads are preferred because:
+- No serial wiring or port access needed
+- Non-invasive — CPU keeps running
+- Works even when serial output is missing or held by another process
+- ST-LINK HotPlug is always available if the probe is connected
+
+**Fallback: Serial log** (only when the behavior cannot be observed via memory — e.g. timing, printf traces):
+```bash
+# Only if SERIAL_MON was found in Step 0
+# Start monitor in background, wait for output, then read
+"$PYBIN" "$SERIAL_MON" <COM_PORT> &
 sleep 8
-cat tools/serial_log.txt
+SERIAL_LOG=$(dirname "$SERIAL_MON")/serial_log.txt
+cat "$SERIAL_LOG"
 ```
 
-**Memory read (non-invasive HotPlug mode)**:
-```bash
-# Always use HotPlug to avoid halting the CPU
-ST-LINK_CLI.exe -c SWD HotPlug -r32 <address> <count>
-
-# Find symbol addresses in the map file
-grep "symbolname" path/to/output.map
-```
+> If the COM port returns `PermissionError`, another process holds it. Use memory reads instead — do not wait or retry the port.
 
 8. If verification passes, stop and deliver the result.
 9. If verification fails, analyze the failure, choose the next fix, and return to step 1.
 
 ## Core Commands
 
+All paths use variables discovered in Step 0.
+
 ```bash
-# Compile (bash)
-"C:/Keil_v5/UV4/UV4.exe" -j0 -b "<path/to/project.uvprojx>"
+# Compile
+"$KEIL" -j0 -b "$PROJ"
+
+# Check build result
+grep -E "Error\(s\)|Warning\(s\)|Program Size" "$LOG" | tail -4
 
 # Flash
-ST-LINK_CLI.exe -c SWD -P "<path/to/output.hex>" -V after_programming -Rst
+ST-LINK_CLI.exe -c SWD -P "$HEX" -V after_programming -Rst
 
-# Memory read — NON-INVASIVE (use HotPlug, not plain SWD)
-ST-LINK_CLI.exe -c SWD HotPlug -r32 <address> <word_count>
+# Memory read — PRIMARY verification method (HotPlug = non-invasive)
+# Always read one word at a time; count > 2 is unreliable
+grep "symbol_name" "$MAP"                              # find address
+ST-LINK_CLI.exe -c SWD HotPlug -r32 <address> 1       # read value
 
-# Serial monitor (specify full python path with pyserial)
-"C:/Python314/python.exe" tools/serial_monitor.py <COM_PORT>
-
-# Find COM port
+# Find COM port (only needed for serial fallback)
 python -c "import serial.tools.list_ports; [print(p.device, p.description) for p in serial.tools.list_ports.comports()]"
+
+# Serial monitor (fallback — only if SERIAL_MON found in Step 0)
+"$PYBIN" "$SERIAL_MON" <COM_PORT>
 ```
 
 ## Iteration Strategy
@@ -114,9 +148,9 @@ python -c "import serial.tools.list_ports; [print(p.device, p.description) for p
 1. Start with the smallest possible test.
 2. Add functionality in narrow increments.
 3. Use counters to prove loops and periodic tasks are running.
-4. Prefer direct memory reads (HotPlug) when serial output is unavailable or ambiguous.
+4. **Always try memory reads first.** Only reach for serial when memory cannot prove the behavior (e.g. ordering of events, printf traces).
 5. Change one main hypothesis at a time when isolating a fault.
-6. Check serial_log.txt modification time before reading — stale logs mislead diagnosis.
+6. If using serial: check `$SERIAL_LOG` modification time before reading — stale logs mislead diagnosis.
 
 ## Common Checks
 
@@ -127,22 +161,24 @@ python -c "import serial.tools.list_ports; [print(p.device, p.description) for p
   - If `No ST-LINK detected` → hardware not connected, stop and report
   - If `Can't reset the core` → try HotPlug mode or power-cycle the board
   - Do not claim the board is updated if programming did not complete
-- **Serial log is empty or stale**:
-  - Check file modification time: `stat tools/serial_log.txt | grep Modify`
-  - If stale, start the serial monitor first and wait for fresh data
-  - If port open fails with PermissionError → another process holds the port, wait or kill it
+- **Serial log is empty or stale** (serial fallback only):
+  - Switch to memory reads first — avoids the problem entirely
+  - If serial is required: check mtime with `stat "$SERIAL_LOG" | grep Modify`
+  - If stale: start the monitor, wait, then re-read
+  - If `PermissionError` on port open → another process holds it; use memory reads instead
 - **`printf` produces no output**:
   - Keil projects may not enable MicroLib (`useUlib=0` in `.uvprojx`)
   - Without MicroLib, `fputc` retargeting is inactive; `printf` goes to semihosting (no output)
   - Fix: use `snprintf(buf, sizeof(buf), ...) + uart_send_string(buf)` instead
-- **Weight/sensor reads stuck at zero**:
-  - Check sensor polarity: applying load may decrease raw ADC value (not increase it)
-  - Output raw value alongside processed value to diagnose
-  - If `raw` changes but weight stays 0, check sign convention and deadband config
+- **Sensor/peripheral value stuck at zero or wrong**:
+  - Read the raw register or variable via memory first — skip serial entirely
+  - If raw changes but processed value is wrong: check sign convention, scale factor, offset
+  - If raw is always zero: check GPIO clock, pin mode, peripheral clock enable
 - **Peripheral bring-up issues**:
   - Verify GPIO clock is enabled (`__HAL_RCC_GPIOx_CLK_ENABLE()`)
-  - Verify pin mode, pull, initial output level
+  - Verify pin mode, pull, alternate function, initial output level
   - Verify SCL/SDA or CLK/DATA wiring assumptions match code
+  - Read peripheral status/control registers via HotPlug to confirm configuration took effect
 
 ## Pitfalls (learned from this project)
 
@@ -154,24 +190,45 @@ python -c "import serial.tools.list_ports; [print(p.device, p.description) for p
 | Reading stale serial_log.txt | Appears to pass when board runs old firmware | Check file mtime; restart monitor |
 | Wrong Python for serial monitor | `ModuleNotFoundError: No module named 'serial'` | Use `python -c "import serial"` to verify; fall back to full path |
 | Sensor sign inversion | Processed value always 0 despite raw changing | Output raw; check if `offset - raw` needed instead of `raw - offset` |
+| TIM8 dual IRQ vectors | Capture or overflow interrupt never fires | TIM8 splits into two vectors: enable both `TIM8_UP_TIM13_IRQn` (overflow) and `TIM8_CC_IRQn` (capture); general timers (TIM3 etc.) use a single `TIMx_IRQn` |
+| Mixed PWM + IC on same TIM | IC never triggers, or PWM stops after IC config | Call `HAL_TIM_PWM_Init` first (initialises base), then `HAL_TIM_IC_ConfigChannel` for IC channels; overflow interrupt is NOT enabled by `HAL_TIM_IC_Start_IT` — call `__HAL_TIM_ENABLE_IT(&htimx, TIM_IT_UPDATE)` separately |
+| `-r32 count > 2` returns fewer words than requested | Multi-variable diagnosis yields incomplete data | Read each address individually; do not rely on count > 2 returning all words |
+| volatile variables read at different times | val1/val2/overflow from different interrupt moments; calculated frequency is nonsense | Add a snapshot struct; copy all fields with interrupts disabled, then read the snapshot address |
 
-## Key Files (project-relative, discover at start)
+## Key Files (all discovered in Step 0, never hardcoded)
 
-- Project:   `<discovered>/*.uvprojx`
-- Hex:       `<discovered>/<target>/<target>.hex`
-- Build log: `<discovered>/<target>/<target>.build_log.htm`
-- Map file:  `<discovered>/<target>/<target>.map`  ← for symbol addresses
-- Serial log: `tools/serial_log.txt`
-- Serial monitor: `tools/serial_monitor.py`
+| Variable | Derived from | Purpose |
+|----------|-------------|---------|
+| `$KEIL` | found under `/c/Keil*` | Build tool |
+| `$PROJ` | `find . -name "*.uvprojx"` | Keil project |
+| `$HEX` | `$PROJ_DIR/$TARGET/$TARGET.hex` | Flash image |
+| `$LOG` | `$PROJ_DIR/$TARGET/$TARGET.build_log.htm` | Build result |
+| `$MAP` | `$PROJ_DIR/$TARGET/$TARGET.map` | Symbol → address lookup |
+| `$SERIAL_MON` | `find . -name "serial_monitor.py"` | Serial fallback (**optional**) |
+| `$SERIAL_LOG` | `$(dirname $SERIAL_MON)/serial_log.txt` | Serial output (**optional**) |
+| `$PYBIN` | `python -c "import sys; print(sys.executable)"` | Python for serial only |
+
+## Acceptance Criteria
+
+Verification is only complete when a **quantified** pass condition is met. Before starting a feature, agree on the expected range, not just "looks reasonable":
+
+- Input capture: state the expected frequency range (e.g. "30~200 Hz at 50% PWM")
+- ADC: state the expected raw value range at a known temperature/load
+- GPIO: state the expected ODR bit pattern as a hex mask
+- PWM duty: state the expected CCR value and ARR
+
+If the measured value falls within the agreed range → pass. If not → diagnose before changing code.
 
 ## Execution Rules
 
-- Discover project paths at the start; never assume `upboard` or any fixed name.
+- Discover all project paths at the start using Step 0; never hardcode `upboard`, `C:/Keil_v5`, or `tools/`.
 - Use bash syntax for all shell commands (not PowerShell).
 - Always use `HotPlug` when reading memory from a running target.
-- Always start the serial monitor before reading the log file.
+- **Verify with memory reads by default.** Only use serial when memory cannot answer the question.
+- If serial is needed and `$SERIAL_MON` was not found in Step 0, state that serial is unavailable and continue with memory reads only.
 - Do not stop after a single failed attempt if another concrete iteration is available.
-- Do not report success without a verification step (serial log or memory read).
+- Do not report success without a quantified verification step (memory value in expected range, or serial output matching expected pattern).
+- Confirm the complete GPIO/interface mapping with the user before writing any peripheral code — partial pin lists cause mid-development rework.
 - If blocked by hardware, missing tools, or unavailable verification signals, state the blocker precisely and stop only when further local iteration would be speculative.
 
 ## Trigger Phrases

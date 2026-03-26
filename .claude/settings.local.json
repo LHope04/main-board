@@ -4,7 +4,24 @@
       "Bash(python:*)",
       "Bash(\"C:/Keil_v5/UV4/UV4.exe\" -j0 -b \"C:/Users/q7591/Documents/GitHub/main-board/upboard/MDK-ARM/upboard.uvprojx\" sleep 15 grep -E \"Error\\\\\\(s\\\\\\)|Warning\\\\\\(s\\\\\\)|Program Size\" \"C:/Users/q7591/Documents/GitHub/main-board/upboard/MDK-ARM/upboard/upboard.build_log.htm\")",
       "Bash(\"C:/Keil_v5/UV4/UV4.exe\" -j0 -b \"C:/Users/q7591/Documents/GitHub/main-board/upboard/MDK-ARM/upboard.uvprojx\")",
-      "Bash(ST-LINK_CLI.exe -c SWD -P \"C:/Users/q7591/Documents/GitHub/main-board/upboard/MDK-ARM/upboard/upboard.hex\" -V after_programming -Rst 2>&1)"
+      "Bash(ST-LINK_CLI.exe -c SWD -P \"C:/Users/q7591/Documents/GitHub/main-board/upboard/MDK-ARM/upboard/upboard.hex\" -V after_programming -Rst 2>&1)",
+      "Bash(HEX=\"/c/Users/q7591/Documents/GitHub/main-board/upboard/MDK-ARM/upboard/upboard.hex\")",
+      "Bash(ST-LINK_CLI.exe -c SWD -P \"$HEX\" -V after_programming -Rst)",
+      "Bash(\"C:/Keil_v5/UV4/UV4.exe\" -j0 -b \"MDK-ARM/upboard.uvprojx\")",
+      "Bash(ST-LINK_CLI.exe -c SWD -P \"MDK-ARM/upboard/upboard.hex\" -V after_programming -Rst)",
+      "Bash(ST-LINK_CLI.exe -c SWD HotPlug -r32 0x40000424 5)",
+      "Bash(ST-LINK_CLI.exe -c SWD HotPlug -r32 0x4000042C 5)",
+      "Bash(ST-LINK_CLI.exe -c SWD HotPlug -r32 0x40000434 3)",
+      "Bash(ST-LINK_CLI.exe -c SWD HotPlug -r32 0x40000438 1)",
+      "Bash(ST-LINK_CLI.exe -c SWD HotPlug -r32 0x4000043C 1)",
+      "Bash(ST-LINK_CLI.exe -c SWD HotPlug -r32 0x20000010 1)",
+      "Bash(ST-LINK_CLI.exe -c SWD HotPlug -r32 0x20000020 1)",
+      "Bash(ST-LINK_CLI.exe -c SWD HotPlug -r32 0x20000014 1)",
+      "Bash(ST-LINK_CLI.exe -c SWD HotPlug -r32 0x20000001 1)",
+      "Bash(ST-LINK_CLI.exe -c SWD HotPlug -r32 0x20000000 10)",
+      "Bash(ST-LINK_CLI.exe -c SWD HotPlug -r32 0x20000010 6)",
+      "Bash(ST-LINK_CLI.exe -c SWD HotPlug -r32 0x20000018 1)",
+      "Bash(ST-LINK_CLI.exe -c SWD HotPlug -r32 0x2000001C 1)"
     ]
   }
 }
