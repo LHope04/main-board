@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>NTC 测温电路设计错误分析</title>
+<style>
+  body { font-family: "Microsoft YaHei", Arial, sans-serif; background:#f5f7fa; color:#222; margin:0; padding:24px; }
+  h1 { color:#c0392b; border-bottom:3px solid #c0392b; padding-bottom:10px; }
+  h2 { color:#2c3e50; margin-top:36px; border-left:4px solid #3498db; padding-left:12px; }
+  h3 { color:#34495e; }
+  .card { background:#fff; border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,.1); padding:20px 28px; margin-bottom:24px; }
+  .error-box { background:#fdf0f0; border:2px solid #e74c3c; border-radius:6px; padding:16px 20px; margin:16px 0; }
+  .ok-box   { background:#eafaf1; border:2px solid #27ae60; border-radius:6px; padding:16px 20px; margin:16px 0; }
+  .warn-box { background:#fef9e7; border:2px solid #f39c12; border-radius:6px; padding:16px 20px; margin:16px 0; }
+  code { background:#ecf0f1; border-radius:4px; padding:2px 6px; font-family:Consolas,monospace; font-size:.92em; }
+  pre  { background:#2c3e50; color:#ecf0f1; border-radius:8px; padding:18px; font-family:Consolas,monospace; font-size:.88em; line-height:1.6; overflow-x:auto; }
+  table { border-collapse:collapse; width:100%; font-size:.9em; }
+  th { background:#2c3e50; color:#fff; padding:9px 14px; text-align:center; }
+  td { border:1px solid #ddd; padding:8px 14px; text-align:center; }
+  tr:nth-child(even) td { background:#f9f9f9; }
+  .sat-low  { background:#fde8e8 !important; color:#c0392b; font-weight:bold; }
+  .sat-high { background:#fde8e8 !important; color:#c0392b; font-weight:bold; }
+  .linear   { background:#eafaf1 !important; color:#1a6a3c; }
+  .range-bar { display:inline-block; height:20px; background:#3498db; border-radius:3px; vertical-align:middle; margin-right:6px; }
+  .formula-box { background:#f0f4ff; border:1px solid #3498db; border-radius:6px; padding:14px 20px; font-family:Consolas,monospace; font-size:.95em; line-height:1.8; }
+  svg text { font-family:"Microsoft YaHei",Arial,sans-serif; }
+  .tag-error { display:inline-block; background:#e74c3c; color:#fff; border-radius:4px; padding:2px 8px; font-size:.82em; margin-left:6px; vertical-align:middle; }
+  .tag-ok    { display:inline-block; background:#27ae60; color:#fff; border-radius:4px; padding:2px 8px; font-size:.82em; margin-left:6px; vertical-align:middle; }
+</style>
+</head>
+<body>
+
+<h1>⚠️ NTC 测温电路设计错误分析报告</h1>
+<p style="color:#7f8c8d;font-size:.95em;">项目：摩托车液冷系统主控板 &nbsp;|&nbsp; NTC 型号：ZY103（R₂₅=10kΩ，B=3950，1%）&nbsp;|&nbsp; 设计目标：0~60°C</p>
+
+<!-- ===== 1. 结论先行 ===== -->
+<div class="card">
+  <h2 style="margin-top:0">1. 结论</h2>
+  <div class="error-box">
+    <strong>❌ 错误核心：运放偏置电路把有效测量窗口压缩到了 46~57°C，只有 11°C 宽。</strong><br>
+    0°C ~ 45°C 的所有温度全部被映射到同一个 ADC 值（≈700），57°C 以上同样饱和（≈2736），无法区分。
+  </div>
+  <table style="max-width:500px;margin-top:12px">
+    <tr><th>指标</th><th>设计目标</th><th>实际结果</th></tr>
+    <tr><td>测量范围</td><td>0 ~ 60°C</td><td class="sat-low">46 ~ 57°C</td></tr>
+    <tr><td>ADC 有效范围</td><td>0 ~ 4095</td><td class="sat-low">700 ~ 2736</td></tr>
+    <tr><td>覆盖宽度</td><td>60°C</td><td class="sat-low">11°C</td></tr>
+  </table>
+</div>
+
+<!-- ===== 2. 电路分析 ===== -->
+<div class="card">
+  <h2 style="margin-top:0">2. 电路原理与问题定位</h2>
+  <h3>2.1 实际电路（从网表还原）</h3>
+  <pre>
+         NTC-VCC (A3V1=3.3V)
+              │
+         ┌────┘
+         │ NTC (ZY103, 10kΩ@25°C)
+         │
+    Vp ──┼──────────────────── R_pulldown (R7=8.25kΩ) ── PGND
+         │
+         └── U5/U8 IN+（运放正输入）
+
+
+    NTC-VCC (3.3V) ── R_bias (R10 = 3kΩ) ──┬── U5/U8 IN-（运放负输入）
+                                             │
+                           PGND ── R_lower (R11 = 10kΩ) ──┘
+                                             │
+                           Vout ── R_fb   (R14 = 10kΩ) ──┘
+
+    Vout ──► STM32 ADC（PA0~PA7）
+  </pre>
+
+  <h3>2.2 运放输出公式推导</h3>
+  <div class="formula-box">
+    IN- 节点 KCL（虚短条件：V<sub>IN-</sub> = V<sub>IN+</sub> = Vp）：<br><br>
+    &nbsp;&nbsp;(3.3V − Vp) / 3kΩ + (Vout − Vp) / 10kΩ + (0 − Vp) / 10kΩ = 0<br><br>
+    化简得：<br>
+    &nbsp;&nbsp;<strong>Vout = (16 × Vp − 33) / 3</strong><br><br>
+    其中：&nbsp;&nbsp;<strong>Vp = 3.3V × 8.25 / (R_NTC + 8.25)</strong> &nbsp;&nbsp;（单位 kΩ）<br><br>
+    ADC 值（12位）：&nbsp;&nbsp;<strong>ADC = Vout / 3.3 × 4095</strong>
+  </div>
+
+  <h3 style="margin-top:20px">2.3 运放工作区间分析</h3>
+  <p>运放从低端饱和进入线性区的条件：<code>Vout > V_low_sat ≈ 0.56V</code></p>
+  <div class="formula-box">
+    解方程：(16 × Vp − 33) / 3 = 0 &nbsp;→&nbsp; <strong>Vp = 2.0625V</strong><br>
+    对应 R_NTC = 3.3×8.25/2.0625 − 8.25 = <strong>4.33kΩ</strong><br>
+    查 RT 表：4.33kΩ 对应 <strong>≈ 45°C</strong><br>
+    <br>
+    解方程：(16 × Vp − 33) / 3 = 3.3 &nbsp;→&nbsp; <strong>Vp = 2.681V</strong><br>
+    对应 R_NTC = 3.3×8.25/2.681 − 8.25 = <strong>2.86kΩ</strong><br>
+    查 RT 表：2.86kΩ 对应 <strong>≈ 56°C</strong>
+  </div>
+
+  <p style="margin-top:14px">也就是说，运放只在 <strong>45~56°C</strong> 这一区间内处于线性放大状态，其他温度全部饱和。</p>
+</div>
+
+<!-- ===== 3. 数据对比表 ===== -->
+<div class="card">
+  <h2 style="margin-top:0">3. 全温度范围 ADC 实际读数</h2>
+  <table>
+    <tr>
+      <th>温度 (°C)</th>
+      <th>R_NTC (kΩ)</th>
+      <th>Vp (V)</th>
+      <th>Vout 理论 (V)</th>
+      <th>ADC 理论</th>
+      <th>ADC 实际（钳位后）</th>
+      <th>状态</th>
+    </tr>
+    <tr class="sat-low"><td>0</td><td>31.770</td><td>0.680</td><td>−7.37</td><td>−9149</td><td>700</td><td>低端饱和 ❌</td></tr>
+    <tr class="sat-low"><td>5</td><td>24.935</td><td>0.820</td><td>−6.62</td><td>−8222</td><td>700</td><td>低端饱和 ❌</td></tr>
+    <tr class="sat-low"><td>10</td><td>19.682</td><td>0.975</td><td>−5.80</td><td>−7201</td><td>700</td><td>低端饱和 ❌</td></tr>
+    <tr class="sat-low"><td>15</td><td>15.621</td><td>1.140</td><td>−4.92</td><td>−6103</td><td>700</td><td>低端饱和 ❌</td></tr>
+    <tr class="sat-low"><td>20</td><td>12.465</td><td>1.314</td><td>−3.99</td><td>−4953</td><td>700</td><td>低端饱和 ❌</td></tr>
+    <tr class="sat-low"><td>25</td><td>10.000</td><td>1.492</td><td>−3.04</td><td>−3778</td><td>700</td><td>低端饱和 ❌</td></tr>
+    <tr class="sat-low"><td>30</td><td>8.064</td><td>1.669</td><td>−2.10</td><td>−2606</td><td>700</td><td>低端饱和 ❌</td></tr>
+    <tr class="sat-low"><td>35</td><td>6.538</td><td>1.841</td><td>−1.18</td><td>−1465</td><td>700</td><td>低端饱和 ❌</td></tr>
+    <tr class="sat-low"><td>40</td><td>5.327</td><td>2.005</td><td>−0.31</td><td>−379</td><td>700</td><td>低端饱和 ❌</td></tr>
+    <tr class="sat-low"><td>45</td><td>4.363</td><td>2.159</td><td>+0.51</td><td>635</td><td>700</td><td>刚进线性区边缘</td></tr>
+    <tr class="linear"><td>50</td><td>3.592</td><td>2.299</td><td>+1.26</td><td>1565</td><td>1565</td><td>✅ 线性区</td></tr>
+    <tr class="linear"><td>55</td><td>2.972</td><td>2.426</td><td>+1.94</td><td>2406</td><td>2406</td><td>✅ 线性区</td></tr>
+    <tr class="sat-high"><td>60</td><td>2.472</td><td>2.539</td><td>+2.54</td><td>3155</td><td>2736</td><td>高端饱和 ❌</td></tr>
+  </table>
+
+  <p style="margin-top:16px;color:#e74c3c;font-weight:bold;">
+    结果：0°C ~ 45°C 共 46 个温度点全部读出 ADC=700，与断路值相同，完全无法区分。
+    57°C 以上与短路值相同，同样无法区分。
+  </p>
+</div>
+
+<!-- ===== 4. 可视化 ===== -->
+<div class="card">
+  <h2 style="margin-top:0">4. 可视化：温度 → ADC 映射</h2>
+  <svg viewBox="0 0 760 260" style="width:100%;max-width:760px;display:block">
+    <!-- 坐标轴 -->
+    <line x1="60" y1="220" x2="720" y2="220" stroke="#555" stroke-width="1.5"/>
+    <line x1="60" y1="20"  x2="60"  y2="220" stroke="#555" stroke-width="1.5"/>
+    <!-- X轴标签 -->
+    <text x="60"  y="238" text-anchor="middle" font-size="12" fill="#555">0</text>
+    <text x="170" y="238" text-anchor="middle" font-size="12" fill="#555">10</text>
+    <text x="280" y="238" text-anchor="middle" font-size="12" fill="#555">20</text>
+    <text x="390" y="238" text-anchor="middle" font-size="12" fill="#555">30</text>
+    <text x="500" y="238" text-anchor="middle" font-size="12" fill="#555">40</text>
+    <text x="610" y="238" text-anchor="middle" font-size="12" fill="#555">50</text>
+    <text x="720" y="238" text-anchor="middle" font-size="12" fill="#555">60°C</text>
+    <!-- Y轴标签 -->
+    <text x="52" y="224" text-anchor="end" font-size="12" fill="#555">0</text>
+    <text x="52" y="154" text-anchor="end" font-size="12" fill="#555">1365</text>
+    <text x="52" y="84"  text-anchor="end" font-size="12" fill="#555">2730</text>
+    <text x="52" y="30"  text-anchor="end" font-size="12" fill="#555">4095</text>
+    <!-- Y轴网格线 -->
+    <line x1="60" y1="154" x2="720" y2="154" stroke="#ddd" stroke-width="1" stroke-dasharray="4"/>
+    <line x1="60" y1="84"  x2="720" y2="84"  stroke="#ddd" stroke-width="1" stroke-dasharray="4"/>
+    <line x1="60" y1="30"  x2="720" y2="30"  stroke="#ddd" stroke-width="1" stroke-dasharray="4"/>
+
+    <!-- 当前设计折线（红色）：低端饱和区 -->
+    <!-- 0-45°C: ADC=700 → y = 220 - 700/4095*200 = 220-34.2=185.8 -->
+    <line x1="60"  y1="186" x2="500" y2="186" stroke="#e74c3c" stroke-width="2.5" stroke-dasharray="0"/>
+    <!-- 45-57°C: 线性区 635→2716 -->
+    <!-- 45°C x=500, y=220-635/4095*200=189; 57°C x=676, y=220-2716/4095*200=87 -->
+    <line x1="500" y1="189" x2="676" y2="88"  stroke="#e74c3c" stroke-width="2.5"/>
+    <!-- 57-60°C: 高端饱和 ADC=2736 -->
+    <!-- y=220-2736/4095*200=87 -->
+    <line x1="676" y1="87"  x2="720" y2="87"  stroke="#e74c3c" stroke-width="2.5"/>
+
+    <!-- 正确设计折线（绿色）：简单分压 -->
+    <!-- 0°C ADC=844 → y=220-844/4095*200=178.8；60°C ADC=3151 → y=220-3151/4095*200=66 -->
+    <line x1="60" y1="179" x2="720" y2="67" stroke="#27ae60" stroke-width="2.5" stroke-dasharray="6,3"/>
+
+    <!-- 饱和区填色 -->
+    <rect x="60"  y="20" width="440" height="166" fill="#e74c3c" opacity=".07"/>
+    <rect x="676" y="20" width="44"  height="67"  fill="#e74c3c" opacity=".07"/>
+
+    <!-- 标注 -->
+    <text x="250" y="175" text-anchor="middle" font-size="13" fill="#c0392b" font-weight="bold">低端饱和 ADC≈700（0~45°C 全一样）</text>
+    <text x="697" y="76"  text-anchor="middle" font-size="11" fill="#c0392b" transform="rotate(-90,697,76)">高端饱和</text>
+    <text x="590" y="128" text-anchor="middle" font-size="12" fill="#1a6a3c" font-weight="bold">线性区（仅11°C）</text>
+
+    <!-- 图例 -->
+    <line x1="80"  y1="15" x2="110" y2="15" stroke="#e74c3c" stroke-width="2.5"/>
+    <text x="115" y="19" font-size="12" fill="#333">当前设计（R_bias=3kΩ）</text>
+    <line x1="300" y1="15" x2="330" y2="15" stroke="#27ae60" stroke-width="2.5" stroke-dasharray="6,3"/>
+    <text x="335" y="19" font-size="12" fill="#333">正确设计（简单分压）</text>
+
+    <!-- 轴标题 -->
+    <text x="390" y="255" text-anchor="middle" font-size="13" fill="#555">温度（°C）</text>
+    <text x="18"  y="130" text-anchor="middle" font-size="13" fill="#555" transform="rotate(-90,18,130)">ADC 值</text>
+  </svg>
+</div>
+
+<!-- ===== 5. 错误根因 ===== -->
+<div class="card">
+  <h2 style="margin-top:0">5. 错误根因：运放偏置参数选错</h2>
+
+  <h3>5.1 偏置网络的作用</h3>
+  <p>IN− 端的三个电阻决定了运放的"工作中心点"：</p>
+  <table style="max-width:600px">
+    <tr><th>电阻</th><th>连接</th><th>值</th><th>作用</th></tr>
+    <tr><td>R_bias (R10)</td><td>NTC-VCC → IN−</td><td>3kΩ</td><td>设定偏置参考电压 <span class="tag-error">❌ 太小</span></td></tr>
+    <tr><td>R_lower (R11)</td><td>IN− → PGND</td><td>10kΩ</td><td>设定偏置参考电压</td></tr>
+    <tr><td>R_fb (R14)</td><td>Vout → IN−</td><td>10kΩ</td><td>负反馈，决定增益</td></tr>
+  </table>
+
+  <h3 style="margin-top:16px">5.2 偏置参考电压计算</h3>
+  <p>运放饱和时（无反馈），IN− 的电压由 R_bias 和 R_lower 分压决定：</p>
+  <div class="formula-box">
+    V_ref = VCC × (R_lower ‖ R_fb) / (R_bias + R_lower ‖ R_fb)<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;= 3.3 × (10k‖10k) / (3k + 10k‖10k)<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;= 3.3 × 5k / 8k<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;= <strong>2.0625V</strong>
+  </div>
+  <p>这意味着：只有当 <strong>Vp > 2.0625V</strong> 时，运放才从低端饱和进入线性区。</p>
+  <p>而 Vp = 2.0625V 对应 R_NTC = 4.33kΩ，也就是 <strong>约 45°C</strong>。</p>
+  <p style="color:#c0392b;font-weight:bold;">→ 0°C ~ 45°C 整段，运放永远处于低端饱和，Vout 被钳在 ≈0.56V，ADC 恒为 ≈700。</p>
+
+  <h3 style="margin-top:16px">5.3 增益过高</h3>
+  <div class="formula-box">
+    增益 G = R_fb/R_bias + 1 + R_fb/R_lower<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;= 10/3 + 1 + 10/10 = <strong>5.33×</strong>
+  </div>
+  <p>5.33 倍增益把 NTC 电压的微小变化急剧放大。0°C 到 60°C 范围内 Vp 只变化了 <strong>1.86V</strong>（0.68V → 2.54V），乘以 5.33 倍后需要 9.9V 输出摆幅，而运放只有 3.3V 电源，<strong>绝大部分区间都在饱和状态</strong>。</p>
+</div>
+
+<!-- ===== 6. 正确方案 ===== -->
+<div class="card">
+  <h2 style="margin-top:0">6. 正确设计方案</h2>
+
+  <h3>方案 A：去掉运放偏置，直接分压（推荐）<span class="tag-ok">最简单</span></h3>
+  <p>分压电阻 R_pulldown = 8.25kΩ 选值本身是正确的（几何平均值 √(31.77k×2.47k)≈8.85kΩ ≈ 8.25kΩ）。</p>
+  <p>只需将运放改为<strong>单位增益缓冲器（Voltage Follower）</strong>，即：</p>
+  <pre>  IN+ → NTC分压点 Vp
+  IN− → 直接连 Vout（短接，无 R_bias、R_lower）
+  Vout = Vp → 直接送 ADC</pre>
+
+  <table style="max-width:480px;margin-top:10px">
+    <tr><th>温度</th><th>R_NTC (kΩ)</th><th>Vp (V)</th><th>ADC</th></tr>
+    <tr class="linear"><td>0°C</td><td>31.770</td><td>0.680</td><td>844</td></tr>
+    <tr class="linear"><td>10°C</td><td>19.682</td><td>0.975</td><td>1209</td></tr>
+    <tr class="linear"><td>20°C</td><td>12.465</td><td>1.314</td><td>1631</td></tr>
+    <tr class="linear"><td>30°C</td><td>8.064</td><td>1.669</td><td>2071</td></tr>
+    <tr class="linear"><td>40°C</td><td>5.327</td><td>2.005</td><td>2488</td></tr>
+    <tr class="linear"><td>50°C</td><td>3.592</td><td>2.299</td><td>2853</td></tr>
+    <tr class="linear"><td>60°C</td><td>2.472</td><td>2.539</td><td>3151</td></tr>
+  </table>
+  <div class="ok-box" style="margin-top:12px">
+    ✅ ADC 从 844（0°C）到 3151（60°C），覆盖 73% 的量程，全程单调，无饱和问题。
+  </div>
+
+  <h3 style="margin-top:24px">方案 B：修正运放偏置参数，保留放大功能<span class="tag-ok">适合需要高精度</span></h3>
+  <p>目标：让 Vout 在 0°C（Vp=0.68V）时为 0V，在 60°C（Vp=2.54V）时为 3.3V。</p>
+  <p>所需增益 G = 3.3 / (2.54−0.68) = <strong>1.77×</strong></p>
+  <p>所需偏置：K = G × 0.68 = <strong>1.20V</strong></p>
+  <div class="formula-box">
+    联立方程：<br>
+    &nbsp;&nbsp;G = R_fb/R_bias + 1 + R_fb/R_lower = <strong>1.77</strong><br>
+    &nbsp;&nbsp;K = VCC × R_fb / R_bias = <strong>1.20</strong><br><br>
+    取 R_fb = 10kΩ，解得：<br>
+    &nbsp;&nbsp;R_bias = 3.3×10k/1.20 = <strong>27.5kΩ → 选 27kΩ</strong> <span class="tag-ok">原来是 3kΩ，差了 9 倍！</span><br>
+    &nbsp;&nbsp;R_lower = 10k/(1.77−1−10/27) = 10k/0.399 = <strong>25.1kΩ → 选 24.9kΩ</strong>
+  </div>
+  <div class="warn-box" style="margin-top:12px">
+    ⚠️ 此方案需更换 PCB 上的 R10（3kΩ→27kΩ）和 R11（10kΩ→24.9kΩ），当前已贴片则需飞线。
+  </div>
+
+  <h3 style="margin-top:24px">两个方案对比</h3>
+  <table style="max-width:600px">
+    <tr><th>方案</th><th>硬件改动</th><th>ADC 覆盖</th><th>分辨率</th></tr>
+    <tr><td>方案 A（缓冲器）</td><td>去掉 R10、R11，R14短接</td><td>844~3151</td><td>~38 ADC/°C</td></tr>
+    <tr><td>方案 B（修正增益）</td><td>换 R10=27kΩ，R11=24.9kΩ</td><td>0~4095</td><td>~68 ADC/°C</td></tr>
+    <tr class="sat-low"><td>当前设计（错误）</td><td>—</td><td>700~2736 (仅11°C有效)</td><td>~170 ADC/°C (仅11°C内)</td></tr>
+  </table>
+</div>
+
+<!-- ===== 7. 软件临时补丁 ===== -->
+<div class="card">
+  <h2 style="margin-top:0">7. 软件层面的临时处理（硬件不改的情况下）</h2>
+  <div class="error-box">
+    ❌ <strong>无法通过软件弥补硬件的结构性缺陷。</strong><br>
+    0°C ~ 45°C 时运放处于硬饱和，ADC 固定在 ≈700，软件无法从单一数值恢复温度信息。
+  </div>
+  <p>如果系统工作范围确实只在 46~57°C（例如压缩机高负荷区），当前设计可勉强使用，需修改代码中的温度换算参数（已在 <code>sensor_acq.c</code> 中实现）。</p>
+  <p>如果需要 0~60°C 完整范围，<strong>必须修改硬件</strong>。</p>
+</div>
+
+<!-- ===== 8. 总结 ===== -->
+<div class="card" style="background:#2c3e50;color:#ecf0f1">
+  <h2 style="margin-top:0;color:#f1c40f;border-left-color:#f1c40f">8. 一句话总结</h2>
+  <p style="font-size:1.1em;line-height:1.8">
+    <strong>R_bias（R10）选了 3kΩ，应该是 27kΩ。</strong><br>
+    这一个参数的偏差导致运放的偏置参考电压从应该的 0.68V（对应 0°C）被拉高到了 2.06V（对应 45°C），
+    将整个测量窗口从 0~60°C 压缩到了 46~57°C。
+  </p>
+</div>
+
+<p style="color:#aaa;font-size:.85em;text-align:right;margin-top:12px">生成于 2026-03-26 · 基于网表 控制板Netlist_Schematic3_2026-03-25.tel 及 ZY103 RT 表分析</p>
+</body>
+</html>

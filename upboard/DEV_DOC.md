@@ -19,7 +19,7 @@
 | 压缩机控制 | PWM 调速 + 换向 + 刹车 + 转速反馈 | ✅ 已验收 |
 | 温度采集 | 8 路 NTC 热敏电阻采样 | ✅ 已验收 |
 | 功率监测 | 3 路 INA226 电压/电流/功率 | ✅ 已验收 |
-| 开机提示 | 大疆风格开机音 + LED 指示 | ✅ 已验收 |
+| 开机提示 | 大疆风格开机音 | ✅ 已验收 |
 | 充电控制 | 锂电池充电模块使能 | ✅ 已接入 |
 | 水泵控制 | 水泵输出使能 | ✅ 已接入 |
 | 保护逻辑 | 过温/过流保护状态机 | 🔲 待开发 |
@@ -143,8 +143,8 @@ float adc_to_celsius(uint16_t raw) {
 | I2C | 引脚 | HAL 地址 | 测量对象 | Rshunt | Current_LSB |
 |-----|------|----------|----------|--------|-------------|
 | I2C1 | PB6/PB7 | 0x88 | 水泵（U13，24V_YSJ_SENSOR） | 100mΩ | 0.1mA |
-| I2C2 | PB10/PB11 | 0x88 | 24V 输入（U11，12V_VCC_UIP） | 6mΩ | 1mA |
-| I2C3 | PA8/PC9 | 0x88 | 总输入功率（U12，24V_BAT_UIP） | 6mΩ | 1mA |
+| I2C2 | PB10/PB11 | 0x88 | 24V 输入（U11，12V_VCC_UIP） | 6mΩ | 1.2mA |
+| I2C3 | PA8/PC9 | 0x88 | 总输入功率（U12，24V_BAT_UIP） | 6mΩ | 1.2mA |
 
 配置寄存器 0x00 = `0x4527`：16次平均，1.1ms 采样，连续测量模式。
 
@@ -213,7 +213,7 @@ ticks = overflow_count × ARR_period + (val2 - val1)
 
 ```
 上电 → 外设初始化 → INA226 配置 → 受控上电时序
-     → 大疆开机音 + LED → 风扇启动 → 压缩机启动
+     → 大疆开机音 → 风扇启动 → 压缩机启动
      → 输入捕获启动
      → 主循环（500ms）：
            INA226 读取 → 打印功率
@@ -223,28 +223,31 @@ ticks = overflow_count × ARR_period + (val2 - val1)
 
 ---
 
-## 四、关键全局变量
+## 四、数据读取接口
+
+各模块的运行数据均通过 getter 函数对外提供，内部变量为 `static`，不可直接访问。
 
 ```c
 // 转速（中断更新，主循环只读）
-extern volatile uint32_t sc_freq_hz;   // 压缩机反馈 Hz，RPM = × 10
-extern volatile uint32_t fan_freq_hz;  // 风扇反馈 Hz，RPM = × 20
+float    FanCtrl_GetFreqHz(void);           // 风扇 FG 频率 Hz，0=丢失
+uint32_t FanCtrl_GetRPM(void);             // 风扇转速 RPM = Hz × 20
+
+float    CompressorCtrl_GetFreqHz(void);   // 压缩机 SC_COUNT 频率 Hz，0=丢失
+uint32_t CompressorCtrl_GetRPM(void);      // 压缩机转速 RPM = Hz × 10
 
 // NTC（DMA 自动刷新，任意时刻可读）
-extern uint16_t adc_buf[8];            // 原始 ADC 值，0~4095
+uint16_t        SensorAcq_GetNTC(uint8_t ch);      // ch=0~7，原始 12bit 值
+const uint16_t *SensorAcq_GetAllNTC(void);         // 返回内部 buf 指针（只读）
 
 // 功率（主循环每 500ms 更新）
-extern INA226_Device sensors[3];       // .v(V) / .i(A) / .p(W)
+extern INA226_Device sensors[3];   // sensors[0~2].voltage_V / .current_A / .power_W
+// 或用 getter：
+float INA226_GetVoltage(const INA226_Device *dev);
+float INA226_GetCurrent(const INA226_Device *dev);
+float INA226_GetPower(const INA226_Device *dev);
 ```
 
-**当前版本 RAM 地址（map 文件）**：
-
-| 变量 | 地址 |
-|------|------|
-| `sc_freq_hz` | `0x20000010` |
-| `fan_freq_hz` | `0x20000020` |
-| `adc_buf[0]` | `0x200001BC` |
-| `sensors[0].v` | `0x20000028` |
+> 如需用调试器直接读取内存地址，查阅 `MDK-ARM/upboard/upboard.map` 中对应符号（`s_freq_hz`、`s_adc_buf` 等）的当前地址，map 文件在每次编译后会更新。
 
 ---
 

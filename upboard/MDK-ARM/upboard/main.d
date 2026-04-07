@@ -39,4 +39,10 @@ upboard\main.o: ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_uart.h
 upboard\main.o: ../Core/Inc/i2c.h
 upboard\main.o: ../Core/Inc/usart.h
 upboard\main.o: ../Core/Inc/gpio.h
-upboard\main.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stdio.h
+upboard\main.o: ../Core/Inc/ina226.h
+upboard\main.o: ../Core/Inc/power_ctrl.h
+upboard\main.o: ../Core/Inc/fan_ctrl.h
+upboard\main.o: ../Core/Inc/compressor_ctrl.h
+upboard\main.o: ../Core/Inc/sensor_acq.h
+upboard\main.o: ../Core/Inc/buzzer.h
+upboard\main.o: ../Core/Inc/esp_comm.h

@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>NTC 测温电路改版方案：0~80°C</title>
+<style>
+  body { font-family:"Microsoft YaHei",Arial,sans-serif; background:#f5f7fa; color:#222; margin:0; padding:24px; }
+  h1   { color:#1a5276; border-bottom:3px solid #1a5276; padding-bottom:10px; }
+  h2   { color:#2c3e50; margin-top:36px; border-left:4px solid #2980b9; padding-left:12px; }
+  h3   { color:#34495e; margin-top:20px; }
+  .card { background:#fff; border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,.1); padding:22px 28px; margin-bottom:24px; }
+  .ok-box   { background:#eafaf1; border:2px solid #27ae60; border-radius:6px; padding:14px 20px; margin:14px 0; }
+  .warn-box { background:#fef9e7; border:2px solid #f39c12; border-radius:6px; padding:14px 20px; margin:14px 0; }
+  .info-box  { background:#eaf3fb; border:2px solid #2980b9; border-radius:6px; padding:14px 20px; margin:14px 0; }
+  pre  { background:#1e2a36; color:#ecf0f1; border-radius:8px; padding:18px; font-family:Consolas,monospace; font-size:.88em; line-height:1.65; overflow-x:auto; }
+  code { background:#ecf0f1; border-radius:4px; padding:2px 6px; font-family:Consolas,monospace; font-size:.9em; }
+  table { border-collapse:collapse; width:100%; font-size:.9em; }
+  th   { background:#1a5276; color:#fff; padding:9px 14px; text-align:center; }
+  td   { border:1px solid #ddd; padding:8px 14px; text-align:center; }
+  tr:nth-child(even) td { background:#f4f9ff; }
+  .remove  { background:#fde8e8 !important; color:#c0392b; font-weight:bold; }
+  .change  { background:#fef9e7 !important; color:#935116; font-weight:bold; }
+  .keep    { background:#eafaf1 !important; color:#1a6a3c; }
+  .new-val { color:#1a5276; font-weight:bold; }
+  .tag     { display:inline-block; border-radius:4px; padding:2px 8px; font-size:.82em; font-weight:bold; color:#fff; }
+  .tag-rm  { background:#e74c3c; }
+  .tag-chg { background:#f39c12; }
+  .tag-ok  { background:#27ae60; }
+  .step    { display:flex; align-items:flex-start; margin:12px 0; }
+  .step-num { flex-shrink:0; width:30px; height:30px; border-radius:50%; background:#1a5276; color:#fff; display:flex; align-items:center; justify-content:center; font-weight:bold; margin-right:14px; margin-top:2px; }
+  .formula-box { background:#f0f4ff; border:1px solid #2980b9; border-radius:6px; padding:14px 20px; font-family:Consolas,monospace; font-size:.93em; line-height:1.9; }
+</style>
+</head>
+<body>
+
+<h1>🔧 NTC 测温电路改版方案：0~80°C（运放缓冲器模式）</h1>
+<p style="color:#7f8c8d;font-size:.95em;">NTC：ZY103（R₂₅=10kΩ，B=3950，1%）&nbsp;|&nbsp; 运放：偏置短接 → Unity-Gain Buffer &nbsp;|&nbsp; 目标：0~80°C</p>
+
+<!-- ===== 1. 改版概述 ===== -->
+<div class="card">
+  <h2 style="margin-top:0">1. 改版概述</h2>
+  <p>将运放从"带偏置的反相放大器"改为<strong>单位增益缓冲器（Voltage Follower）</strong>，Vout 直接跟随 NTC 分压电压 Vp，同时将下拉电阻从 8.25kΩ 换为 <strong>6.2kΩ</strong>（对应 0~80°C 最优值）。</p>
+
+  <div class="ok-box">
+    ✅ 改版后：ADC 有效范围 <strong>669 ~ 3412</strong>，对应 0°C ~ 80°C，覆盖率 66.9%，全程无饱和。
+  </div>
+
+  <table style="max-width:560px;margin-top:14px">
+    <tr><th>指标</th><th>改版前（错误）</th><th>改版后</th></tr>
+    <tr><td>运放模式</td><td class="remove">带偏置放大器（G=5.33×）</td><td class="keep">单位增益缓冲器（G=1×）</td></tr>
+    <tr><td>测量范围</td><td class="remove">46~57°C（仅11°C）</td><td class="keep">0~80°C（完整80°C）</td></tr>
+    <tr><td>ADC 有效范围</td><td class="remove">700~2736（钳位）</td><td class="keep">669~3412（线性）</td></tr>
+    <tr><td>分辨率（平均）</td><td class="remove">~170 counts/°C（仅11°C）</td><td class="keep">~34 counts/°C（全程）</td></tr>
+    <tr><td>下拉电阻</td><td class="change">8.25kΩ（为0~60°C设计）</td><td class="keep">6.2kΩ（为0~80°C最优）</td></tr>
+  </table>
+</div>
+
+<!-- ===== 2. 电路改版原理 ===== -->
+<div class="card">
+  <h2 style="margin-top:0">2. 改版原理</h2>
+
+  <h3>2.1 运放接法变化</h3>
+  <svg viewBox="0 0 740 260" style="width:100%;max-width:740px;display:block;margin:10px 0">
+    <!-- 左侧：改版前 -->
+    <text x="170" y="18" text-anchor="middle" font-size="14" font-weight="bold" fill="#c0392b">改版前（错误）</text>
+    <!-- NTC + 下拉 -->
+    <line x1="60" y1="50" x2="60" y2="80" stroke="#333" stroke-width="1.5"/>
+    <rect x="40" y="80" width="40" height="24" fill="none" stroke="#2980b9" stroke-width="1.5" rx="3"/>
+    <text x="60" y="96" text-anchor="middle" font-size="11" fill="#2980b9">NTC</text>
+    <line x1="60" y1="104" x2="60" y2="130" stroke="#333" stroke-width="1.5"/>
+    <line x1="60" y1="130" x2="120" y2="130" stroke="#333" stroke-width="1.5"/>
+    <!-- 下拉R -->
+    <line x1="60" y1="130" x2="60" y2="160" stroke="#333" stroke-width="1.5"/>
+    <rect x="40" y="160" width="40" height="20" fill="none" stroke="#555" stroke-width="1.2" rx="3"/>
+    <text x="60" y="174" text-anchor="middle" font-size="10" fill="#555">8.25kΩ</text>
+    <line x1="60" y1="180" x2="60" y2="200" stroke="#333" stroke-width="1.5"/>
+    <text x="60" y="215" text-anchor="middle" font-size="10" fill="#555">PGND</text>
+    <!-- 运放 -->
+    <polygon points="140,110 140,160 185,135" fill="#fff" stroke="#2980b9" stroke-width="2"/>
+    <text x="152" y="128" font-size="10" fill="#2980b9">IN+</text>
+    <text x="152" y="152" font-size="10" fill="#2980b9">IN−</text>
+    <!-- 偏置网络连线（红色标注） -->
+    <line x1="120" y1="130" x2="140" y2="130" stroke="#333" stroke-width="1.5"/>
+    <line x1="140" y1="145" x2="120" y2="145" stroke="#333" stroke-width="1.5"/>
+    <!-- R_bias -->
+    <line x1="120" y1="145" x2="120" y2="40" stroke="#e74c3c" stroke-width="1.5" stroke-dasharray="4,2"/>
+    <text x="108" y="95" font-size="10" fill="#e74c3c" transform="rotate(-90,108,95)">R_bias=3kΩ ❌</text>
+    <!-- R_lower -->
+    <line x1="120" y1="145" x2="120" y2="200" stroke="#e74c3c" stroke-width="1.5" stroke-dasharray="4,2"/>
+    <text x="132" y="180" font-size="10" fill="#e74c3c">R_low=10kΩ ❌</text>
+    <!-- R_fb -->
+    <line x1="185" y1="135" x2="210" y2="135" stroke="#333" stroke-width="1.5"/>
+    <line x1="210" y1="135" x2="210" y2="145" stroke="#e74c3c" stroke-width="1.5" stroke-dasharray="4,2"/>
+    <line x1="120" y1="145" x2="210" y2="145" stroke="#e74c3c" stroke-width="1.5" stroke-dasharray="4,2"/>
+    <text x="165" y="158" font-size="10" fill="#e74c3c">R_fb=10kΩ ❌</text>
+    <text x="210" y="130" font-size="10" fill="#333">→ ADC</text>
+    <text x="30" y="46" font-size="10" fill="#555">3.3V</text>
+
+    <!-- 分割线 -->
+    <line x1="370" y1="20" x2="370" y2="240" stroke="#bbb" stroke-width="1.5" stroke-dasharray="6,3"/>
+    <text x="370" y="240" text-anchor="middle" font-size="16" fill="#bbb">→</text>
+
+    <!-- 右侧：改版后 -->
+    <text x="555" y="18" text-anchor="middle" font-size="14" font-weight="bold" fill="#27ae60">改版后（正确）</text>
+    <line x1="440" y1="50" x2="440" y2="80" stroke="#333" stroke-width="1.5"/>
+    <rect x="420" y="80" width="40" height="24" fill="none" stroke="#2980b9" stroke-width="1.5" rx="3"/>
+    <text x="440" y="96" text-anchor="middle" font-size="11" fill="#2980b9">NTC</text>
+    <line x1="440" y1="104" x2="440" y2="130" stroke="#333" stroke-width="1.5"/>
+    <line x1="440" y1="130" x2="500" y2="130" stroke="#333" stroke-width="1.5"/>
+    <!-- 下拉R（新值） -->
+    <line x1="440" y1="130" x2="440" y2="160" stroke="#333" stroke-width="1.5"/>
+    <rect x="420" y="160" width="40" height="20" fill="none" stroke="#27ae60" stroke-width="2" rx="3"/>
+    <text x="440" y="174" text-anchor="middle" font-size="10" fill="#27ae60" font-weight="bold">6.2kΩ ✓</text>
+    <line x1="440" y1="180" x2="440" y2="200" stroke="#333" stroke-width="1.5"/>
+    <text x="440" y="215" text-anchor="middle" font-size="10" fill="#555">PGND</text>
+    <!-- 运放 -->
+    <polygon points="520,110 520,160 565,135" fill="#fff" stroke="#27ae60" stroke-width="2"/>
+    <text x="532" y="128" font-size="10" fill="#27ae60">IN+</text>
+    <text x="532" y="152" font-size="10" fill="#27ae60">IN−</text>
+    <!-- 直接反馈（短接） -->
+    <line x1="500" y1="130" x2="520" y2="130" stroke="#333" stroke-width="1.5"/>
+    <line x1="565" y1="135" x2="600" y2="135" stroke="#333" stroke-width="1.5"/>
+    <line x1="600" y1="135" x2="600" y2="150" stroke="#27ae60" stroke-width="2"/>
+    <line x1="520" y1="150" x2="600" y2="150" stroke="#27ae60" stroke-width="2"/>
+    <text x="555" y="165" text-anchor="middle" font-size="10" fill="#27ae60" font-weight="bold">直接短接 ✓</text>
+    <text x="605" y="130" font-size="10" fill="#333">→ ADC</text>
+    <text x="410" y="46" font-size="10" fill="#555">3.3V</text>
+    <!-- 删除R_bias, R_lower的叉 -->
+    <text x="490" y="90" font-size="22" fill="#e74c3c" font-weight="bold">╳</text>
+    <text x="490" y="200" font-size="22" fill="#e74c3c" font-weight="bold">╳</text>
+    <text x="470" y="80" font-size="9" fill="#e74c3c">移除R_bias</text>
+    <text x="470" y="200" font-size="9" fill="#e74c3c">移除R_lower</text>
+  </svg>
+
+  <h3>2.2 公式变化</h3>
+  <div class="formula-box">
+    <strong>改版前：</strong>Vout = (16 × Vp − 33) / 3 &nbsp;&nbsp;← 带偏置放大，仅 46~57°C 有效<br>
+    <br>
+    <strong>改版后：</strong>Vout = Vp = 3.3 × R_pull / (R_NTC + R_pull) &nbsp;&nbsp;← 直接分压，0~80°C 全程有效<br>
+    <br>
+    其中 R_pull = <strong>6.2kΩ</strong>
+  </div>
+
+  <h3 style="margin-top:18px">2.3 为什么选 6.2kΩ？</h3>
+  <div class="formula-box">
+    0°C 时 R_NTC = 31.77kΩ，80°C 时 R_NTC = 1.24kΩ<br>
+    最优下拉 = √(R_min × R_max) = √(31.77k × 1.24k) = <strong>6.28kΩ ≈ 选标准值 6.2kΩ</strong><br>
+    <br>
+    这使 40°C（量程中点）的 ADC 值最接近量程中间值，非线性误差最小。
+  </div>
+</div>
+
+<!-- ===== 3. 硬件改动清单 ===== -->
+<div class="card">
+  <h2 style="margin-top:0">3. 硬件改动清单</h2>
+  <p>以下改动对全部 8 路 NTC（两块运放 U5、U8 各 4 路）均相同：</p>
+
+  <table>
+    <tr>
+      <th>位号</th>
+      <th>数量</th>
+      <th>当前值</th>
+      <th>操作</th>
+      <th>改后状态</th>
+      <th>说明</th>
+    </tr>
+    <tr class="remove">
+      <td>R10, R12, R19, R22, R30, R33, R40, R43</td>
+      <td>8</td>
+      <td>3kΩ (R0402)</td>
+      <td><span class="tag tag-rm">移除</span></td>
+      <td>断路</td>
+      <td>偏置电阻，移除后 IN− 不再被 VCC 拉偏</td>
+    </tr>
+    <tr class="remove">
+      <td>R11, R13, R20, R23, R31, R34, R41, R46</td>
+      <td>8</td>
+      <td>10kΩ (R0402)</td>
+      <td><span class="tag tag-rm">移除</span></td>
+      <td>断路</td>
+      <td>偏置下拉电阻，移除</td>
+    </tr>
+    <tr class="change">
+      <td>R14, R15, R24, R25, R35, R37, R45, R48</td>
+      <td>8</td>
+      <td>10kΩ (R0402)</td>
+      <td><span class="tag tag-chg">换为 0Ω</span></td>
+      <td>短路</td>
+      <td>反馈电阻改为短路，Vout 直接连 IN−，形成单位增益缓冲器</td>
+    </tr>
+    <tr class="change">
+      <td>R7, R8, R18, R21, R29, R32, R39, R42</td>
+      <td>8</td>
+      <td>8.25kΩ (R0402)</td>
+      <td><span class="tag tag-chg">换为 6.2kΩ</span></td>
+      <td>6.2kΩ</td>
+      <td>NTC 下拉分压电阻，针对 0~80°C 重新选优</td>
+    </tr>
+  </table>
+
+  <div class="warn-box" style="margin-top:16px">
+    ⚠️ <strong>共涉及 32 颗 R0402 贴片电阻的操作</strong>。如果 6.2kΩ 标准值不易采购，用 <strong>6.8kΩ</strong> 也可接受（0°C 误差约 +1°C）。R14 等反馈电阻换为 0Ω，若没有 0Ω 料，用导线飞线短接即可。
+  </div>
+
+  <div class="info-box" style="margin-top:12px">
+    💡 <strong>R9（值未标注）</strong>：网表中 R9 连接 2-IN2+ 和 2-IN2−，若实际未贴片（断路），本次改版不影响该位置；若已贴 0Ω，移除后行为与其他通道一致。
+  </div>
+</div>
+
+<!-- ===== 4. 改版后性能 ===== -->
+<div class="card">
+  <h2 style="margin-top:0">4. 改版后性能数据</h2>
+
+  <table>
+    <tr>
+      <th>温度 (°C)</th>
+      <th>R_NTC (kΩ)</th>
+      <th>Vp = Vout (V)</th>
+      <th>ADC 值</th>
+      <th>与 40°C 的对称性</th>
+    </tr>
+    <tr><td>0</td><td>31.770</td><td>0.539</td><td>669</td><td>—</td></tr>
+    <tr><td>10</td><td>19.682</td><td>0.791</td><td>981</td><td></td></tr>
+    <tr><td>20</td><td>12.465</td><td>1.096</td><td>1361</td><td></td></tr>
+    <tr><td>30</td><td>8.064</td><td>1.434</td><td>1780</td><td></td></tr>
+    <tr style="background:#eaf3fb;font-weight:bold"><td>40（中点）</td><td>5.327</td><td>1.775</td><td>2203</td><td>中间值 2041（误差 +162）</td></tr>
+    <tr><td>50</td><td>3.592</td><td>2.089</td><td>2593</td><td></td></tr>
+    <tr><td>60</td><td>2.472</td><td>2.359</td><td>2928</td><td></td></tr>
+    <tr><td>70</td><td>1.735</td><td>2.578</td><td>3200</td><td></td></tr>
+    <tr><td>80</td><td>1.243</td><td>2.749</td><td>3412</td><td>—</td></tr>
+  </table>
+
+  <!-- 可视化 -->
+  <h3 style="margin-top:20px">ADC vs 温度曲线对比</h3>
+  <svg viewBox="0 0 700 260" style="width:100%;max-width:700px;display:block">
+    <line x1="60" y1="220" x2="680" y2="220" stroke="#555" stroke-width="1.5"/>
+    <line x1="60" y1="20"  x2="60"  y2="220" stroke="#555" stroke-width="1.5"/>
+    <!-- X轴标签 -->
+    <text x="60"  y="237" text-anchor="middle" font-size="11" fill="#555">0</text>
+    <text x="185" y="237" text-anchor="middle" font-size="11" fill="#555">20</text>
+    <text x="310" y="237" text-anchor="middle" font-size="11" fill="#555">40</text>
+    <text x="435" y="237" text-anchor="middle" font-size="11" fill="#555">60</text>
+    <text x="560" y="237" text-anchor="middle" font-size="11" fill="#555">70</text>
+    <text x="680" y="237" text-anchor="middle" font-size="11" fill="#555">80°C</text>
+    <!-- Y轴标签 -->
+    <text x="52" y="223" text-anchor="end" font-size="11" fill="#555">0</text>
+    <text x="52" y="172" text-anchor="end" font-size="11" fill="#555">1024</text>
+    <text x="52" y="121" text-anchor="end" font-size="11" fill="#555">2048</text>
+    <text x="52" y="70"  text-anchor="end" font-size="11" fill="#555">3072</text>
+    <text x="52" y="26"  text-anchor="end" font-size="11" fill="#555">4095</text>
+    <!-- 网格 -->
+    <line x1="60" y1="172" x2="680" y2="172" stroke="#eee" stroke-width="1"/>
+    <line x1="60" y1="121" x2="680" y2="121" stroke="#eee" stroke-width="1"/>
+    <line x1="60" y1="70"  x2="680" y2="70"  stroke="#eee" stroke-width="1"/>
+    <line x1="60" y1="26"  x2="680" y2="26"  stroke="#eee" stroke-width="1"/>
+
+    <!-- 旧曲线（红色）：0~45°C 饱和=700, 45~57°C 线性, 57~80°C 饱和=2736 -->
+    <!-- y = 220 - adc/4095*200 -->
+    <!-- 700 -> y=220-34.2=185.8; 2736->y=220-133.6=86.4 -->
+    <!-- 0-45°C x=60~352 -->
+    <line x1="60" y1="186" x2="352" y2="186" stroke="#e74c3c" stroke-width="2.5"/>
+    <!-- 45-57°C 线性: x=352~453 y=189~88 -->
+    <line x1="352" y1="189" x2="453" y2="88"  stroke="#e74c3c" stroke-width="2.5"/>
+    <!-- 57-80°C: x=453~680 y=87 -->
+    <line x1="453" y1="87"  x2="680" y2="87"  stroke="#e74c3c" stroke-width="2.5"/>
+
+    <!-- 新曲线（绿色）：直接计算各点连线 -->
+    <!-- 0°C: x=60, adc=669, y=220-669/4095*200=187.3 -->
+    <!-- 10°C: x=60+77=137 adc=981 y=220-47.9=172 -->
+    <!-- 20°C: x=185 adc=1361 y=220-66.5=153.5 -->
+    <!-- 30°C: x=248 adc=1780 y=220-86.9=133 -->
+    <!-- 40°C: x=310 adc=2203 y=220-107.6=112.4 -->
+    <!-- 50°C: x=373 adc=2593 y=220-126.7=93.3 -->
+    <!-- 60°C: x=435 adc=2928 y=220-143.0=77 -->
+    <!-- 70°C: x=560 adc=3200 y=220-156.3=63.7 -->
+    <!-- 80°C: x=680 adc=3412 y=220-166.6=53.4 -->
+    <polyline points="60,187 137,172 185,154 248,133 310,112 373,93 435,77 560,64 680,53"
+              fill="none" stroke="#27ae60" stroke-width="2.5"/>
+
+    <!-- 图例 -->
+    <line x1="80"  y1="14" x2="110" y2="14" stroke="#e74c3c" stroke-width="2.5"/>
+    <text x="115" y="18" font-size="12" fill="#333">改版前（低端饱和 0~45°C，高端饱和 57°C+）</text>
+    <line x1="400" y1="14" x2="430" y2="14" stroke="#27ae60" stroke-width="2.5"/>
+    <text x="435" y="18" font-size="12" fill="#333">改版后（0~80°C 全程线性）</text>
+
+    <text x="370" y="253" text-anchor="middle" font-size="12" fill="#555">温度（°C）</text>
+    <text x="18" y="130" text-anchor="middle" font-size="12" fill="#555" transform="rotate(-90,18,130)">ADC</text>
+  </svg>
+</div>
+
+<!-- ===== 5. 软件更新 ===== -->
+<div class="card">
+  <h2 style="margin-top:0">5. 软件更新：sensor_acq.c</h2>
+  <p>改版后运放为直接缓冲，用 RT 查表替换原来的运放反推公式：</p>
+
+<pre>/*
+ * NTC: ZY103, R25=10kΩ, B=3950
+ * 电路: NTC-VCC(3.3V) -- NTC -- IN+ -- R_pull(6.2kΩ) -- PGND
+ *       运放: Unity-Gain Buffer (Vout = Vp)
+ * 范围: 0~80°C, ADC 669~3412
+ */
+#define NTC_T_MIN     0
+#define NTC_T_MAX     80
+#define NTC_ADC_LOW   630     /* 略低于 0°C 的理论值 669，留余量 */
+#define NTC_ADC_HIGH  3450    /* 略高于 80°C 的理论值 3412，留余量 */
+
+/* ADC 查表：每 1°C 一个条目，索引 0=0°C … 80=80°C（共81项，ADC 从低到高） */
+static const uint16_t s_ntc_table[] = {
+     669,  697,  725,  755,  785,  816,  847,  880,  913,  947,  /* 0~9°C  */
+     981, 1016, 1052, 1089, 1126, 1164, 1202, 1241, 1280, 1320,  /* 10~19°C */
+    1361, 1401, 1442, 1484, 1526, 1568, 1610, 1652, 1695, 1738,  /* 20~29°C */
+    1780, 1823, 1866, 1909, 1951, 1994, 2036, 2078, 2120, 2162,  /* 30~39°C */
+    2203, 2244, 2285, 2325, 2365, 2404, 2443, 2481, 2519, 2557,  /* 40~49°C */
+    2593, 2630, 2665, 2700, 2735, 2769, 2802, 2835, 2867, 2898,  /* 50~59°C */
+    2928, 2959, 2988, 3017, 3045, 3072, 3099, 3125, 3151, 3176,  /* 60~69°C */
+    3200, 3224, 3247, 3270, 3292, 3313, 3334, 3354, 3374, 3393,  /* 70~79°C */
+    3412                                                           /* 80°C   */
+};
+
+float SensorAcq_NTCToCelsius(uint16_t raw)
+{
+    if (raw <= NTC_ADC_LOW)  return NAN;  /* 断路或超量程冷 */
+    if (raw >= NTC_ADC_HIGH) return NAN;  /* 短路或超量程热 */
+
+    /* 二分查找：找最大的 i 使 s_ntc_table[i] <= raw */
+    int lo = 0, hi = NTC_T_MAX - NTC_T_MIN - 1;
+    while (lo < hi) {
+        int mid = (lo + hi + 1) / 2;
+        if (s_ntc_table[mid] <= raw) lo = mid;
+        else hi = mid - 1;
+    }
+
+    /* 线性插值 */
+    float adc0 = s_ntc_table[lo];
+    float adc1 = s_ntc_table[lo + 1];
+    return (NTC_T_MIN + lo) + (raw - adc0) / (adc1 - adc0);
+}</pre>
+
+  <div class="ok-box">
+    ✅ 仅修改 <code>sensor_acq.c</code> 中的查表数据和边界常量，函数接口不变，无需修改调用方代码。
+  </div>
+</div>
+
+<!-- ===== 6. 备选方案 ===== -->
+<div class="card">
+  <h2 style="margin-top:0">6. 备选方案：保留运放增益，充分利用 ADC 量程</h2>
+  <p>若希望 0~80°C 完整对应 ADC 0~4095（充分利用 12 位精度），可保留放大功能，但修正偏置参数：</p>
+
+  <div class="formula-box">
+    目标：Vout = 0V 在 0°C（Vp=0.539V），Vout = 3.3V 在 80°C（Vp=2.749V）<br>
+    所需增益 G = 3.3 / (2.749 − 0.539) = <strong>1.493×</strong><br>
+    所需偏置 K = G × 0.539 = <strong>0.805V</strong><br>
+    <br>
+    取 R_fb = 10kΩ：<br>
+    R_bias = VCC × R_fb / K = 3.3 × 10k / 0.805 = <strong>41.0kΩ → 选 39kΩ 或 43.2kΩ</strong><br>
+    R_lower = R_fb / (G − 1 − R_fb/R_bias) = 10k / (1.493 − 1 − 0.244) = <strong>40.2kΩ → 选 39kΩ 或 40.2kΩ</strong>
+  </div>
+
+  <table style="max-width:520px;margin-top:14px">
+    <tr><th>位号</th><th>当前值</th><th>备选方案值</th><th>操作</th></tr>
+    <tr class="change"><td>R10/R12/... (R_bias)</td><td>3kΩ</td><td class="new-val">39kΩ</td><td><span class="tag tag-chg">换值</span></td></tr>
+    <tr class="change"><td>R11/R13/... (R_lower)</td><td>10kΩ</td><td class="new-val">39kΩ</td><td><span class="tag tag-chg">换值</span></td></tr>
+    <tr class="keep"><td>R14/R15/... (R_fb)</td><td>10kΩ</td><td>10kΩ（不变）</td><td><span class="tag tag-ok">保留</span></td></tr>
+    <tr class="change"><td>R7/R8/... (R_pull)</td><td>8.25kΩ</td><td class="new-val">6.2kΩ</td><td><span class="tag tag-chg">换值</span></td></tr>
+  </table>
+
+  <p style="margin-top:12px">备选方案效果：ADC ≈ 24（0°C） ~ 4080（80°C），精度约 <strong>51 counts/°C</strong>（比方案A的34提升50%）。</p>
+  <div class="warn-box">
+    ⚠️ 备选方案计算值（39kΩ/39kΩ）需用实测数据校准；缓冲器方案（主推）参数更确定，直接用查表即可。
+  </div>
+</div>
+
+<!-- ===== 7. 操作步骤 ===== -->
+<div class="card">
+  <h2 style="margin-top:0">7. 返修操作步骤（主推方案）</h2>
+
+  <div class="step">
+    <div class="step-num">1</div>
+    <div>拆除 <strong>R10, R12, R19, R22, R30, R33, R40, R43</strong>（共8颗，3kΩ，偏置电阻），直接吹焊拆除，焊盘留空。</div>
+  </div>
+  <div class="step">
+    <div class="step-num">2</div>
+    <div>拆除 <strong>R11, R13, R20, R23, R31, R34, R41, R46</strong>（共8颗，10kΩ，偏置下拉），同上处理。</div>
+  </div>
+  <div class="step">
+    <div class="step-num">3</div>
+    <div>将 <strong>R14, R15, R24, R25, R35, R37, R45, R48</strong>（共8颗，10kΩ，反馈电阻）更换为 <strong>0Ω</strong>，或直接飞线短接其两端焊盘。</div>
+  </div>
+  <div class="step">
+    <div class="step-num">4</div>
+    <div>将 <strong>R7, R8, R18, R21, R29, R32, R39, R42</strong>（共8颗，8.25kΩ，NTC下拉）更换为 <strong>6.2kΩ</strong>（无货时用 6.8kΩ 代替）。</div>
+  </div>
+  <div class="step">
+    <div class="step-num">5</div>
+    <div>上电验证：NTC 断路时各通道 ADC 应接近 <strong>0</strong>（运放缓冲器低摆幅，约 0~100）；短接时应接近 <strong>4000+</strong>；室温（25°C）时应约 <strong>1568</strong>。</div>
+  </div>
+  <div class="step">
+    <div class="step-num">6</div>
+    <div>更新 <code>sensor_acq.c</code> 中的查表数组（见第 5 节代码）。</div>
+  </div>
+</div>
+
+<p style="color:#aaa;font-size:.85em;text-align:right;margin-top:12px">生成于 2026-03-26 · ZY103 RT 表 + 电路网表分析</p>
+</body>
+</html>

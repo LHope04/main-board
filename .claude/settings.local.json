@@ -21,7 +21,20 @@
       "Bash(ST-LINK_CLI.exe -c SWD HotPlug -r32 0x20000000 10)",
       "Bash(ST-LINK_CLI.exe -c SWD HotPlug -r32 0x20000010 6)",
       "Bash(ST-LINK_CLI.exe -c SWD HotPlug -r32 0x20000018 1)",
-      "Bash(ST-LINK_CLI.exe -c SWD HotPlug -r32 0x2000001C 1)"
+      "Bash(ST-LINK_CLI.exe -c SWD HotPlug -r32 0x2000001C 1)",
+      "Bash(LOG=\"/c/Users/q7591/Documents/GitHub/main-board/upboard/MDK-ARM/upboard/upboard.build_log.htm\" grep -E \"Error\\\\\\(s\\\\\\)|Warning\\\\\\(s\\\\\\)|Program Size\" \"$LOG\")",
+      "Bash(gh pr:*)",
+      "Bash(ls:*)",
+      "WebSearch",
+      "Bash(\"C:\\\\Keil_v5\\\\UV4\\\\UV4.exe\" -j0 -b \"MDK-ARM\\\\upboard.uvprojx\")",
+      "Bash(ST-LINK_CLI.exe -c SWD -P \"MDK-ARM\\\\upboard\\\\upboard.hex\" -V after_programming -Rst)",
+      "Bash(ST-LINK_CLI.exe -c SWD -CoreReg)",
+      "Bash(ST-LINK_CLI.exe -c SWD -Run)",
+      "Bash(ST-LINK_CLI.exe -c SWD -Halt -CoreReg)",
+      "Bash(ST-LINK_CLI.exe -c SWD -HardRst -Run)",
+      "Bash(ST-LINK_CLI.exe -c SWD -r32 0x08000000 8)",
+      "Bash(ST-LINK_CLI.exe -c SWD NORST -r32 0x20000000 1)",
+      "Bash(ST-LINK_CLI.exe -c SWD -HardRst -r32 0x20000000 1)"
     ]
   }
 }

@@ -81,7 +81,7 @@ void HAL_UART_MspInit(UART_HandleTypeDef* uartHandle)
     HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
 
   /* USER CODE BEGIN USART2_MspInit 1 */
-
+  /* NVIC enabled later in EspComm_Init after s_huart is set */
   /* USER CODE END USART2_MspInit 1 */
   }
 }

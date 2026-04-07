@@ -22,6 +22,7 @@
 #include "stm32f4xx_it.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "esp_comm.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -59,6 +60,7 @@
 /* USER CODE BEGIN EV */
 extern TIM_HandleTypeDef htim3;
 extern TIM_HandleTypeDef htim8;
+extern UART_HandleTypeDef huart2;
 /* USER CODE END EV */
 
 /******************************************************************************/
@@ -213,5 +215,10 @@ void TIM8_UP_TIM13_IRQHandler(void)
 void TIM8_CC_IRQHandler(void)
 {
     HAL_TIM_IRQHandler(&htim8);
+}
+
+void USART2_IRQHandler(void)
+{
+    EspComm_RxISR();
 }
 /* USER CODE END 1 */

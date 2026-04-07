@@ -570,6 +570,41 @@
               <FileType>1</FileType>
               <FilePath>../Core/Src/stm32f4xx_hal_msp.c</FilePath>
             </File>
+            <File>
+              <FileName>ina226.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>../Core/Src/ina226.c</FilePath>
+            </File>
+            <File>
+              <FileName>power_ctrl.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>../Core/Src/power_ctrl.c</FilePath>
+            </File>
+            <File>
+              <FileName>fan_ctrl.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>../Core/Src/fan_ctrl.c</FilePath>
+            </File>
+            <File>
+              <FileName>compressor_ctrl.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>../Core/Src/compressor_ctrl.c</FilePath>
+            </File>
+            <File>
+              <FileName>sensor_acq.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>../Core/Src/sensor_acq.c</FilePath>
+            </File>
+            <File>
+              <FileName>buzzer.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>../Core/Src/buzzer.c</FilePath>
+            </File>
+            <File>
+              <FileName>esp_comm.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>../Core/Src/esp_comm.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
