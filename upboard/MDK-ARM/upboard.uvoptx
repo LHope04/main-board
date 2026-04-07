@@ -181,7 +181,7 @@
         <Ww>
           <count>6</count>
           <WinNumber>1</WinNumber>
-          <ItemText>s_gear_cmd</ItemText>
+          <ItemText>s_dbg_raw </ItemText>
         </Ww>
       </WatchWindow1>
       <WatchWindow2>

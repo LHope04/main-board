@@ -259,12 +259,6 @@ int main(void)
 
   SensorAcq_Start();
 
-  FanCtrl_Enable(1);
-  FanCtrl_SetDuty(50);
-
-  CompressorCtrl_SetBrake(0);
-  CompressorCtrl_SetDuty(30);
-
   Buzzer_PlayHajimi();
 
   /* USER CODE END 2 */
@@ -275,11 +269,60 @@ int main(void)
     /* USER CODE END WHILE */
     /* USER CODE BEGIN 3 */
 
+    /* Update INA226 power measurements */
     for (int i = 0; i < 3; i++) {
         INA226_UpdateData(&sensors[i]);
     }
 
+    /* Process ESP32 commands */
     EspComm_Poll();
+
+    /* Apply gear/on command to actuators */
+    EspComm_GearCmd *cmd = EspComm_GetGearCmd();
+    if (cmd->updated) {
+        cmd->updated = 0;
+        if (cmd->on) {
+            /* Fan & pump: full power, on/off only */
+            FanCtrl_Enable(1);
+            FanCtrl_SetDuty(100);
+            PowerCtrl_EnablePump(1);
+
+            /* Compressor: gear 1~10 → duty 100%~10% (PMOS inverted) */
+            uint8_t duty = 110 - cmd->gear * 10;
+            if (duty > 100) duty = 100;
+            if (duty < 10)  duty = 10;
+            CompressorCtrl_SetBrake(0);
+            CompressorCtrl_SetDuty(duty);
+        } else {
+            FanCtrl_Enable(0);
+            FanCtrl_SetDuty(0);
+            PowerCtrl_EnablePump(0);
+
+            CompressorCtrl_SetDuty(0);
+            CompressorCtrl_SetBrake(1);
+        }
+    }
+
+    /* Send status to ESP32 every 1s (2 x 500ms loops) */
+    {
+        static uint8_t tx_div = 0;
+        if (++tx_div >= 2) {
+            tx_div = 0;
+
+            float total_w = INA226_GetPower(&sensors[2]);
+            float water_c = SensorAcq_NTCToCelsius(SensorAcq_GetNTC(3));  /* 2-NTC1 water */
+            float ambient_c = SensorAcq_NTCToCelsius(SensorAcq_GetNTC(7)); /* 1-NTC1 ambient */
+
+            EspComm_Status st;
+            st.water_temp_x10   = (int16_t)(water_c * 10.0f);
+            st.battery_pct      = 0;   /* TODO: battery SOC */
+            st.total_power_w    = (uint16_t)total_w;
+            st.error_flags      = 0;   /* TODO: over-temp / dry-burn detection */
+            st.ambient_temp_x10 = (int16_t)(ambient_c * 10.0f);
+
+            EspComm_SendStatus(&st);
+        }
+    }
 
     HAL_Delay(500);
   }
