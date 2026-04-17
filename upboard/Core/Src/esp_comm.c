@@ -31,6 +31,7 @@ static volatile uint8_t  s_frame_rd;   /* read by Poll */
 
 /* Application data */
  EspComm_GearCmd s_gear_cmd;
+static volatile uint8_t s_ota_selftest_req;
 
 /* Debug: raw byte ring buffer — view in Keil Memory at &s_dbg_raw */
 #define DBG_RAW_SIZE  64
@@ -165,6 +166,9 @@ void EspComm_Poll(void)
         case ESP_CMD_SET_GEAR:
             handle_set_gear(s_frame_payload[slot], len);
             break;
+        case ESP_CMD_OTA_SELFTEST:
+            s_ota_selftest_req = 1;
+            break;
         default:
             break;
         }
@@ -201,4 +205,11 @@ void EspComm_SendStatus(const EspComm_Status *st)
 EspComm_GearCmd *EspComm_GetGearCmd(void)
 {
     return &s_gear_cmd;
+}
+
+uint8_t EspComm_TakeOtaSelfTestRequest(void)
+{
+    uint8_t r = s_ota_selftest_req;
+    s_ota_selftest_req = 0;
+    return r;
 }

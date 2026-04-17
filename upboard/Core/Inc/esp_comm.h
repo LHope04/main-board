@@ -16,6 +16,7 @@ extern "C" {
 /* Command codes */
 #define ESP_CMD_PING          0x01   /* C3 -> STM32 */
 #define ESP_CMD_SET_GEAR      0x20   /* C3 -> STM32 */
+#define ESP_CMD_OTA_SELFTEST  0xF0   /* C3 -> STM32, payload=0, triggers A→B self-copy+reset */
 #define ESP_CMD_PING_ACK      0x81   /* STM32 -> C3 */
 #define ESP_CMD_STATUS        0xA0   /* STM32 -> C3 */
 
@@ -40,6 +41,7 @@ void            EspComm_Poll(void);
 void            EspComm_RxISR(void);
 void            EspComm_SendStatus(const EspComm_Status *st);
 EspComm_GearCmd *EspComm_GetGearCmd(void);
+uint8_t          EspComm_TakeOtaSelfTestRequest(void);  /* returns 1 once if requested, then clears */
 
 #ifdef __cplusplus
 }

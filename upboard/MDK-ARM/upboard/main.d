@@ -46,3 +46,5 @@ upboard\main.o: ../Core/Inc/compressor_ctrl.h
 upboard\main.o: ../Core/Inc/sensor_acq.h
 upboard\main.o: ../Core/Inc/buzzer.h
 upboard\main.o: ../Core/Inc/esp_comm.h
+upboard\main.o: ../Core/Inc/ota.h
+upboard\main.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stdbool.h

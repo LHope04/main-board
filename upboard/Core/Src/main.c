@@ -32,6 +32,7 @@
 #include "sensor_acq.h"
 #include "buzzer.h"
 #include "esp_comm.h"
+#include "ota.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -277,6 +278,13 @@ int main(void)
     /* Process ESP32 commands */
     EspComm_Poll();
 
+    /* OTA self-test trigger — C3 sends ESP_CMD_OTA_SELFTEST (0xF0).
+     * Copies current App from Slot A to Slot B, switches active_slot=B,
+     * and resets. Does not return on success. */
+    if (EspComm_TakeOtaSelfTestRequest()) {
+        Ota_SelfTest(32U * 1024U);
+    }
+
     /* Apply gear/on command to actuators */
     EspComm_GearCmd *cmd = EspComm_GetGearCmd();
     if (cmd->updated) {
@@ -322,12 +330,27 @@ int main(void)
             if (pct > 100) pct = 100;
             if (pct < 0)   pct = 0;
 
+            /* OTA liveness signal: water_temp_x10 carries a ramp whose range
+             * depends on the slot the Bootloader decided to launch. Bootloader
+             * stashes 0xA0A0A0A0 (A) or 0xB0B0B0B0 (B) in RTC->BKP0R before
+             * jumping, so this works even when the two slots share bytes.
+             *   Slot A → 1..10
+             *   Slot B → 10..20
+             * Value not changing = App has hung. */
+            static uint16_t ota_ramp = 0;
+            int16_t ramp_lo, ramp_span;
+            if (RTC->BKP0R == 0xB0B0B0B0U) { ramp_lo = 10; ramp_span = 11; }
+            else                           { ramp_lo = 1;  ramp_span = 10; }
+            int16_t ramp_val = ramp_lo + (int16_t)(ota_ramp % (uint16_t)ramp_span);
+            ota_ramp++;
+
             EspComm_Status st;
-            st.water_temp_x10   = (int16_t)(v_24in * 10.0f);  /* DEBUG: 24V电瓶电压*10 */
+            st.water_temp_x10   = ramp_val;                    /* OTA liveness ramp */
             st.battery_pct      = (uint8_t)pct;                /* 锂电池电量 0~100% */
             st.total_power_w    = (uint16_t)p_24in;            /* 24V电瓶功率 W */
             st.error_flags      = 0;
             st.ambient_temp_x10 = (int16_t)(ambient_c * 10.0f);
+            (void)v_24in;
 
             EspComm_SendStatus(&st);
         }

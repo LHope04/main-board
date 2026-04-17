@@ -40,7 +40,9 @@
       "WebFetch(domain:datasheet.lcsc.com)",
       "WebFetch(domain:www.lcsc.com)",
       "WebFetch(domain:www.ti.com)",
-      "WebFetch(domain:www.utmel.com)"
+      "WebFetch(domain:www.utmel.com)",
+      "Bash(ST-LINK_CLI.exe *)",
+      "Bash(\"C:/Keil_v5/UV4/UV4.exe\" -j0 -b \"MDK-ARM/bootloader.uvprojx\")"
     ]
   }
 }
