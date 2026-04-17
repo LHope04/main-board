@@ -160,14 +160,14 @@ void MX_TIM3_Init(void)
     sConfig.OCMode     = TIM_OCMODE_PWM1;
     sConfig.OCFastMode = TIM_OCFAST_DISABLE;
 
-    /* CH2: YSJ compressor — PMOS inverted, init duty 0% */
+    /* CH2: YSJ compressor — PMOS inverted, init off (Pulse=ARR → output HIGH → PMOS off) */
     sConfig.OCPolarity = TIM_OCPOLARITY_LOW;
-    sConfig.Pulse      = 0;
+    sConfig.Pulse      = 49;
     HAL_TIM_PWM_ConfigChannel(&htim3, &sConfig, TIM_CHANNEL_2);
 
-    /* CH3: FAN — init duty 50% */
+    /* CH3: FAN — init off */
     sConfig.OCPolarity = TIM_OCPOLARITY_HIGH;
-    sConfig.Pulse      = 25;
+    sConfig.Pulse      = 0;
     HAL_TIM_PWM_ConfigChannel(&htim3, &sConfig, TIM_CHANNEL_3);
 
     /* CH1: SC_COUNT input capture — rising edge, filter 0x0F */
@@ -244,7 +244,7 @@ int main(void)
 
   /* USER CODE BEGIN 2 */
 
-  /* INA226: pump(I2C1), 24V input(I2C2), total(I2C3) */
+  /* INA226: 压缩机(I2C1), 24V 电瓶(I2C2), 锂电池(I2C3) */
   INA226_Init(&sensors[0], &hi2c1, 0x88, 0x0200, 0.0001f);
   INA226_Init(&sensors[1], &hi2c2, 0x88, 0x0355, 0.0012f);
   INA226_Init(&sensors[2], &hi2c3, 0x88, 0x0355, 0.0012f);
@@ -309,15 +309,24 @@ int main(void)
         if (++tx_div >= 2) {
             tx_div = 0;
 
-            float total_w = INA226_GetPower(&sensors[2]);
-            float water_c = SensorAcq_NTCToCelsius(SensorAcq_GetNTC(3));  /* 2-NTC1 water */
-            float ambient_c = SensorAcq_NTCToCelsius(SensorAcq_GetNTC(7)); /* 1-NTC1 ambient */
+            float water_c   = SensorAcq_NTCToCelsius(SensorAcq_GetNTC(3));  /* 2-NTC1 水温 */
+            float ambient_c = SensorAcq_NTCToCelsius(SensorAcq_GetNTC(7)); /* 1-NTC1 环温 */
+
+            /* 24V电瓶 (I2C2): 发送电压和功率 */
+            float v_24in = INA226_GetVoltage(&sensors[1]);
+            float p_24in = INA226_GetPower(&sensors[1]);
+
+            /* 锂电池 (I2C3): 电压→电量，满电24.8V=100%，15V=0% */
+            float v_bat  = INA226_GetVoltage(&sensors[2]);
+            int16_t pct  = (int16_t)((v_bat - 15.0f) / (24.8f - 15.0f) * 100.0f);
+            if (pct > 100) pct = 100;
+            if (pct < 0)   pct = 0;
 
             EspComm_Status st;
-            st.water_temp_x10   = (int16_t)(water_c * 10.0f);
-            st.battery_pct      = 0;   /* TODO: battery SOC */
-            st.total_power_w    = (uint16_t)total_w;
-            st.error_flags      = 0;   /* TODO: over-temp / dry-burn detection */
+            st.water_temp_x10   = (int16_t)(v_24in * 10.0f);  /* DEBUG: 24V电瓶电压*10 */
+            st.battery_pct      = (uint8_t)pct;                /* 锂电池电量 0~100% */
+            st.total_power_w    = (uint16_t)p_24in;            /* 24V电瓶功率 W */
+            st.error_flags      = 0;
             st.ambient_temp_x10 = (int16_t)(ambient_c * 10.0f);
 
             EspComm_SendStatus(&st);

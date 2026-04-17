@@ -34,7 +34,13 @@
       "Bash(ST-LINK_CLI.exe -c SWD -HardRst -Run)",
       "Bash(ST-LINK_CLI.exe -c SWD -r32 0x08000000 8)",
       "Bash(ST-LINK_CLI.exe -c SWD NORST -r32 0x20000000 1)",
-      "Bash(ST-LINK_CLI.exe -c SWD -HardRst -r32 0x20000000 1)"
+      "Bash(ST-LINK_CLI.exe -c SWD -HardRst -r32 0x20000000 1)",
+      "WebFetch(domain:e2e.ti.com)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:datasheet.lcsc.com)",
+      "WebFetch(domain:www.lcsc.com)",
+      "WebFetch(domain:www.ti.com)",
+      "WebFetch(domain:www.utmel.com)"
     ]
   }
 }

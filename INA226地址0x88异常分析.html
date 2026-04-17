@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>INA226 地址异常分析：为什么 0x88 能工作而不是 0x80</title>
+<style>
+  body { font-family:"Microsoft YaHei",Arial,sans-serif; background:#f5f7fa; color:#222; margin:0; padding:24px; line-height:1.7; }
+  h1   { color:#1a5276; border-bottom:3px solid #1a5276; padding-bottom:10px; }
+  h2   { color:#2c3e50; margin-top:36px; border-left:4px solid #2980b9; padding-left:12px; }
+  h3   { color:#34495e; margin-top:20px; }
+  .card { background:#fff; border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,.1); padding:22px 28px; margin-bottom:24px; }
+  .ok-box   { background:#eafaf1; border:2px solid #27ae60; border-radius:6px; padding:14px 20px; margin:14px 0; }
+  .warn-box { background:#fef9e7; border:2px solid #f39c12; border-radius:6px; padding:14px 20px; margin:14px 0; }
+  .err-box  { background:#fdecea; border:2px solid #e74c3c; border-radius:6px; padding:14px 20px; margin:14px 0; }
+  .info-box { background:#eaf3fb; border:2px solid #2980b9; border-radius:6px; padding:14px 20px; margin:14px 0; }
+  pre  { background:#1e2a36; color:#ecf0f1; border-radius:8px; padding:18px; font-family:Consolas,monospace; font-size:.88em; line-height:1.65; overflow-x:auto; }
+  code { background:#ecf0f1; border-radius:4px; padding:2px 6px; font-family:Consolas,monospace; font-size:.9em; }
+  table { border-collapse:collapse; width:100%; font-size:.92em; margin:10px 0; }
+  th   { background:#1a5276; color:#fff; padding:9px 14px; text-align:center; }
+  td   { border:1px solid #ddd; padding:8px 14px; text-align:center; }
+  tr:nth-child(even) td { background:#f4f9ff; }
+  .bad     { background:#fde8e8 !important; color:#c0392b; font-weight:bold; }
+  .mid     { background:#fef9e7 !important; color:#935116; font-weight:bold; }
+  .good    { background:#eafaf1 !important; color:#1a6a3c; font-weight:bold; }
+  .tag     { display:inline-block; border-radius:4px; padding:2px 8px; font-size:.82em; font-weight:bold; color:#fff; }
+  .tag-rm  { background:#e74c3c; }
+  .tag-chg { background:#f39c12; }
+  .tag-ok  { background:#27ae60; }
+  .step    { display:flex; align-items:flex-start; margin:12px 0; }
+  .step-num { flex-shrink:0; width:30px; height:30px; border-radius:50%; background:#1a5276; color:#fff; display:flex; align-items:center; justify-content:center; font-weight:bold; margin-right:14px; margin-top:2px; }
+  .hl      { background:#fff3cd; padding:2px 6px; border-radius:3px; font-weight:bold; }
+  .num     { font-family:Consolas,monospace; font-weight:bold; color:#1a5276; }
+</style>
+</head>
+<body>
+
+<h1>🔍 INA226 地址异常分析</h1>
+<p style="color:#7f8c8d;font-size:.95em;">现象：原理图标注 <code>地址：1000000</code>（0x80 HAL 格式），但代码写 <code>0x88</code> 才能正常读到数据。原因并不是代码错误，也不是接线错误，而是<strong>原理图的硬件设计不符合 INA226 数据手册要求</strong>。</p>
+
+<!-- ===== 1. 现象 ===== -->
+<div class="card">
+  <h2 style="margin-top:0">1. 现象描述</h2>
+  <table style="max-width:720px">
+    <tr><th style="width:30%">来源</th><th>内容</th></tr>
+    <tr><td>原理图备注</td><td class="bad">地址：1000000（= 7-bit 0x40 = HAL 0x80）</td></tr>
+    <tr><td>网表 A0/A1 连接</td><td class="bad">A0 → 10kΩ → GND；A1 → 10kΩ → GND（应得 0x80）</td></tr>
+    <tr><td>实际代码</td><td class="good"><code>INA226_Init(..., 0x88, ...)</code></td></tr>
+    <tr><td>实测结果</td><td class="good">代码写 0x88 能读到正确数据；写 0x80 读不到</td></tr>
+  </table>
+  <div class="err-box">
+    ⚠ 按原理图应该是 <code>0x80</code>，但实物响应 <code>0x88</code>。<br>
+    接线没错、代码没错，那问题在<strong>硬件设计本身</strong>。
+  </div>
+</div>
+
+<!-- ===== 2. HAL 地址格式 ===== -->
+<div class="card">
+  <h2 style="margin-top:0">2. 先澄清 HAL 地址格式（排除这一干扰）</h2>
+  <p>STM32 HAL 的 I2C API 使用<strong>8-bit 地址格式</strong>：7-bit 硬件地址左移 1 位，留出 R/W 位。这部分<strong>不是问题</strong>。</p>
+  <table style="max-width:560px">
+    <tr><th>A1</th><th>A0</th><th>7-bit 地址</th><th>HAL 8-bit 值</th></tr>
+    <tr><td>GND</td><td>GND</td><td class="num">0x40</td><td class="num">0x80</td></tr>
+    <tr><td>GND</td><td>VS</td><td class="num">0x41</td><td class="num">0x82</td></tr>
+    <tr class="good"><td><strong>VS</strong></td><td><strong>GND</strong></td><td class="num">0x44</td><td class="num">0x88 ← 实测</td></tr>
+    <tr><td>VS</td><td>VS</td><td class="num">0x45</td><td class="num">0x8A</td></tr>
+  </table>
+  <p>实测 0x88 能工作 ⇒ 芯片实际响应 7-bit 地址 <span class="hl">0x44</span> ⇒ 芯片把 <span class="hl">A1 识别成 VS，A0 识别成 GND</span>。</p>
+</div>
+
+<!-- ===== 3. 根因：INA226 A0/A1 是四态采样 ===== -->
+<div class="card">
+  <h2 style="margin-top:0">3. 根因：INA226 的 A0/A1 不是普通数字输入</h2>
+
+  <h3>3.1 数据手册怎么说</h3>
+  <p>TI INA226 数据手册 (SBOS547) <strong>8.5.1 节</strong>：</p>
+  <div class="info-box">
+    <em>"A0 and A1 can be configured to one of <strong>four signals (SCL, SDA, GND, or V+)</strong>, allowing the device to respond to 16 different possible addresses."</em><br>
+    <em>"The state of pins A0 and A1 is sampled on every bus communication event."</em>
+  </div>
+  <p>INA226 的 A0/A1 是 <strong>四态采样引脚（quad-state）</strong>，每个引脚可识别 4 种状态：</p>
+  <table style="max-width:640px">
+    <tr><th>识别状态</th><th>芯片怎么判断</th><th>推荐外部接法</th></tr>
+    <tr><td class="good">GND</td><td>引脚电压 ≈ 0V</td><td><strong>直接短接到 GND</strong>（0Ω）</td></tr>
+    <tr><td class="good">VS</td><td>引脚电压 ≈ VS</td><td><strong>直接短接到 VS</strong>（0Ω）</td></tr>
+    <tr><td class="good">SDA</td><td>引脚与 SDA 同步跳变</td><td>直接连到 SDA 走线</td></tr>
+    <tr><td class="good">SCL</td><td>引脚与 SCL 同步跳变</td><td>直接连到 SCL 走线</td></tr>
+  </table>
+  <p>TI 的 Typical Application 电路图里，A0/A1 是<strong>直连</strong>，没有任何电阻。</p>
+
+  <h3>3.2 这块板子的接法</h3>
+  <p>网表 <code>驱动板Netlist_Schematic1_2026-03-25.tel</code>：</p>
+<pre>'$1N135' ; R41.1 U11.1    ← U11 pin 1 (A1) → R41 → ...
+'$1N134' ; R37.1 U11.2    ← U11 pin 2 (A0) → R37 → ...
+GND ;  ... R37.2 R41.2 ...  ← R41/R37 另一端都在 GND 网络</pre>
+  <p>电阻值表（line 43）：<code>R37, R41 = 10kΩ</code>。</p>
+  <p>拓扑示意：</p>
+  <svg viewBox="0 0 560 200" style="width:100%;max-width:560px;display:block;margin:10px 0">
+    <!-- A1 pin -->
+    <text x="80" y="30" text-anchor="middle" font-size="13" font-weight="bold" fill="#2c3e50">INA226 pin 1 (A1)</text>
+    <line x1="80" y1="40" x2="80" y2="70" stroke="#333" stroke-width="2"/>
+    <circle cx="80" cy="40" r="4" fill="#1a5276"/>
+    <rect x="55" y="70" width="50" height="24" fill="#fef9e7" stroke="#f39c12" stroke-width="2" rx="3"/>
+    <text x="80" y="87" text-anchor="middle" font-size="12" fill="#935116" font-weight="bold">R41</text>
+    <text x="130" y="87" font-size="12" fill="#935116">10kΩ ⚠</text>
+    <line x1="80" y1="94" x2="80" y2="130" stroke="#333" stroke-width="2"/>
+    <line x1="60" y1="130" x2="100" y2="130" stroke="#333" stroke-width="2"/>
+    <line x1="66" y1="135" x2="94" y2="135" stroke="#333" stroke-width="2"/>
+    <line x1="72" y1="140" x2="88" y2="140" stroke="#333" stroke-width="2"/>
+    <text x="80" y="160" text-anchor="middle" font-size="11" fill="#555">GND</text>
+    <!-- A0 pin -->
+    <text x="360" y="30" text-anchor="middle" font-size="13" font-weight="bold" fill="#2c3e50">INA226 pin 2 (A0)</text>
+    <line x1="360" y1="40" x2="360" y2="70" stroke="#333" stroke-width="2"/>
+    <circle cx="360" cy="40" r="4" fill="#1a5276"/>
+    <rect x="335" y="70" width="50" height="24" fill="#fef9e7" stroke="#f39c12" stroke-width="2" rx="3"/>
+    <text x="360" y="87" text-anchor="middle" font-size="12" fill="#935116" font-weight="bold">R37</text>
+    <text x="410" y="87" font-size="12" fill="#935116">10kΩ ⚠</text>
+    <line x1="360" y1="94" x2="360" y2="130" stroke="#333" stroke-width="2"/>
+    <line x1="340" y1="130" x2="380" y2="130" stroke="#333" stroke-width="2"/>
+    <line x1="346" y1="135" x2="374" y2="135" stroke="#333" stroke-width="2"/>
+    <line x1="352" y1="140" x2="368" y2="140" stroke="#333" stroke-width="2"/>
+    <text x="360" y="160" text-anchor="middle" font-size="11" fill="#555">GND</text>
+  </svg>
+  <div class="err-box">
+    ⚠ <strong>问题：</strong>设计者按普通数字逻辑输入思路，用 10kΩ 下拉到 GND。但对 INA226 的四态采样电路来说，<strong>10kΩ 阻抗太大</strong>。
+  </div>
+
+  <h3>3.3 为什么 10kΩ 下拉会被误识别</h3>
+  <p>INA226 采样 A0/A1 时，引脚内部会注入<strong>少量偏置电流</strong>来检测外接拓扑：</p>
+  <ul>
+    <li>如果外部<strong>直连 GND</strong>（0Ω）→ 引脚压降 ≈ 0V → 识别为 <strong>GND 态</strong></li>
+    <li>如果外部<strong>直连 VS</strong>（0Ω）→ 引脚电压 ≈ VS → 识别为 <strong>VS 态</strong></li>
+    <li>如果外部<strong>经 10kΩ 接 GND</strong> → 偏置电流 × 10kΩ 产生电压降，具体被识别成什么状态<strong>完全由芯片内部偏置设计决定</strong>，并且 A0 和 A1 的偏置<strong>不一定对称</strong></li>
+  </ul>
+  <p>实测结果表明：这个批次的 INA226 对于 10kΩ 下拉到 GND 的拓扑：</p>
+  <table style="max-width:560px">
+    <tr><th>引脚</th><th>外部接法</th><th>芯片识别结果</th></tr>
+    <tr><td>A1 (pin 1)</td><td>10kΩ → GND</td><td class="bad">识别为 VS 态 ❌（不符合设计意图）</td></tr>
+    <tr><td>A0 (pin 2)</td><td>10kΩ → GND</td><td class="good">识别为 GND 态 ✅</td></tr>
+  </table>
+  <p>→ 合成地址 = <span class="hl">A1=VS, A0=GND = 7-bit 0x44 = HAL 0x88</span></p>
+  <p>A0 和 A1 接法完全一样却被识别成不同状态，说明这是<strong>不稳定的灰色地带</strong>，依赖芯片内部偏置的不对称性。</p>
+</div>
+
+<!-- ===== 4. 原理图的自我矛盾 ===== -->
+<div class="card">
+  <h2 style="margin-top:0">4. 原理图备注里的线索</h2>
+  <p>驱动板原理图 INA226 附近有两处备注：</p>
+  <div class="info-box">
+    <strong>①</strong> <code>地址：1000000</code> — 设计者按 A0=A1=GND 计算的"理论地址"<br>
+    <strong>②</strong> <code>添加3V3焊盘，以供地址可选</code> — <span class="hl">预留了飞线焊盘</span>
+  </div>
+  <p>备注 ② 其实<strong>间接承认</strong>：设计者自己也知道 10kΩ 下拉不保险，才特意留了 3V3 焊盘作为补救。但因为三颗芯片共用 I2C 总线上的多个 INA226 是靠 A0/A1 区分地址的（本项目每路 I2C 只有一颗，所以没有冲突问题），这个 bug 就没有触发诊断。</p>
+</div>
+
+<!-- ===== 5. 测试验证流程 ===== -->
+<div class="card">
+  <h2 style="margin-top:0">5. 如何用测试确认这个假设</h2>
+  <p>核心思路：<strong>分别做"电压测量"和"扫描 + 修改硬件"两组实验</strong>，逐层排除其他可能。</p>
+
+  <h3>实验 A：静态电压测量（5 分钟，不动硬件）</h3>
+  <div class="step">
+    <div class="step-num">1</div>
+    <div>
+      板子上电，让固件正常运行到 INA226 初始化之后（代码用 0x88 能读到的状态）。
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-num">2</div>
+    <div>
+      让 I2C 总线处于空闲（比如在 <code>main.c</code> 初始化 INA226 之后加一个 <code>HAL_Delay(5000)</code>，然后在 ≥1 秒的窗口里测量）。
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-num">3</div>
+    <div>
+      用万用表 DC 电压档，<strong>黑表笔接 GND</strong>，红表笔分别触到 U11/U12/U13 的 <strong>pin 1 (A1)</strong> 和 <strong>pin 2 (A0)</strong>。
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-num">4</div>
+    <div>对照下表判断：</div>
+  </div>
+  <table style="max-width:720px">
+    <tr><th>A1 (pin 1) 电压</th><th>A0 (pin 2) 电压</th><th>判断</th></tr>
+    <tr class="good"><td>&gt; 2.0 V（接近 3.3V）</td><td>&lt; 0.3 V</td><td>✅ <strong>确认是本假设</strong>：A1 被识别为 VS，A0 为 GND</td></tr>
+    <tr class="mid"><td>介于 0.3V ~ 2.0V</td><td>任意</td><td>⚠ 灰色地带，识别不稳定，更坐实"10kΩ 不可靠"</td></tr>
+    <tr class="bad"><td>&lt; 0.1V</td><td>&lt; 0.1V</td><td>❌ 两个都是 GND，那理论地址应是 0x80，代码用 0x88 能工作就另有原因（需扫描排查）</td></tr>
+  </table>
+  <div class="warn-box">
+    📌 如果三颗 INA226 的 A1 电压<strong>都异常高</strong>，就是芯片内部偏置+10kΩ 拓扑的系统性问题；如果只有一两颗异常，可能还有焊接或电阻个体差异。
+  </div>
+
+  <h3>实验 B：I2C 总线扫描（10 分钟，改固件）</h3>
+  <p>独立确认芯片实际响应哪些地址，排除"代码恰好能访问 0x80 和 0x88 两个"的假象。</p>
+  <div class="step">
+    <div class="step-num">1</div>
+    <div>
+      临时在 <code>main.c</code> 初始化后加扫描代码，扫 0x00 ~ 0xFE（步长 2，仅偶数 = 写地址）：
+    </div>
+  </div>
+<pre>printf("I2C1 scan:\r\n");
+for (uint8_t addr = 0x02; addr &lt; 0xFE; addr += 2) {
+    if (HAL_I2C_IsDeviceReady(&hi2c1, addr, 2, 50) == HAL_OK) {
+        printf("  found 0x%02X\r\n", addr);
+    }
+}
+/* I2C2、I2C3 同样做一遍 */</pre>
+  <div class="step">
+    <div class="step-num">2</div>
+    <div>预期输出：</div>
+  </div>
+<pre>I2C1 scan:
+  found 0x88         ← 只有 0x88 有响应；如果同时出现 0x80，说明地址解码还有问题
+
+I2C2 scan:
+  found 0x88
+
+I2C3 scan:
+  found 0x88</pre>
+  <div class="step">
+    <div class="step-num">3</div>
+    <div>
+      如果 <strong>只有 0x88 响应</strong>（没有 0x80、0x82 等），就坐实"A1 被识别为 VS，A0 被识别为 GND"，硬件地址只有 0x44 一个。
+    </div>
+  </div>
+
+  <h3>实验 C：飞线验证（20 分钟，改硬件，终极排除）</h3>
+  <p>如果前两个实验结果<strong>都符合假设</strong>，再做这个验证"10kΩ 电阻值"是根因，而不是别的什么。</p>
+  <div class="step">
+    <div class="step-num">1</div>
+    <div>
+      选一颗 INA226（比如 U11），用镊子或飞线把 <strong>R41 直接短路</strong>（或者把 R41 拆掉，换 0Ω 跳线）—— 这会让 A1 <strong>硬拉到 GND</strong>。
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-num">2</div>
+    <div>重新上电，先量 A1 (pin 1) 电压：应该 = 0V（被强制 GND）。</div>
+  </div>
+  <div class="step">
+    <div class="step-num">3</div>
+    <div>
+      跑实验 B 的扫描代码。预期结果：
+      <ul>
+        <li>✅ <strong>U11 所在的 I2C1 扫描结果变成 0x80</strong>（因为 A1 现在真的 GND 了），不再是 0x88</li>
+        <li>U12、U13 保持 0x88 不变</li>
+      </ul>
+      如果观察到这个变化，<strong>完全坐实</strong>根因是 10kΩ 下拉被误识别。
+    </div>
+  </div>
+  <div class="ok-box">
+    ✅ 实验 C 做完后恢复 R41（把飞线拿掉），避免和其他两颗的地址冲突（本项目不会冲突，因为三颗在不同 I2C 总线上，但保持整齐比较好）。
+  </div>
+</div>
+
+<!-- ===== 6. 根据实验结果决定处置 ===== -->
+<div class="card">
+  <h2 style="margin-top:0">6. 根据实验结果的处置建议</h2>
+
+  <table>
+    <tr>
+      <th style="width:30%">实验 A 结果</th>
+      <th style="width:30%">实验 B 结果</th>
+      <th>处置建议</th>
+    </tr>
+    <tr>
+      <td class="good">A1≈3.3V, A0≈0V</td>
+      <td class="good">只响应 0x88</td>
+      <td>✅ 假设成立。<strong>保持代码 0x88 不动</strong>，在 <code>main.c</code> INA226_Init 处加一行注释说明"实测地址 0x88，原理图 10kΩ 下拉被误识别为 VS 态，下一版改板改 0Ω"。</td>
+    </tr>
+    <tr>
+      <td class="mid">A1 电压中间值</td>
+      <td class="good">只响应 0x88</td>
+      <td>⚠ 假设成立但更危险。强烈建议<strong>下一版改板</strong>，把 R41 换 0Ω（或直连 GND），避免不同批次 INA226 识别结果漂移。</td>
+    </tr>
+    <tr>
+      <td class="bad">A1≈0V, A0≈0V</td>
+      <td class="good">只响应 0x88</td>
+      <td>❓ 假设不成立。电压测到都是 GND 但响应 0x88，可能是假芯片、代码 bug 或其他问题，需进一步排查。</td>
+    </tr>
+    <tr>
+      <td>任意</td>
+      <td class="bad">同时响应 0x80 和 0x88（或其他）</td>
+      <td>❌ 更复杂，可能有地址冲突或芯片异常，需更深入排查。</td>
+    </tr>
+  </table>
+</div>
+
+<!-- ===== 7. 改版建议（下一版 PCB） ===== -->
+<div class="card">
+  <h2 style="margin-top:0">7. 下一版 PCB 改版建议</h2>
+
+  <h3>方案 1：保持地址 0x88（改动最小）</h3>
+  <ul>
+    <li>把 <strong>R41 下拉端</strong>（R41.2）从 GND 改到 D3V3 → A1 <strong>直连 VS</strong></li>
+    <li>R37 保持原状，但改成 <strong>0Ω</strong>（A0 直连 GND）</li>
+    <li>代码 <code>0x88</code> 保持不变</li>
+  </ul>
+
+  <h3>方案 2：改成规范的 0x80（推荐）</h3>
+  <ul>
+    <li>R41、R37 都改成 <strong>0Ω</strong>（或直接去掉，焊盘短接）</li>
+    <li>A0、A1 都直连 GND → 识别为 GND 态</li>
+    <li>代码改成 <code>INA226_Init(..., 0x80, ...)</code></li>
+  </ul>
+
+  <div class="ok-box">
+    ✅ 无论选哪个方案，核心都是<strong>去掉 10kΩ 这个灰色地带电阻</strong>，让 A0/A1 有确定的状态。
+  </div>
+</div>
+
+<!-- ===== 8. 关键要点 ===== -->
+<div class="card" style="background:#1a5276;color:#fff">
+  <h2 style="margin-top:0;color:#fff;border-left-color:#f39c12">💡 要点回顾</h2>
+  <ol style="font-size:1.02em;line-height:1.9">
+    <li>INA226 的 A0/A1 是<strong>四态采样引脚</strong>，不是普通逻辑输入。</li>
+    <li>数据手册要求 A0/A1 <strong>直连</strong> GND/VS/SDA/SCL，不要加上下拉电阻。</li>
+    <li>本板用 <strong>10kΩ 下拉</strong>，阻抗太大，芯片把 A1 识别为 VS、A0 识别为 GND，合成地址从 0x80 变成 0x88。</li>
+    <li>代码 <code>0x88</code> 能工作是<strong>撞对了</strong>，不是原理图"对"。</li>
+    <li>用<strong>实验 A（测电压）+ 实验 B（I2C 扫描）+ 实验 C（飞线短路电阻）</strong>三步验证，就能坐实是不是这个问题。</li>
+    <li>长期解法：下一版把 R37、R41 改 0Ω，<strong>消除 10kΩ 灰色地带</strong>。</li>
+  </ol>
+</div>
+
+</body>
+</html>
