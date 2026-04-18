@@ -34,6 +34,13 @@ bool Ota_End(uint8_t slot, uint32_t size, uint32_t version);
  * `copy_size` must cover the current App image (128KB max = whole slot). */
 void Ota_SelfTest(uint32_t copy_size);
 
+/* Confirm a successful boot. Call once the App has proven stable (e.g.
+ * after BOOT_OK_DELAY_MS of healthy main-loop iterations). Clears
+ * pending_update / boot_count in the param block so the Bootloader stops
+ * counting and stops watching for rollback. No-op if params are already
+ * clean. Returns true on success (including no-op). */
+bool Ota_MarkBootOk(void);
+
 /* ---- OTA protocol handlers (called from EspComm_Poll) ---- */
 
 /* Status codes match ESP_CMD ACK payload; see esp_comm.h OTA_STATUS_* */

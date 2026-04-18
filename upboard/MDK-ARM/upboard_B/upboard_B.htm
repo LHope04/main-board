@@ -3,9 +3,9 @@
 <title>Static Call Graph - [upboard_B\upboard_B.axf]</title></head>
 <body><HR>
 <H1>Static Call Graph for image upboard_B\upboard_B.axf</H1><HR>
-<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5060528: Last Updated: Sat Apr 18 11:32:29 2026
+<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5060528: Last Updated: Sat Apr 18 15:57:40 2026
 <BR><P>
-<H3>Maximum Stack Usage =        344 bytes + Unknown(Cycles, Untraceable Function Pointers)</H3><H3>
+<H3>Maximum Stack Usage =        496 bytes + Unknown(Cycles, Untraceable Function Pointers)</H3><H3>
 Call chain for Maximum Stack Depth:</H3>
 main &rArr; EspComm_Poll &rArr; OtaProto_HandleEnd &rArr; Ota_End &rArr; BootParams_Write &rArr; write_one_copy &rArr; HAL_FLASH_Program &rArr; FLASH_WaitForLastOperation
 <P>
@@ -17,7 +17,7 @@ Mutually Recursive functions
  <LI><a href="#[3]">MemManage_Handler</a>&nbsp;&nbsp;&nbsp;&rArr;&nbsp;&nbsp;&nbsp;<a href="#[3]">MemManage_Handler</a><BR>
  <LI><a href="#[1]">NMI_Handler</a>&nbsp;&nbsp;&nbsp;&rArr;&nbsp;&nbsp;&nbsp;<a href="#[1]">NMI_Handler</a><BR>
  <LI><a href="#[5]">UsageFault_Handler</a>&nbsp;&nbsp;&nbsp;&rArr;&nbsp;&nbsp;&nbsp;<a href="#[5]">UsageFault_Handler</a><BR>
- <LI><a href="#[f4]">UART_EndRxTransfer</a>&nbsp;&nbsp;&nbsp;&rArr;&nbsp;&nbsp;&nbsp;<a href="#[f4]">UART_EndRxTransfer</a><BR>
+ <LI><a href="#[f5]">UART_EndRxTransfer</a>&nbsp;&nbsp;&nbsp;&rArr;&nbsp;&nbsp;&nbsp;<a href="#[f5]">UART_EndRxTransfer</a><BR>
 </UL>
 <P>
 <H3>
@@ -128,7 +128,7 @@ Global Symbols
 <P><STRONG><a name="[5d]"></a>__main</STRONG> (Thumb, 0 bytes, Stack size unknown bytes, entry.o(.ARM.Collect$$$$00000000))
 <BR>[Address Reference Count : 1]<UL><LI> startup_stm32f407xx.o(.text)
 </UL>
-<P><STRONG><a name="[102]"></a>_main_stk</STRONG> (Thumb, 0 bytes, Stack size unknown bytes, entry2.o(.ARM.Collect$$$$00000001))
+<P><STRONG><a name="[103]"></a>_main_stk</STRONG> (Thumb, 0 bytes, Stack size unknown bytes, entry2.o(.ARM.Collect$$$$00000001))
 
 <P><STRONG><a name="[61]"></a>_main_scatterload</STRONG> (Thumb, 0 bytes, Stack size unknown bytes, entry5.o(.ARM.Collect$$$$00000004))
 <BR><BR>[Calls]<UL><LI><a href="#[62]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__scatterload
@@ -138,15 +138,15 @@ Global Symbols
 <BR><BR>[Called By]<UL><LI><a href="#[62]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__scatterload
 </UL>
 
-<P><STRONG><a name="[103]"></a>_main_clock</STRONG> (Thumb, 0 bytes, Stack size unknown bytes, entry7b.o(.ARM.Collect$$$$00000008))
+<P><STRONG><a name="[104]"></a>_main_clock</STRONG> (Thumb, 0 bytes, Stack size unknown bytes, entry7b.o(.ARM.Collect$$$$00000008))
 
-<P><STRONG><a name="[104]"></a>_main_cpp_init</STRONG> (Thumb, 0 bytes, Stack size unknown bytes, entry8b.o(.ARM.Collect$$$$0000000A))
+<P><STRONG><a name="[105]"></a>_main_cpp_init</STRONG> (Thumb, 0 bytes, Stack size unknown bytes, entry8b.o(.ARM.Collect$$$$0000000A))
 
-<P><STRONG><a name="[105]"></a>_main_init</STRONG> (Thumb, 0 bytes, Stack size unknown bytes, entry9a.o(.ARM.Collect$$$$0000000B))
+<P><STRONG><a name="[106]"></a>_main_init</STRONG> (Thumb, 0 bytes, Stack size unknown bytes, entry9a.o(.ARM.Collect$$$$0000000B))
 
-<P><STRONG><a name="[106]"></a>__rt_final_cpp</STRONG> (Thumb, 0 bytes, Stack size unknown bytes, entry10a.o(.ARM.Collect$$$$0000000D))
+<P><STRONG><a name="[107]"></a>__rt_final_cpp</STRONG> (Thumb, 0 bytes, Stack size unknown bytes, entry10a.o(.ARM.Collect$$$$0000000D))
 
-<P><STRONG><a name="[107]"></a>__rt_final_exit</STRONG> (Thumb, 0 bytes, Stack size unknown bytes, entry11a.o(.ARM.Collect$$$$0000000F))
+<P><STRONG><a name="[108]"></a>__rt_final_exit</STRONG> (Thumb, 0 bytes, Stack size unknown bytes, entry11a.o(.ARM.Collect$$$$0000000F))
 
 <P><STRONG><a name="[0]"></a>Reset_Handler</STRONG> (Thumb, 8 bytes, Stack size 0 bytes, startup_stm32f407xx.o(.text))
 <BR>[Address Reference Count : 1]<UL><LI> startup_stm32f407xx.o(RESET)
@@ -396,24 +396,25 @@ Global Symbols
 <LI><a href="#[ba]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_RCC_GetSysClockFreq
 </UL>
 
-<P><STRONG><a name="[108]"></a>__aeabi_memcpy</STRONG> (Thumb, 36 bytes, Stack size 0 bytes, memcpya.o(.text), UNUSED)
+<P><STRONG><a name="[109]"></a>__aeabi_memcpy</STRONG> (Thumb, 36 bytes, Stack size 0 bytes, memcpya.o(.text), UNUSED)
 
-<P><STRONG><a name="[73]"></a>__aeabi_memcpy4</STRONG> (Thumb, 0 bytes, Stack size 0 bytes, memcpya.o(.text))
+<P><STRONG><a name="[72]"></a>__aeabi_memcpy4</STRONG> (Thumb, 0 bytes, Stack size 0 bytes, memcpya.o(.text))
 <BR><BR>[Called By]<UL><LI><a href="#[df]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;MX_ADC1_Init
 <LI><a href="#[71]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;read_and_verify
-<LI><a href="#[72]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;BootParams_Write
+<LI><a href="#[73]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;BootParams_Write
+<LI><a href="#[70]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;BootParams_Read
 </UL>
 
-<P><STRONG><a name="[109]"></a>__aeabi_memcpy8</STRONG> (Thumb, 0 bytes, Stack size 0 bytes, memcpya.o(.text), UNUSED)
+<P><STRONG><a name="[10a]"></a>__aeabi_memcpy8</STRONG> (Thumb, 0 bytes, Stack size 0 bytes, memcpya.o(.text), UNUSED)
 
 <P><STRONG><a name="[67]"></a>__aeabi_memset</STRONG> (Thumb, 14 bytes, Stack size 0 bytes, memseta.o(.text), UNUSED)
 <BR><BR>[Called By]<UL><LI><a href="#[68]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;_memset$wrapper
 <LI><a href="#[66]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_memclr
 </UL>
 
-<P><STRONG><a name="[10a]"></a>__aeabi_memset4</STRONG> (Thumb, 0 bytes, Stack size 0 bytes, memseta.o(.text), UNUSED)
+<P><STRONG><a name="[10b]"></a>__aeabi_memset4</STRONG> (Thumb, 0 bytes, Stack size 0 bytes, memseta.o(.text), UNUSED)
 
-<P><STRONG><a name="[10b]"></a>__aeabi_memset8</STRONG> (Thumb, 0 bytes, Stack size 0 bytes, memseta.o(.text), UNUSED)
+<P><STRONG><a name="[10c]"></a>__aeabi_memset8</STRONG> (Thumb, 0 bytes, Stack size 0 bytes, memseta.o(.text), UNUSED)
 
 <P><STRONG><a name="[66]"></a>__aeabi_memclr</STRONG> (Thumb, 4 bytes, Stack size 0 bytes, memseta.o(.text), UNUSED)
 <BR><BR>[Calls]<UL><LI><a href="#[67]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_memset
@@ -423,7 +424,7 @@ Global Symbols
 <BR><BR>[Called By]<UL><LI><a href="#[d5]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_UART_MspInit
 <LI><a href="#[a8]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_I2C_MspInit
 <LI><a href="#[e1]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;MX_GPIO_Init
-<LI><a href="#[f3]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;SystemClock_Config
+<LI><a href="#[f4]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;SystemClock_Config
 <LI><a href="#[e7]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;MX_TIM3_Init
 <LI><a href="#[e6]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;MX_TIM2_Init
 <LI><a href="#[75]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;write_one_copy
@@ -431,7 +432,7 @@ Global Symbols
 <LI><a href="#[ed]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Ota_Begin
 </UL>
 
-<P><STRONG><a name="[10c]"></a>__aeabi_memclr8</STRONG> (Thumb, 0 bytes, Stack size 0 bytes, memseta.o(.text), UNUSED)
+<P><STRONG><a name="[10d]"></a>__aeabi_memclr8</STRONG> (Thumb, 0 bytes, Stack size 0 bytes, memseta.o(.text), UNUSED)
 
 <P><STRONG><a name="[68]"></a>_memset$wrapper</STRONG> (Thumb, 18 bytes, Stack size 8 bytes, memseta.o(.text), UNUSED)
 <BR><BR>[Calls]<UL><LI><a href="#[67]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_memset
@@ -441,13 +442,13 @@ Global Symbols
 <BR><BR>[Called By]<UL><LI><a href="#[63]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_uldivmod
 </UL>
 
-<P><STRONG><a name="[10d]"></a>_ll_shift_l</STRONG> (Thumb, 0 bytes, Stack size 0 bytes, llshl.o(.text), UNUSED)
+<P><STRONG><a name="[10e]"></a>_ll_shift_l</STRONG> (Thumb, 0 bytes, Stack size 0 bytes, llshl.o(.text), UNUSED)
 
 <P><STRONG><a name="[64]"></a>__aeabi_llsr</STRONG> (Thumb, 32 bytes, Stack size 0 bytes, llushr.o(.text))
 <BR><BR>[Called By]<UL><LI><a href="#[63]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_uldivmod
 </UL>
 
-<P><STRONG><a name="[10e]"></a>_ll_ushift_r</STRONG> (Thumb, 0 bytes, Stack size 0 bytes, llushr.o(.text), UNUSED)
+<P><STRONG><a name="[10f]"></a>_ll_ushift_r</STRONG> (Thumb, 0 bytes, Stack size 0 bytes, llushr.o(.text), UNUSED)
 
 <P><STRONG><a name="[62]"></a>__scatterload</STRONG> (Thumb, 28 bytes, Stack size 0 bytes, init.o(.text))
 <BR><BR>[Calls]<UL><LI><a href="#[69]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__main_after_scatterload
@@ -455,7 +456,7 @@ Global Symbols
 <BR>[Called By]<UL><LI><a href="#[61]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;_main_scatterload
 </UL>
 
-<P><STRONG><a name="[10f]"></a>__scatterload_rt2</STRONG> (Thumb, 0 bytes, Stack size 0 bytes, init.o(.text), UNUSED)
+<P><STRONG><a name="[110]"></a>__scatterload_rt2</STRONG> (Thumb, 0 bytes, Stack size 0 bytes, init.o(.text), UNUSED)
 
 <P><STRONG><a name="[6d]"></a>BootParams_Default</STRONG> (Thumb, 30 bytes, Stack size 8 bytes, boot_params.o(i.BootParams_Default))
 <BR><BR>[Stack]<UL><LI>Max Depth = 8<LI>Call Chain = BootParams_Default
@@ -466,24 +467,28 @@ Global Symbols
 <BR>[Called By]<UL><LI><a href="#[ec]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Ota_End
 </UL>
 
-<P><STRONG><a name="[70]"></a>BootParams_Read</STRONG> (Thumb, 30 bytes, Stack size 8 bytes, boot_params.o(i.BootParams_Read))
-<BR><BR>[Stack]<UL><LI>Max Depth = 24<LI>Call Chain = BootParams_Read &rArr; read_and_verify
+<P><STRONG><a name="[70]"></a>BootParams_Read</STRONG> (Thumb, 68 bytes, Stack size 152 bytes, boot_params.o(i.BootParams_Read))
+<BR><BR>[Stack]<UL><LI>Max Depth = 168<LI>Call Chain = BootParams_Read &rArr; read_and_verify
 </UL>
 <BR>[Calls]<UL><LI><a href="#[71]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;read_and_verify
+<LI><a href="#[72]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_memcpy4
 </UL>
-<BR>[Called By]<UL><LI><a href="#[ec]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Ota_End
+<BR>[Called By]<UL><LI><a href="#[ee]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Ota_MarkBootOk
+<LI><a href="#[ec]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Ota_End
 </UL>
 
-<P><STRONG><a name="[72]"></a>BootParams_Write</STRONG> (Thumb, 64 bytes, Stack size 80 bytes, boot_params.o(i.BootParams_Write))
-<BR><BR>[Stack]<UL><LI>Max Depth = 184<LI>Call Chain = BootParams_Write &rArr; write_one_copy &rArr; HAL_FLASH_Program &rArr; FLASH_WaitForLastOperation
+<P><STRONG><a name="[73]"></a>BootParams_Write</STRONG> (Thumb, 112 bytes, Stack size 232 bytes, boot_params.o(i.BootParams_Write))
+<BR><BR>[Stack]<UL><LI>Max Depth = 336<LI>Call Chain = BootParams_Write &rArr; write_one_copy &rArr; HAL_FLASH_Program &rArr; FLASH_WaitForLastOperation
 </UL>
 <BR>[Calls]<UL><LI><a href="#[75]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;write_one_copy
+<LI><a href="#[71]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;read_and_verify
 <LI><a href="#[6f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;compute_self_crc
 <LI><a href="#[74]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_FLASH_Unlock
 <LI><a href="#[76]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_FLASH_Lock
-<LI><a href="#[73]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_memcpy4
+<LI><a href="#[72]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_memcpy4
 </UL>
-<BR>[Called By]<UL><LI><a href="#[ec]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Ota_End
+<BR>[Called By]<UL><LI><a href="#[ee]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Ota_MarkBootOk
+<LI><a href="#[ec]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Ota_End
 </UL>
 
 <P><STRONG><a name="[4]"></a>BusFault_Handler</STRONG> (Thumb, 2 bytes, Stack size 0 bytes, stm32f4xx_it.o(i.BusFault_Handler))
@@ -493,11 +498,11 @@ Global Symbols
 </UL>
 <BR>[Address Reference Count : 1]<UL><LI> startup_stm32f407xx.o(RESET)
 </UL>
-<P><STRONG><a name="[f9]"></a>Buzzer_Init</STRONG> (Thumb, 6 bytes, Stack size 0 bytes, buzzer.o(i.Buzzer_Init))
+<P><STRONG><a name="[fa]"></a>Buzzer_Init</STRONG> (Thumb, 6 bytes, Stack size 0 bytes, buzzer.o(i.Buzzer_Init))
 <BR><BR>[Called By]<UL><LI><a href="#[5b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
 </UL>
 
-<P><STRONG><a name="[77]"></a>Buzzer_PlayHajimi</STRONG> (Thumb, 154 bytes, Stack size 40 bytes, buzzer.o(i.Buzzer_PlayHajimi))
+<P><STRONG><a name="[77]"></a>Buzzer_PlayHajimi</STRONG> (Thumb, 166 bytes, Stack size 40 bytes, buzzer.o(i.Buzzer_PlayHajimi))
 <BR><BR>[Stack]<UL><LI>Max Depth = 60<LI>Call Chain = Buzzer_PlayHajimi &rArr; HAL_TIM_PWM_Stop &rArr; TIM_CCxChannelCmd
 </UL>
 <BR>[Calls]<UL><LI><a href="#[78]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_GPIO_WritePin
@@ -552,7 +557,7 @@ Global Symbols
 <LI><a href="#[e2]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;MX_I2C1_Init
 </UL>
 
-<P><STRONG><a name="[fc]"></a>EspComm_GetGearCmd</STRONG> (Thumb, 4 bytes, Stack size 0 bytes, esp_comm.o(i.EspComm_GetGearCmd))
+<P><STRONG><a name="[fd]"></a>EspComm_GetGearCmd</STRONG> (Thumb, 4 bytes, Stack size 0 bytes, esp_comm.o(i.EspComm_GetGearCmd))
 <BR><BR>[Called By]<UL><LI><a href="#[5b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
 </UL>
 
@@ -566,7 +571,7 @@ Global Symbols
 </UL>
 
 <P><STRONG><a name="[85]"></a>EspComm_Poll</STRONG> (Thumb, 284 bytes, Stack size 32 bytes, esp_comm.o(i.EspComm_Poll))
-<BR><BR>[Stack]<UL><LI>Max Depth = 320<LI>Call Chain = EspComm_Poll &rArr; OtaProto_HandleEnd &rArr; Ota_End &rArr; BootParams_Write &rArr; write_one_copy &rArr; HAL_FLASH_Program &rArr; FLASH_WaitForLastOperation
+<BR><BR>[Stack]<UL><LI>Max Depth = 472<LI>Call Chain = EspComm_Poll &rArr; OtaProto_HandleEnd &rArr; Ota_End &rArr; BootParams_Write &rArr; write_one_copy &rArr; HAL_FLASH_Program &rArr; FLASH_WaitForLastOperation
 </UL>
 <BR>[Calls]<UL><LI><a href="#[88]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;OtaProto_HandleStart
 <LI><a href="#[8b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;OtaProto_HandleEnd
@@ -579,7 +584,7 @@ Global Symbols
 <BR>[Called By]<UL><LI><a href="#[5b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
 </UL>
 
-<P><STRONG><a name="[f6]"></a>EspComm_RxISR</STRONG> (Thumb, 210 bytes, Stack size 16 bytes, esp_comm.o(i.EspComm_RxISR))
+<P><STRONG><a name="[f7]"></a>EspComm_RxISR</STRONG> (Thumb, 210 bytes, Stack size 16 bytes, esp_comm.o(i.EspComm_RxISR))
 <BR><BR>[Stack]<UL><LI>Max Depth = 16<LI>Call Chain = EspComm_RxISR
 </UL>
 <BR>[Called By]<UL><LI><a href="#[30]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;USART2_IRQHandler
@@ -593,7 +598,7 @@ Global Symbols
 <BR>[Called By]<UL><LI><a href="#[5b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
 </UL>
 
-<P><STRONG><a name="[fa]"></a>EspComm_TakeOtaSelfTestRequest</STRONG> (Thumb, 10 bytes, Stack size 0 bytes, esp_comm.o(i.EspComm_TakeOtaSelfTestRequest))
+<P><STRONG><a name="[fb]"></a>EspComm_TakeOtaSelfTestRequest</STRONG> (Thumb, 10 bytes, Stack size 0 bytes, esp_comm.o(i.EspComm_TakeOtaSelfTestRequest))
 <BR><BR>[Called By]<UL><LI><a href="#[5b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
 </UL>
 
@@ -608,8 +613,8 @@ Global Symbols
 <P><STRONG><a name="[8e]"></a>FLASH_WaitForLastOperation</STRONG> (Thumb, 72 bytes, Stack size 16 bytes, stm32f4xx_hal_flash.o(i.FLASH_WaitForLastOperation))
 <BR><BR>[Stack]<UL><LI>Max Depth = 16<LI>Call Chain = FLASH_WaitForLastOperation
 </UL>
-<BR>[Calls]<UL><LI><a href="#[90]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FLASH_SetErrorCode
-<LI><a href="#[8f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_GetTick
+<BR>[Calls]<UL><LI><a href="#[8f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_GetTick
+<LI><a href="#[90]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FLASH_SetErrorCode
 </UL>
 <BR>[Called By]<UL><LI><a href="#[a2]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_FLASH_Program
 <LI><a href="#[9e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_FLASHEx_Erase
@@ -686,15 +691,15 @@ Global Symbols
 </UL>
 <BR>[Calls]<UL><LI><a href="#[99]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_DMA_Start_IT
 </UL>
-<BR>[Called By]<UL><LI><a href="#[f1]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;SensorAcq_Start
+<BR>[Called By]<UL><LI><a href="#[f2]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;SensorAcq_Start
 </UL>
 
 <P><STRONG><a name="[9a]"></a>HAL_DMA_Init</STRONG> (Thumb, 206 bytes, Stack size 24 bytes, stm32f4xx_hal_dma.o(i.HAL_DMA_Init))
 <BR><BR>[Stack]<UL><LI>Max Depth = 32<LI>Call Chain = HAL_DMA_Init &rArr; DMA_CheckFifoParam
 </UL>
-<BR>[Calls]<UL><LI><a href="#[9b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;DMA_CheckFifoParam
+<BR>[Calls]<UL><LI><a href="#[8f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_GetTick
+<LI><a href="#[9b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;DMA_CheckFifoParam
 <LI><a href="#[9c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;DMA_CalcBaseAndBitshift
-<LI><a href="#[8f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_GetTick
 </UL>
 <BR>[Called By]<UL><LI><a href="#[df]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;MX_ADC1_Init
 </UL>
@@ -712,7 +717,7 @@ Global Symbols
 </UL>
 <BR>[Calls]<UL><LI><a href="#[8f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_GetTick
 </UL>
-<BR>[Called By]<UL><LI><a href="#[f0]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;PowerCtrl_StartupSequence
+<BR>[Called By]<UL><LI><a href="#[f1]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;PowerCtrl_StartupSequence
 <LI><a href="#[77]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Buzzer_PlayHajimi
 <LI><a href="#[5b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
 </UL>
@@ -730,7 +735,7 @@ Global Symbols
 </UL>
 
 <P><STRONG><a name="[76]"></a>HAL_FLASH_Lock</STRONG> (Thumb, 14 bytes, Stack size 0 bytes, stm32f4xx_hal_flash.o(i.HAL_FLASH_Lock))
-<BR><BR>[Called By]<UL><LI><a href="#[72]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;BootParams_Write
+<BR><BR>[Called By]<UL><LI><a href="#[73]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;BootParams_Write
 <LI><a href="#[ea]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Ota_WriteChunk
 <LI><a href="#[ed]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Ota_Begin
 </UL>
@@ -749,7 +754,7 @@ Global Symbols
 </UL>
 
 <P><STRONG><a name="[74]"></a>HAL_FLASH_Unlock</STRONG> (Thumb, 32 bytes, Stack size 0 bytes, stm32f4xx_hal_flash.o(i.HAL_FLASH_Unlock))
-<BR><BR>[Called By]<UL><LI><a href="#[72]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;BootParams_Write
+<BR><BR>[Called By]<UL><LI><a href="#[73]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;BootParams_Write
 <LI><a href="#[ea]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Ota_WriteChunk
 <LI><a href="#[ed]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Ota_Begin
 </UL>
@@ -763,8 +768,8 @@ Global Symbols
 </UL>
 
 <P><STRONG><a name="[78]"></a>HAL_GPIO_WritePin</STRONG> (Thumb, 10 bytes, Stack size 0 bytes, stm32f4xx_hal_gpio.o(i.HAL_GPIO_WritePin))
-<BR><BR>[Called By]<UL><LI><a href="#[f0]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;PowerCtrl_StartupSequence
-<LI><a href="#[ef]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;PowerCtrl_EnablePump
+<BR><BR>[Called By]<UL><LI><a href="#[f1]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;PowerCtrl_StartupSequence
+<LI><a href="#[f0]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;PowerCtrl_EnablePump
 <LI><a href="#[e1]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;MX_GPIO_Init
 <LI><a href="#[92]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FanCtrl_Enable
 <LI><a href="#[80]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;CompressorCtrl_SetBrake
@@ -778,14 +783,15 @@ Global Symbols
 <LI><a href="#[b9]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_RCC_ClockConfig
 <LI><a href="#[7a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_Delay
 <LI><a href="#[9a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_DMA_Init
+<LI><a href="#[5b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
+<LI><a href="#[d8]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;UART_WaitOnFlagUntilTimeout
+<LI><a href="#[8e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FLASH_WaitForLastOperation
 <LI><a href="#[b0]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;I2C_WaitOnTXEFlagUntilTimeout
 <LI><a href="#[ad]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;I2C_WaitOnRXNEFlagUntilTimeout
 <LI><a href="#[d9]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;I2C_WaitOnMasterAddressFlagUntilTimeout
 <LI><a href="#[ab]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;I2C_WaitOnFlagUntilTimeout
 <LI><a href="#[b1]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;I2C_WaitOnBTFFlagUntilTimeout
 <LI><a href="#[d7]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_UART_Transmit
-<LI><a href="#[d8]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;UART_WaitOnFlagUntilTimeout
-<LI><a href="#[8e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FLASH_WaitForLastOperation
 </UL>
 
 <P><STRONG><a name="[a7]"></a>HAL_I2C_Init</STRONG> (Thumb, 376 bytes, Stack size 16 bytes, stm32f4xx_hal_i2c.o(i.HAL_I2C_Init))
@@ -802,10 +808,10 @@ Global Symbols
 <P><STRONG><a name="[aa]"></a>HAL_I2C_Mem_Read</STRONG> (Thumb, 502 bytes, Stack size 64 bytes, stm32f4xx_hal_i2c.o(i.HAL_I2C_Mem_Read))
 <BR><BR>[Stack]<UL><LI>Max Depth = 136<LI>Call Chain = HAL_I2C_Mem_Read &rArr; I2C_RequestMemoryRead &rArr; I2C_WaitOnMasterAddressFlagUntilTimeout
 </UL>
-<BR>[Calls]<UL><LI><a href="#[ad]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;I2C_WaitOnRXNEFlagUntilTimeout
+<BR>[Calls]<UL><LI><a href="#[8f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_GetTick
+<LI><a href="#[ad]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;I2C_WaitOnRXNEFlagUntilTimeout
 <LI><a href="#[ab]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;I2C_WaitOnFlagUntilTimeout
 <LI><a href="#[ac]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;I2C_RequestMemoryRead
-<LI><a href="#[8f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_GetTick
 </UL>
 <BR>[Called By]<UL><LI><a href="#[dd]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;INA226_ReadReg
 </UL>
@@ -813,11 +819,11 @@ Global Symbols
 <P><STRONG><a name="[ae]"></a>HAL_I2C_Mem_Write</STRONG> (Thumb, 294 bytes, Stack size 64 bytes, stm32f4xx_hal_i2c.o(i.HAL_I2C_Mem_Write))
 <BR><BR>[Stack]<UL><LI>Max Depth = 128<LI>Call Chain = HAL_I2C_Mem_Write &rArr; I2C_RequestMemoryWrite &rArr; I2C_WaitOnMasterAddressFlagUntilTimeout
 </UL>
-<BR>[Calls]<UL><LI><a href="#[b0]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;I2C_WaitOnTXEFlagUntilTimeout
+<BR>[Calls]<UL><LI><a href="#[8f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_GetTick
+<LI><a href="#[b0]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;I2C_WaitOnTXEFlagUntilTimeout
 <LI><a href="#[ab]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;I2C_WaitOnFlagUntilTimeout
 <LI><a href="#[b1]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;I2C_WaitOnBTFFlagUntilTimeout
 <LI><a href="#[af]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;I2C_RequestMemoryWrite
-<LI><a href="#[8f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_GetTick
 </UL>
 <BR>[Called By]<UL><LI><a href="#[dc]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;INA226_WriteReg
 </UL>
@@ -831,7 +837,7 @@ Global Symbols
 <BR>[Called By]<UL><LI><a href="#[a7]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_I2C_Init
 </UL>
 
-<P><STRONG><a name="[f2]"></a>HAL_IncTick</STRONG> (Thumb, 12 bytes, Stack size 0 bytes, stm32f4xx_hal.o(i.HAL_IncTick))
+<P><STRONG><a name="[f3]"></a>HAL_IncTick</STRONG> (Thumb, 12 bytes, Stack size 0 bytes, stm32f4xx_hal.o(i.HAL_IncTick))
 <BR><BR>[Called By]<UL><LI><a href="#[9]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;SysTick_Handler
 </UL>
 
@@ -885,11 +891,11 @@ Global Symbols
 <P><STRONG><a name="[b9]"></a>HAL_RCC_ClockConfig</STRONG> (Thumb, 288 bytes, Stack size 32 bytes, stm32f4xx_hal_rcc.o(i.HAL_RCC_ClockConfig))
 <BR><BR>[Stack]<UL><LI>Max Depth = 80<LI>Call Chain = HAL_RCC_ClockConfig &rArr; HAL_RCC_GetSysClockFreq &rArr; __aeabi_uldivmod
 </UL>
-<BR>[Calls]<UL><LI><a href="#[ba]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_RCC_GetSysClockFreq
+<BR>[Calls]<UL><LI><a href="#[8f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_GetTick
+<LI><a href="#[ba]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_RCC_GetSysClockFreq
 <LI><a href="#[b5]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_InitTick
-<LI><a href="#[8f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_GetTick
 </UL>
-<BR>[Called By]<UL><LI><a href="#[f3]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;SystemClock_Config
+<BR>[Called By]<UL><LI><a href="#[f4]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;SystemClock_Config
 </UL>
 
 <P><STRONG><a name="[a9]"></a>HAL_RCC_GetPCLK1Freq</STRONG> (Thumb, 20 bytes, Stack size 0 bytes, stm32f4xx_hal_rcc.o(i.HAL_RCC_GetPCLK1Freq))
@@ -897,7 +903,7 @@ Global Symbols
 <LI><a href="#[d6]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;UART_SetConfig
 </UL>
 
-<P><STRONG><a name="[f5]"></a>HAL_RCC_GetPCLK2Freq</STRONG> (Thumb, 20 bytes, Stack size 0 bytes, stm32f4xx_hal_rcc.o(i.HAL_RCC_GetPCLK2Freq))
+<P><STRONG><a name="[f6]"></a>HAL_RCC_GetPCLK2Freq</STRONG> (Thumb, 20 bytes, Stack size 0 bytes, stm32f4xx_hal_rcc.o(i.HAL_RCC_GetPCLK2Freq))
 <BR><BR>[Called By]<UL><LI><a href="#[d6]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;UART_SetConfig
 </UL>
 
@@ -914,7 +920,7 @@ Global Symbols
 </UL>
 <BR>[Calls]<UL><LI><a href="#[8f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_GetTick
 </UL>
-<BR>[Called By]<UL><LI><a href="#[f3]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;SystemClock_Config
+<BR>[Called By]<UL><LI><a href="#[f4]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;SystemClock_Config
 </UL>
 
 <P><STRONG><a name="[b7]"></a>HAL_SYSTICK_Config</STRONG> (Thumb, 40 bytes, Stack size 8 bytes, stm32f4xx_hal_cortex.o(i.HAL_SYSTICK_Config))
@@ -1081,8 +1087,8 @@ Global Symbols
 <P><STRONG><a name="[d7]"></a>HAL_UART_Transmit</STRONG> (Thumb, 160 bytes, Stack size 32 bytes, stm32f4xx_hal_uart.o(i.HAL_UART_Transmit))
 <BR><BR>[Stack]<UL><LI>Max Depth = 64<LI>Call Chain = HAL_UART_Transmit &rArr; UART_WaitOnFlagUntilTimeout
 </UL>
-<BR>[Calls]<UL><LI><a href="#[d8]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;UART_WaitOnFlagUntilTimeout
-<LI><a href="#[8f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_GetTick
+<BR>[Calls]<UL><LI><a href="#[8f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_GetTick
+<LI><a href="#[d8]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;UART_WaitOnFlagUntilTimeout
 </UL>
 <BR>[Called By]<UL><LI><a href="#[86]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;send_raw
 </UL>
@@ -1094,11 +1100,11 @@ Global Symbols
 </UL>
 <BR>[Address Reference Count : 1]<UL><LI> startup_stm32f407xx.o(RESET)
 </UL>
-<P><STRONG><a name="[100]"></a>INA226_GetPower</STRONG> (Thumb, 6 bytes, Stack size 0 bytes, ina226.o(i.INA226_GetPower))
+<P><STRONG><a name="[101]"></a>INA226_GetPower</STRONG> (Thumb, 6 bytes, Stack size 0 bytes, ina226.o(i.INA226_GetPower))
 <BR><BR>[Called By]<UL><LI><a href="#[5b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
 </UL>
 
-<P><STRONG><a name="[ff]"></a>INA226_GetVoltage</STRONG> (Thumb, 6 bytes, Stack size 0 bytes, ina226.o(i.INA226_GetVoltage))
+<P><STRONG><a name="[100]"></a>INA226_GetVoltage</STRONG> (Thumb, 6 bytes, Stack size 0 bytes, ina226.o(i.INA226_GetVoltage))
 <BR><BR>[Called By]<UL><LI><a href="#[5b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
 </UL>
 
@@ -1124,7 +1130,7 @@ Global Symbols
 <BR>[Calls]<UL><LI><a href="#[9a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_DMA_Init
 <LI><a href="#[95]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_ADC_Init
 <LI><a href="#[e0]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_ADC_ConfigChannel
-<LI><a href="#[73]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_memcpy4
+<LI><a href="#[72]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_memcpy4
 </UL>
 <BR>[Called By]<UL><LI><a href="#[5b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
 </UL>
@@ -1236,7 +1242,7 @@ Global Symbols
 </UL>
 
 <P><STRONG><a name="[8b]"></a>OtaProto_HandleEnd</STRONG> (Thumb, 82 bytes, Stack size 16 bytes, ota.o(i.OtaProto_HandleEnd))
-<BR><BR>[Stack]<UL><LI>Max Depth = 288<LI>Call Chain = OtaProto_HandleEnd &rArr; Ota_End &rArr; BootParams_Write &rArr; write_one_copy &rArr; HAL_FLASH_Program &rArr; FLASH_WaitForLastOperation
+<BR><BR>[Stack]<UL><LI>Max Depth = 440<LI>Call Chain = OtaProto_HandleEnd &rArr; Ota_End &rArr; BootParams_Write &rArr; write_one_copy &rArr; HAL_FLASH_Program &rArr; FLASH_WaitForLastOperation
 </UL>
 <BR>[Calls]<UL><LI><a href="#[eb]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;crc32_compute
 <LI><a href="#[ec]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Ota_End
@@ -1252,11 +1258,11 @@ Global Symbols
 <BR>[Called By]<UL><LI><a href="#[85]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;EspComm_Poll
 </UL>
 
-<P><STRONG><a name="[101]"></a>OtaProto_IsBusy</STRONG> (Thumb, 12 bytes, Stack size 0 bytes, ota.o(i.OtaProto_IsBusy))
+<P><STRONG><a name="[102]"></a>OtaProto_IsBusy</STRONG> (Thumb, 12 bytes, Stack size 0 bytes, ota.o(i.OtaProto_IsBusy))
 <BR><BR>[Called By]<UL><LI><a href="#[5b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
 </UL>
 
-<P><STRONG><a name="[fb]"></a>OtaProto_TakeResetRequest</STRONG> (Thumb, 10 bytes, Stack size 0 bytes, ota.o(i.OtaProto_TakeResetRequest))
+<P><STRONG><a name="[fc]"></a>OtaProto_TakeResetRequest</STRONG> (Thumb, 10 bytes, Stack size 0 bytes, ota.o(i.OtaProto_TakeResetRequest))
 <BR><BR>[Called By]<UL><LI><a href="#[5b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
 </UL>
 
@@ -1268,24 +1274,33 @@ Global Symbols
 <LI><a href="#[9e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_FLASHEx_Erase
 <LI><a href="#[6e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_memclr4
 </UL>
-<BR>[Called By]<UL><LI><a href="#[ee]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Ota_SelfTest
+<BR>[Called By]<UL><LI><a href="#[ef]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Ota_SelfTest
 <LI><a href="#[88]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;OtaProto_HandleStart
 </UL>
 
 <P><STRONG><a name="[ec]"></a>Ota_End</STRONG> (Thumb, 76 bytes, Stack size 88 bytes, ota.o(i.Ota_End))
-<BR><BR>[Stack]<UL><LI>Max Depth = 272<LI>Call Chain = Ota_End &rArr; BootParams_Write &rArr; write_one_copy &rArr; HAL_FLASH_Program &rArr; FLASH_WaitForLastOperation
+<BR><BR>[Stack]<UL><LI>Max Depth = 424<LI>Call Chain = Ota_End &rArr; BootParams_Write &rArr; write_one_copy &rArr; HAL_FLASH_Program &rArr; FLASH_WaitForLastOperation
 </UL>
 <BR>[Calls]<UL><LI><a href="#[eb]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;crc32_compute
-<LI><a href="#[72]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;BootParams_Write
+<LI><a href="#[73]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;BootParams_Write
 <LI><a href="#[70]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;BootParams_Read
 <LI><a href="#[6d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;BootParams_Default
 </UL>
-<BR>[Called By]<UL><LI><a href="#[ee]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Ota_SelfTest
+<BR>[Called By]<UL><LI><a href="#[ef]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Ota_SelfTest
 <LI><a href="#[8b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;OtaProto_HandleEnd
 </UL>
 
-<P><STRONG><a name="[ee]"></a>Ota_SelfTest</STRONG> (Thumb, 122 bytes, Stack size 24 bytes, ota.o(i.Ota_SelfTest))
-<BR><BR>[Stack]<UL><LI>Max Depth = 296<LI>Call Chain = Ota_SelfTest &rArr; Ota_End &rArr; BootParams_Write &rArr; write_one_copy &rArr; HAL_FLASH_Program &rArr; FLASH_WaitForLastOperation
+<P><STRONG><a name="[ee]"></a>Ota_MarkBootOk</STRONG> (Thumb, 42 bytes, Stack size 72 bytes, ota.o(i.Ota_MarkBootOk))
+<BR><BR>[Stack]<UL><LI>Max Depth = 408<LI>Call Chain = Ota_MarkBootOk &rArr; BootParams_Write &rArr; write_one_copy &rArr; HAL_FLASH_Program &rArr; FLASH_WaitForLastOperation
+</UL>
+<BR>[Calls]<UL><LI><a href="#[73]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;BootParams_Write
+<LI><a href="#[70]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;BootParams_Read
+</UL>
+<BR>[Called By]<UL><LI><a href="#[5b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
+</UL>
+
+<P><STRONG><a name="[ef]"></a>Ota_SelfTest</STRONG> (Thumb, 122 bytes, Stack size 24 bytes, ota.o(i.Ota_SelfTest))
+<BR><BR>[Stack]<UL><LI>Max Depth = 448<LI>Call Chain = Ota_SelfTest &rArr; Ota_End &rArr; BootParams_Write &rArr; write_one_copy &rArr; HAL_FLASH_Program &rArr; FLASH_WaitForLastOperation
 </UL>
 <BR>[Calls]<UL><LI><a href="#[ea]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Ota_WriteChunk
 <LI><a href="#[ec]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Ota_End
@@ -1301,20 +1316,20 @@ Global Symbols
 <LI><a href="#[a2]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_FLASH_Program
 <LI><a href="#[76]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_FLASH_Lock
 </UL>
-<BR>[Called By]<UL><LI><a href="#[ee]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Ota_SelfTest
+<BR>[Called By]<UL><LI><a href="#[ef]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Ota_SelfTest
 <LI><a href="#[89]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;OtaProto_HandleData
 </UL>
 
 <P><STRONG><a name="[8]"></a>PendSV_Handler</STRONG> (Thumb, 2 bytes, Stack size 0 bytes, stm32f4xx_it.o(i.PendSV_Handler))
 <BR>[Address Reference Count : 1]<UL><LI> startup_stm32f407xx.o(RESET)
 </UL>
-<P><STRONG><a name="[ef]"></a>PowerCtrl_EnablePump</STRONG> (Thumb, 18 bytes, Stack size 0 bytes, power_ctrl.o(i.PowerCtrl_EnablePump))
+<P><STRONG><a name="[f0]"></a>PowerCtrl_EnablePump</STRONG> (Thumb, 18 bytes, Stack size 0 bytes, power_ctrl.o(i.PowerCtrl_EnablePump))
 <BR><BR>[Calls]<UL><LI><a href="#[78]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_GPIO_WritePin
 </UL>
 <BR>[Called By]<UL><LI><a href="#[5b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
 </UL>
 
-<P><STRONG><a name="[f0]"></a>PowerCtrl_StartupSequence</STRONG> (Thumb, 82 bytes, Stack size 8 bytes, power_ctrl.o(i.PowerCtrl_StartupSequence))
+<P><STRONG><a name="[f1]"></a>PowerCtrl_StartupSequence</STRONG> (Thumb, 82 bytes, Stack size 8 bytes, power_ctrl.o(i.PowerCtrl_StartupSequence))
 <BR><BR>[Stack]<UL><LI>Max Depth = 24<LI>Call Chain = PowerCtrl_StartupSequence &rArr; HAL_Delay
 </UL>
 <BR>[Calls]<UL><LI><a href="#[78]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_GPIO_WritePin
@@ -1326,21 +1341,21 @@ Global Symbols
 <P><STRONG><a name="[6]"></a>SVC_Handler</STRONG> (Thumb, 2 bytes, Stack size 0 bytes, stm32f4xx_it.o(i.SVC_Handler))
 <BR>[Address Reference Count : 1]<UL><LI> startup_stm32f407xx.o(RESET)
 </UL>
-<P><STRONG><a name="[fd]"></a>SensorAcq_GetNTC</STRONG> (Thumb, 16 bytes, Stack size 0 bytes, sensor_acq.o(i.SensorAcq_GetNTC))
+<P><STRONG><a name="[fe]"></a>SensorAcq_GetNTC</STRONG> (Thumb, 16 bytes, Stack size 0 bytes, sensor_acq.o(i.SensorAcq_GetNTC))
 <BR><BR>[Called By]<UL><LI><a href="#[5b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
 </UL>
 
-<P><STRONG><a name="[f8]"></a>SensorAcq_Init</STRONG> (Thumb, 6 bytes, Stack size 0 bytes, sensor_acq.o(i.SensorAcq_Init))
+<P><STRONG><a name="[f9]"></a>SensorAcq_Init</STRONG> (Thumb, 6 bytes, Stack size 0 bytes, sensor_acq.o(i.SensorAcq_Init))
 <BR><BR>[Called By]<UL><LI><a href="#[5b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
 </UL>
 
-<P><STRONG><a name="[fe]"></a>SensorAcq_NTCToCelsius</STRONG> (Thumb, 116 bytes, Stack size 12 bytes, sensor_acq.o(i.SensorAcq_NTCToCelsius))
+<P><STRONG><a name="[ff]"></a>SensorAcq_NTCToCelsius</STRONG> (Thumb, 116 bytes, Stack size 12 bytes, sensor_acq.o(i.SensorAcq_NTCToCelsius))
 <BR><BR>[Stack]<UL><LI>Max Depth = 12<LI>Call Chain = SensorAcq_NTCToCelsius
 </UL>
 <BR>[Called By]<UL><LI><a href="#[5b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
 </UL>
 
-<P><STRONG><a name="[f1]"></a>SensorAcq_Start</STRONG> (Thumb, 12 bytes, Stack size 0 bytes, sensor_acq.o(i.SensorAcq_Start))
+<P><STRONG><a name="[f2]"></a>SensorAcq_Start</STRONG> (Thumb, 12 bytes, Stack size 0 bytes, sensor_acq.o(i.SensorAcq_Start))
 <BR><BR>[Stack]<UL><LI>Max Depth = 60<LI>Call Chain = SensorAcq_Start &rArr; HAL_ADC_Start_DMA &rArr; HAL_DMA_Start_IT &rArr; DMA_SetConfig
 </UL>
 <BR>[Calls]<UL><LI><a href="#[98]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_ADC_Start_DMA
@@ -1349,11 +1364,11 @@ Global Symbols
 </UL>
 
 <P><STRONG><a name="[9]"></a>SysTick_Handler</STRONG> (Thumb, 4 bytes, Stack size 0 bytes, stm32f4xx_it.o(i.SysTick_Handler))
-<BR><BR>[Calls]<UL><LI><a href="#[f2]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_IncTick
+<BR><BR>[Calls]<UL><LI><a href="#[f3]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_IncTick
 </UL>
 <BR>[Address Reference Count : 1]<UL><LI> startup_stm32f407xx.o(RESET)
 </UL>
-<P><STRONG><a name="[f3]"></a>SystemClock_Config</STRONG> (Thumb, 138 bytes, Stack size 88 bytes, main.o(i.SystemClock_Config))
+<P><STRONG><a name="[f4]"></a>SystemClock_Config</STRONG> (Thumb, 138 bytes, Stack size 88 bytes, main.o(i.SystemClock_Config))
 <BR><BR>[Stack]<UL><LI>Max Depth = 168<LI>Call Chain = SystemClock_Config &rArr; HAL_RCC_ClockConfig &rArr; HAL_RCC_GetSysClockFreq &rArr; __aeabi_uldivmod
 </UL>
 <BR>[Calls]<UL><LI><a href="#[bb]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_RCC_OscConfig
@@ -1417,7 +1432,7 @@ Global Symbols
 <P><STRONG><a name="[30]"></a>USART2_IRQHandler</STRONG> (Thumb, 4 bytes, Stack size 0 bytes, stm32f4xx_it.o(i.USART2_IRQHandler))
 <BR><BR>[Stack]<UL><LI>Max Depth = 16<LI>Call Chain = USART2_IRQHandler &rArr; EspComm_RxISR
 </UL>
-<BR>[Calls]<UL><LI><a href="#[f6]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;EspComm_RxISR
+<BR>[Calls]<UL><LI><a href="#[f7]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;EspComm_RxISR
 </UL>
 <BR>[Address Reference Count : 1]<UL><LI> startup_stm32f407xx.o(RESET)
 </UL>
@@ -1428,39 +1443,40 @@ Global Symbols
 </UL>
 <BR>[Address Reference Count : 1]<UL><LI> startup_stm32f407xx.o(RESET)
 </UL>
-<P><STRONG><a name="[110]"></a>__scatterload_copy</STRONG> (Thumb, 14 bytes, Stack size unknown bytes, handlers.o(i.__scatterload_copy), UNUSED)
+<P><STRONG><a name="[111]"></a>__scatterload_copy</STRONG> (Thumb, 14 bytes, Stack size unknown bytes, handlers.o(i.__scatterload_copy), UNUSED)
 
-<P><STRONG><a name="[111]"></a>__scatterload_null</STRONG> (Thumb, 2 bytes, Stack size unknown bytes, handlers.o(i.__scatterload_null), UNUSED)
+<P><STRONG><a name="[112]"></a>__scatterload_null</STRONG> (Thumb, 2 bytes, Stack size unknown bytes, handlers.o(i.__scatterload_null), UNUSED)
 
-<P><STRONG><a name="[112]"></a>__scatterload_zeroinit</STRONG> (Thumb, 14 bytes, Stack size unknown bytes, handlers.o(i.__scatterload_zeroinit), UNUSED)
+<P><STRONG><a name="[113]"></a>__scatterload_zeroinit</STRONG> (Thumb, 14 bytes, Stack size unknown bytes, handlers.o(i.__scatterload_zeroinit), UNUSED)
 
 <P><STRONG><a name="[eb]"></a>crc32_compute</STRONG> (Thumb, 10 bytes, Stack size 0 bytes, crc32.o(i.crc32_compute))
 <BR><BR>[Stack]<UL><LI>Max Depth = 12<LI>Call Chain = crc32_compute &rArr; crc32_update
 </UL>
-<BR>[Calls]<UL><LI><a href="#[f7]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;crc32_update
+<BR>[Calls]<UL><LI><a href="#[f8]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;crc32_update
 </UL>
 <BR>[Called By]<UL><LI><a href="#[ec]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Ota_End
 <LI><a href="#[8b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;OtaProto_HandleEnd
 </UL>
 
-<P><STRONG><a name="[f7]"></a>crc32_update</STRONG> (Thumb, 42 bytes, Stack size 12 bytes, crc32.o(i.crc32_update))
+<P><STRONG><a name="[f8]"></a>crc32_update</STRONG> (Thumb, 42 bytes, Stack size 12 bytes, crc32.o(i.crc32_update))
 <BR><BR>[Stack]<UL><LI>Max Depth = 12<LI>Call Chain = crc32_update
 </UL>
 <BR>[Called By]<UL><LI><a href="#[eb]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;crc32_compute
 </UL>
 
-<P><STRONG><a name="[5b]"></a>main</STRONG> (Thumb, 576 bytes, Stack size 24 bytes, main.o(i.main))
-<BR><BR>[Stack]<UL><LI>Max Depth = 344<LI>Call Chain = main &rArr; EspComm_Poll &rArr; OtaProto_HandleEnd &rArr; Ota_End &rArr; BootParams_Write &rArr; write_one_copy &rArr; HAL_FLASH_Program &rArr; FLASH_WaitForLastOperation
+<P><STRONG><a name="[5b]"></a>main</STRONG> (Thumb, 620 bytes, Stack size 24 bytes, main.o(i.main))
+<BR><BR>[Stack]<UL><LI>Max Depth = 496<LI>Call Chain = main &rArr; EspComm_Poll &rArr; OtaProto_HandleEnd &rArr; Ota_End &rArr; BootParams_Write &rArr; write_one_copy &rArr; HAL_FLASH_Program &rArr; FLASH_WaitForLastOperation
 </UL>
-<BR>[Calls]<UL><LI><a href="#[f1]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;SensorAcq_Start
-<LI><a href="#[fe]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;SensorAcq_NTCToCelsius
-<LI><a href="#[f8]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;SensorAcq_Init
-<LI><a href="#[fd]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;SensorAcq_GetNTC
-<LI><a href="#[f0]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;PowerCtrl_StartupSequence
-<LI><a href="#[ef]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;PowerCtrl_EnablePump
-<LI><a href="#[ee]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Ota_SelfTest
-<LI><a href="#[fb]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;OtaProto_TakeResetRequest
-<LI><a href="#[101]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;OtaProto_IsBusy
+<BR>[Calls]<UL><LI><a href="#[f2]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;SensorAcq_Start
+<LI><a href="#[ff]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;SensorAcq_NTCToCelsius
+<LI><a href="#[f9]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;SensorAcq_Init
+<LI><a href="#[fe]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;SensorAcq_GetNTC
+<LI><a href="#[f1]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;PowerCtrl_StartupSequence
+<LI><a href="#[f0]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;PowerCtrl_EnablePump
+<LI><a href="#[ef]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Ota_SelfTest
+<LI><a href="#[ee]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Ota_MarkBootOk
+<LI><a href="#[fc]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;OtaProto_TakeResetRequest
+<LI><a href="#[102]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;OtaProto_IsBusy
 <LI><a href="#[e9]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;MX_USART2_UART_Init
 <LI><a href="#[e5]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;MX_I2C3_Init
 <LI><a href="#[e4]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;MX_I2C2_Init
@@ -1468,24 +1484,25 @@ Global Symbols
 <LI><a href="#[e1]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;MX_GPIO_Init
 <LI><a href="#[de]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;INA226_UpdateData
 <LI><a href="#[db]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;INA226_Init
-<LI><a href="#[ff]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;INA226_GetVoltage
-<LI><a href="#[100]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;INA226_GetPower
+<LI><a href="#[100]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;INA226_GetVoltage
+<LI><a href="#[101]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;INA226_GetPower
 <LI><a href="#[b3]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_Init
+<LI><a href="#[8f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_GetTick
 <LI><a href="#[7a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_Delay
 <LI><a href="#[94]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FanCtrl_SetDuty
 <LI><a href="#[93]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FanCtrl_Init
 <LI><a href="#[92]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FanCtrl_Enable
-<LI><a href="#[fa]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;EspComm_TakeOtaSelfTestRequest
+<LI><a href="#[fb]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;EspComm_TakeOtaSelfTestRequest
 <LI><a href="#[8d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;EspComm_SendStatus
 <LI><a href="#[85]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;EspComm_Poll
 <LI><a href="#[82]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;EspComm_Init
-<LI><a href="#[fc]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;EspComm_GetGearCmd
+<LI><a href="#[fd]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;EspComm_GetGearCmd
 <LI><a href="#[81]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;CompressorCtrl_SetDuty
 <LI><a href="#[80]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;CompressorCtrl_SetBrake
 <LI><a href="#[7e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;CompressorCtrl_Init
 <LI><a href="#[77]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Buzzer_PlayHajimi
-<LI><a href="#[f9]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Buzzer_Init
-<LI><a href="#[f3]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;SystemClock_Config
+<LI><a href="#[fa]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Buzzer_Init
+<LI><a href="#[f4]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;SystemClock_Config
 <LI><a href="#[e8]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;MX_TIM8_Init
 <LI><a href="#[e7]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;MX_TIM3_Init
 <LI><a href="#[e6]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;MX_TIM2_Init
@@ -1536,7 +1553,7 @@ Local Symbols
 
 <P><STRONG><a name="[6f]"></a>compute_self_crc</STRONG> (Thumb, 6 bytes, Stack size 0 bytes, boot_params.o(i.compute_self_crc))
 <BR><BR>[Called By]<UL><LI><a href="#[71]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;read_and_verify
-<LI><a href="#[72]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;BootParams_Write
+<LI><a href="#[73]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;BootParams_Write
 <LI><a href="#[6d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;BootParams_Default
 </UL>
 
@@ -1544,9 +1561,10 @@ Local Symbols
 <BR><BR>[Stack]<UL><LI>Max Depth = 16<LI>Call Chain = read_and_verify
 </UL>
 <BR>[Calls]<UL><LI><a href="#[6f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;compute_self_crc
-<LI><a href="#[73]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_memcpy4
+<LI><a href="#[72]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_memcpy4
 </UL>
-<BR>[Called By]<UL><LI><a href="#[70]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;BootParams_Read
+<BR>[Called By]<UL><LI><a href="#[73]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;BootParams_Write
+<LI><a href="#[70]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;BootParams_Read
 </UL>
 
 <P><STRONG><a name="[75]"></a>write_one_copy</STRONG> (Thumb, 120 bytes, Stack size 56 bytes, boot_params.o(i.write_one_copy))
@@ -1556,7 +1574,7 @@ Local Symbols
 <LI><a href="#[9e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_FLASHEx_Erase
 <LI><a href="#[6e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_memclr4
 </UL>
-<BR>[Called By]<UL><LI><a href="#[72]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;BootParams_Write
+<BR>[Called By]<UL><LI><a href="#[73]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;BootParams_Write
 </UL>
 
 <P><STRONG><a name="[da]"></a>I2C_IsAcknowledgeFailed</STRONG> (Thumb, 46 bytes, Stack size 0 bytes, stm32f4xx_hal_i2c.o(i.I2C_IsAcknowledgeFailed))
@@ -1587,8 +1605,8 @@ Local Symbols
 <P><STRONG><a name="[b1]"></a>I2C_WaitOnBTFFlagUntilTimeout</STRONG> (Thumb, 86 bytes, Stack size 16 bytes, stm32f4xx_hal_i2c.o(i.I2C_WaitOnBTFFlagUntilTimeout))
 <BR><BR>[Stack]<UL><LI>Max Depth = 16<LI>Call Chain = I2C_WaitOnBTFFlagUntilTimeout
 </UL>
-<BR>[Calls]<UL><LI><a href="#[da]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;I2C_IsAcknowledgeFailed
-<LI><a href="#[8f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_GetTick
+<BR>[Calls]<UL><LI><a href="#[8f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_GetTick
+<LI><a href="#[da]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;I2C_IsAcknowledgeFailed
 </UL>
 <BR>[Called By]<UL><LI><a href="#[ae]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_I2C_Mem_Write
 </UL>
@@ -1624,8 +1642,8 @@ Local Symbols
 <P><STRONG><a name="[b0]"></a>I2C_WaitOnTXEFlagUntilTimeout</STRONG> (Thumb, 86 bytes, Stack size 16 bytes, stm32f4xx_hal_i2c.o(i.I2C_WaitOnTXEFlagUntilTimeout))
 <BR><BR>[Stack]<UL><LI>Max Depth = 16<LI>Call Chain = I2C_WaitOnTXEFlagUntilTimeout
 </UL>
-<BR>[Calls]<UL><LI><a href="#[da]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;I2C_IsAcknowledgeFailed
-<LI><a href="#[8f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_GetTick
+<BR>[Calls]<UL><LI><a href="#[8f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_GetTick
+<LI><a href="#[da]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;I2C_IsAcknowledgeFailed
 </UL>
 <BR>[Called By]<UL><LI><a href="#[ae]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_I2C_Mem_Write
 <LI><a href="#[af]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;I2C_RequestMemoryWrite
@@ -1679,19 +1697,19 @@ Local Symbols
 <LI><a href="#[b7]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_SYSTICK_Config
 </UL>
 
-<P><STRONG><a name="[f4]"></a>UART_EndRxTransfer</STRONG> (Thumb, 78 bytes, Stack size 0 bytes, stm32f4xx_hal_uart.o(i.UART_EndRxTransfer))
-<BR><BR>[Calls]<UL><LI><a href="#[f4]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;UART_EndRxTransfer
+<P><STRONG><a name="[f5]"></a>UART_EndRxTransfer</STRONG> (Thumb, 78 bytes, Stack size 0 bytes, stm32f4xx_hal_uart.o(i.UART_EndRxTransfer))
+<BR><BR>[Calls]<UL><LI><a href="#[f5]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;UART_EndRxTransfer
 </UL>
 <BR>[Called By]<UL><LI><a href="#[d8]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;UART_WaitOnFlagUntilTimeout
-<LI><a href="#[f4]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;UART_EndRxTransfer
+<LI><a href="#[f5]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;UART_EndRxTransfer
 </UL>
 
 <P><STRONG><a name="[d6]"></a>UART_SetConfig</STRONG> (Thumb, 258 bytes, Stack size 16 bytes, stm32f4xx_hal_uart.o(i.UART_SetConfig))
 <BR><BR>[Stack]<UL><LI>Max Depth = 56<LI>Call Chain = UART_SetConfig &rArr; __aeabi_uldivmod
 </UL>
-<BR>[Calls]<UL><LI><a href="#[63]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_uldivmod
-<LI><a href="#[f5]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_RCC_GetPCLK2Freq
+<BR>[Calls]<UL><LI><a href="#[f6]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_RCC_GetPCLK2Freq
 <LI><a href="#[a9]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_RCC_GetPCLK1Freq
+<LI><a href="#[63]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_uldivmod
 </UL>
 <BR>[Called By]<UL><LI><a href="#[d4]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_UART_Init
 </UL>
@@ -1699,8 +1717,8 @@ Local Symbols
 <P><STRONG><a name="[d8]"></a>UART_WaitOnFlagUntilTimeout</STRONG> (Thumb, 114 bytes, Stack size 32 bytes, stm32f4xx_hal_uart.o(i.UART_WaitOnFlagUntilTimeout))
 <BR><BR>[Stack]<UL><LI>Max Depth = 32<LI>Call Chain = UART_WaitOnFlagUntilTimeout
 </UL>
-<BR>[Calls]<UL><LI><a href="#[f4]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;UART_EndRxTransfer
-<LI><a href="#[8f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_GetTick
+<BR>[Calls]<UL><LI><a href="#[8f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_GetTick
+<LI><a href="#[f5]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;UART_EndRxTransfer
 </UL>
 <BR>[Called By]<UL><LI><a href="#[d7]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_UART_Transmit
 </UL>

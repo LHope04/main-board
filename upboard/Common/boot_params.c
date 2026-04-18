@@ -25,8 +25,16 @@ static bool read_and_verify(uint32_t addr, boot_params_t *out)
 
 bool BootParams_Read(boot_params_t *out)
 {
-    if (read_and_verify(BOOT_PARAMS_A_ADDR, out)) return true;
-    if (read_and_verify(BOOT_PARAMS_B_ADDR, out)) return true;
+    boot_params_t a, b;
+    bool ok_a = read_and_verify(BOOT_PARAMS_A_ADDR, &a);
+    bool ok_b = read_and_verify(BOOT_PARAMS_B_ADDR, &b);
+    if (ok_a && ok_b) {
+        /* Both valid: pick the one with higher sequence. Ties favour A. */
+        *out = (b.sequence > a.sequence) ? b : a;
+        return true;
+    }
+    if (ok_a) { *out = a; return true; }
+    if (ok_b) { *out = b; return true; }
     return false;
 }
 
@@ -85,8 +93,16 @@ static bool write_one_copy(uint32_t addr, const boot_params_t *p)
 
 bool BootParams_Write(const boot_params_t *in)
 {
+    /* Bump sequence to one greater than the highest existing valid copy, so
+     * reader can always pick the newest copy even if write order changes. */
+    boot_params_t a, b;
+    uint32_t max_seq = 0;
+    if (read_and_verify(BOOT_PARAMS_A_ADDR, &a) && a.sequence > max_seq) max_seq = a.sequence;
+    if (read_and_verify(BOOT_PARAMS_B_ADDR, &b) && b.sequence > max_seq) max_seq = b.sequence;
+
     boot_params_t fixed = *in;
     fixed.magic    = BOOT_PARAMS_MAGIC;
+    fixed.sequence = max_seq + 1U;
     fixed.self_crc = compute_self_crc(&fixed);
 
     HAL_FLASH_Unlock();

@@ -46,7 +46,14 @@
       "Bash(C:/Keil_v5/UV4/UV4.exe *)",
       "Bash(\"C:/Keil_v5/ARM/ARMCC/Bin/fromelf.exe\" --bin --output \"MDK-ARM/upboard_B/upboard_B.bin\" \"MDK-ARM/upboard_B/upboard_B.axf\")",
       "Bash(\"C:/Keil_v5/ARM/ARMCC/Bin/fromelf.exe\" --bin --output \"MDK-ARM/upboard/upboard.bin\" \"MDK-ARM/upboard/upboard.axf\")",
-      "Bash(\"C:/Keil_v5/UV4/UV4.exe\" -j0 -b \"MDK-ARM/upboard_B.uvprojx\")"
+      "Bash(\"C:/Keil_v5/UV4/UV4.exe\" -j0 -b \"MDK-ARM/upboard_B.uvprojx\")",
+      "Bash(xargs -0 grep -l \"BootParams_\")",
+      "Bash(echo \"exit=$?\")",
+      "Read(//c/Keil_v5/ARM/ARMCC/bin/**)",
+      "Read(//c/Keil_v5/ARM/ARMCLANG/bin/**)",
+      "Read(//c/Keil_v5/ARM/ARMCC/Bin/**)",
+      "Bash(\"C:/Keil_v5/ARM/ARMCC/bin/fromelf.exe\" --bin --output \"MDK-ARM/upboard_B/upboard_B.bin\" \"MDK-ARM/upboard_B/upboard_B.axf\")",
+      "Bash(\"C:/Keil_v5/ARM/ARMCC/bin/fromelf.exe\" --bin --output \"MDK-ARM/upboard/upboard.bin\" \"MDK-ARM/upboard/upboard.axf\")"
     ]
   }
 }

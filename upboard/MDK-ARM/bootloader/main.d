@@ -37,3 +37,4 @@ bootloader\main.o: ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_tim_ex.h
 bootloader\main.o: ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_uart.h
 bootloader\main.o: ../Common/boot_params.h
 bootloader\main.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stdbool.h
+bootloader\main.o: ../Common/crc32.h

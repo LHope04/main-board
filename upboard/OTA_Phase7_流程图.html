@@ -1,0 +1,429 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>OTA Phase 7 程序框图</title>
+<style>
+  body { font-family: -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+         margin: 24px; background: #fafafa; color: #222; line-height: 1.55; }
+  h1 { border-bottom: 3px solid #333; padding-bottom: 8px; }
+  h2 { margin-top: 40px; border-left: 5px solid #2a7; padding-left: 10px; color: #1a4; }
+  h3 { margin-top: 28px; color: #444; }
+  .note { background: #fff8d0; border-left: 4px solid #e0b000; padding: 10px 14px; margin: 12px 0; }
+  .warn { background: #fde0e0; border-left: 4px solid #c33; padding: 10px 14px; margin: 12px 0; }
+  .ok   { background: #e0f3e0; border-left: 4px solid #2a7; padding: 10px 14px; margin: 12px 0; }
+  code { background: #eee; padding: 1px 5px; border-radius: 3px; font-family: Consolas, monospace; }
+  table { border-collapse: collapse; margin: 10px 0; background: #fff; }
+  th, td { border: 1px solid #bbb; padding: 6px 12px; text-align: left; }
+  th { background: #ddd; }
+
+  /* 流程图盒子 */
+  .flow { display: flex; flex-direction: column; align-items: center; gap: 0; }
+  .row  { display: flex; gap: 18px; align-items: center; justify-content: center; }
+  .box  { border: 2px solid #333; background: #fff; padding: 10px 16px; border-radius: 8px;
+          min-width: 180px; text-align: center; box-shadow: 2px 2px 4px rgba(0,0,0,0.1); font-size: 14px; }
+  .start { background: #dff; border-color: #068; border-radius: 30px; }
+  .decide { background: #ffe0a0; border-color: #a60; transform: skewX(-8deg); }
+  .decide > span { display: inline-block; transform: skewX(8deg); }
+  .action { background: #e8e8ff; border-color: #339; }
+  .danger { background: #fcc; border-color: #900; }
+  .good   { background: #cfc; border-color: #060; }
+  .arrow  { font-size: 24px; color: #555; margin: 2px 0; }
+  .label  { font-size: 12px; color: #666; font-style: italic; }
+
+  /* Flash 布局条 */
+  .flash-bar { display: flex; width: 100%; max-width: 900px; height: 70px; border: 2px solid #333;
+               margin: 15px 0; background: #fff; font-size: 12px; }
+  .flash-bar > div { border-right: 1px solid #333; padding: 6px 8px; display: flex;
+                     flex-direction: column; justify-content: center; align-items: center; }
+  .flash-bar > div:last-child { border-right: 0; }
+  .flash-bar .addr { font-family: monospace; font-weight: bold; }
+  .flash-bar .size { color: #666; }
+
+  /* 时序图 */
+  .seq { font-family: Consolas, monospace; background: #fff; padding: 15px; border: 1px solid #aaa;
+         white-space: pre; overflow-x: auto; font-size: 13px; }
+
+  .two-col { display: flex; gap: 20px; }
+  .two-col > div { flex: 1; }
+</style>
+</head>
+<body>
+
+<h1>OTA Phase 7 程序框图（带回滚）</h1>
+
+<div class="note">
+一句话总结："<b>Bootloader 是裁判，App 是参赛选手；只有 Bootloader 发了准考证（<code>pending_update=1</code>）才会数圈数，平时调试不数圈</b>"。
+</div>
+
+<h2>① Flash 布局</h2>
+
+<div class="flash-bar">
+  <div style="flex: 2; background: #dde;"><div class="addr">0x08000000</div><div>Bootloader</div><div class="size">32 KB</div></div>
+  <div style="flex: 1; background: #ffe0a0;"><div class="addr">0x08008000</div><div>Params A</div><div class="size">16 KB</div></div>
+  <div style="flex: 1; background: #ffe0a0;"><div class="addr">0x0800C000</div><div>Params B</div><div class="size">16 KB</div></div>
+  <div style="flex: 1; background: #fff;"><div>(空)</div><div class="size">48 KB</div></div>
+  <div style="flex: 3; background: #cfc;"><div class="addr">0x08020000</div><div><b>Slot A</b></div><div class="size">128 KB</div></div>
+  <div style="flex: 3; background: #cff;"><div class="addr">0x08040000</div><div><b>Slot B</b></div><div class="size">128 KB</div></div>
+</div>
+
+<table>
+<tr><th>区域</th><th>谁写</th><th>内容</th></tr>
+<tr><td>Bootloader</td><td>ST-Link 烧一次</td><td>本项目 <code>bootloader/</code></td></tr>
+<tr><td>Params A / B</td><td>App（OTA 完成时）+ Bootloader（boot_count++ / 回滚时）</td><td><code>boot_params_t</code> 双副本，靠 <code>sequence</code> 仲裁谁最新</td></tr>
+<tr><td>Slot A</td><td>ST-Link 首次 / 从 Slot B 发起的 OTA</td><td>链接在 0x08020000 的 App 镜像（<code>upboard.hex</code>）</td></tr>
+<tr><td>Slot B</td><td>从 Slot A 发起的 OTA</td><td>链接在 0x08040000 的 App 镜像（<code>upboard_B.hex</code>）</td></tr>
+</table>
+
+
+<h2>①½ 关键变量字典（看后面流程图前先看这里）</h2>
+
+<h3>🔑 <code>boot_params_t</code> 结构体（住在 Params A / Params B 两块 16KB flash 里）</h3>
+
+<table>
+<tr><th>字段</th><th>类型</th><th>含义 / 谁写 / 谁读</th></tr>
+<tr><td><code>magic</code></td><td>u32</td>
+    <td>固定 <code>0xA5A5A5A5</code>。用来判断这块 flash 真的是 params 不是乱数据（擦除后是 0xFF）。</td></tr>
+<tr><td><code>boot_slot</code></td><td>u32</td>
+    <td><b>Bootloader 要跳哪个槽</b>。<code>0=Slot A</code>, <code>1=Slot B</code>。OTA 完成时 App 改成新槽；回滚时 Bootloader 翻过来。</td></tr>
+<tr><td><code>slot_valid[2]</code></td><td>u32×2</td>
+    <td>对应槽是否被 OTA 正式写过。<b>首次裸机烧 Slot A 时是 0</b>，所以 Bootloader 碰到 valid=0 就跳过 CRC 校验（保留"首次无 params 也能跑"的能力）。</td></tr>
+<tr><td><code>slot_size[2]</code></td><td>u32×2</td>
+    <td>该槽镜像有多少字节。<b>Bootloader 做 CRC 校验时必须拿准确的 size，多校少校都会校错</b>。</td></tr>
+<tr><td><code>slot_crc32[2]</code></td><td>u32×2</td>
+    <td>对应 <code>slot_size</code> 字节的 CRC32（IEEE 802.3）。OTA 完成时 App 算好写入；Bootloader 回滚判定时重新算一遍对比。</td></tr>
+<tr><td><code>slot_version[2]</code></td><td>u32×2</td>
+    <td>版本号。目前只"记录"不参与决策，以后可以加"不允许降级"之类的策略。</td></tr>
+<tr><td><code>pending_update</code></td><td>u32</td>
+    <td><b>★最关键的开关 ★</b>。<code>1</code> = 刚 OTA 完、还在试用期；<code>0</code> = 稳态（已确认好用）。<br>
+        • OTA 完成时 App 置 1 <br>
+        • App 连续跑 10 秒后 <code>Ota_MarkBootOk()</code> 清 0 <br>
+        • Bootloader <b>只在 pending_update==1 时才数 boot_count、校 CRC、做回滚</b>。这是"平时调试不误伤"的关键。</td></tr>
+<tr><td><code>boot_count</code></td><td>u32</td>
+    <td>试用期内 Bootloader 已经启动过该槽几次。每次进 Bootloader 就 ++（前提 pending==1）。<br>
+        App 稳定运行后 <code>Ota_MarkBootOk()</code> 清 0。<br>
+        累到 <code>≥ MAX_BOOT_ATTEMPTS(=3)</code> → 触发回滚。</td></tr>
+<tr><td><code>sequence</code></td><td>u32</td>
+    <td><b>A/B 副本仲裁用的序号</b>。每次写 params 时 = max(A.seq, B.seq) + 1。读取时两份都验 CRC，取 seq 更大的那份。用来解决"写 A 写到一半掉电"类问题。</td></tr>
+<tr><td><code>reserved[3]</code></td><td>u32×3</td>
+    <td>12 字节空位。以后加字段不用改结构体大小。</td></tr>
+<tr><td><code>self_crc</code></td><td>u32</td>
+    <td>前面所有字段的 CRC32。读取时对不上 → 这份副本就废，用另一份。</td></tr>
+</table>
+
+<div class="note">
+<b>为什么要两个副本（A / B）？</b>写一份时掉电，flash 可能是半新半旧的字节。双副本 + CRC 保证任何时候至少有一份是完整的。
+<br><b>为什么要 sequence？</b>光有 CRC 只能告诉你"这份完整"，不能告诉你"这份最新"。举例：写 B 先成功、写 A 前掉电 → A 是老但完整、B 是新且完整，没 sequence 会错挑 A。
+</div>
+
+
+<h3>🔑 RTC-&gt;BKP0R（备份寄存器，4 字节）</h3>
+
+<table>
+<tr><th>值</th><th>含义</th></tr>
+<tr><td><code>0xA0A0A0A0</code> (BOOT_MARK_A)</td><td>Bootloader 跳 Slot A 之前写的</td></tr>
+<tr><td><code>0xB0B0B0B0</code> (BOOT_MARK_B)</td><td>Bootloader 跳 Slot B 之前写的</td></tr>
+</table>
+
+<div class="note">
+<b>为什么不直接用 VTOR 判断自己在哪个槽？</b><br>
+Slot A 和 Slot B 的代码 <b>内容完全一样</b>（只是链接地址不同），启动时 <code>SystemInit</code> 会按编译时常量把 VTOR 写成"自己以为的地址"。所以 VTOR 只反映"我以为我在哪"，不是"我实际在哪"。<br>
+备份寄存器是 RTC 里的 RAM，<b>软复位不清零</b>（只有掉电且无 VBAT 电池才会清），Bootloader 在这里留个标记给 App 读，最可靠。
+</div>
+
+
+<h3>🔑 OTA 协议状态机（<code>Core/Src/ota.c</code> 内部静态变量）</h3>
+
+<table>
+<tr><th>变量</th><th>含义</th></tr>
+<tr><td><code>s_state</code></td><td><code>OTA_PROTO_IDLE</code> = 空闲；<code>OTA_PROTO_RECEIVING</code> = 在收数据（会让 <code>OtaProto_IsBusy()</code> 返真）</td></tr>
+<tr><td><code>s_target_slot</code></td><td>OTA_START 时决定写哪个槽。规则：看 RTC-&gt;BKP0R，自己跑在 A 就写 B，反之亦然。</td></tr>
+<tr><td><code>s_total_size</code></td><td>本次 OTA 镜像总字节数（OTA_START 时带过来）</td></tr>
+<tr><td><code>s_version</code></td><td>本次镜像版本号</td></tr>
+<tr><td><code>s_next_offset</code></td><td>期望下一个 DATA 帧的偏移。强制单调递增，防止乱序</td></tr>
+<tr><td><code>s_reset_pending</code></td><td>OTA_END 成功后置 1。主循环看到就 <code>HAL_Delay(50)</code> + <code>NVIC_SystemReset()</code>（先让 ACK 发出去再复位）</td></tr>
+</table>
+
+
+<h3>🔑 OTA 帧格式（USART2 上跑）</h3>
+
+<div class="seq">请求:  AA | CMD | LEN | PAYLOAD[LEN] | XOR
+应答:  AA | CMD | 01  | STATUS       | XOR      （ACK 复用同一 CMD，靠 LEN=1 区分）
+
+CMD 常量                              | 含义
+0xF1  ESP_CMD_OTA_START                | PAYLOAD = size(4B LE) | version(2B LE)
+0xF2  ESP_CMD_OTA_DATA                 | PAYLOAD = offset(4B LE) | data(≤128B)
+0xF3  ESP_CMD_OTA_END                  | PAYLOAD = expected_crc32(4B LE)
+0xF4  ESP_CMD_OTA_ABORT                | PAYLOAD 空
+
+STATUS 常量 (ACK 的 1 字节 payload)    | 含义
+0x00  OTA_STATUS_OK                    | 成功
+0x01  OTA_STATUS_BAD_STATE             | 状态机不对（比如没 START 就 DATA）
+0x02  OTA_STATUS_BAD_PARAM             | 偏移错 / size 越界 / 未 4 字节对齐
+0x03  OTA_STATUS_FLASH_ERR             | 擦或写 flash 失败
+0x04  OTA_STATUS_BAD_CRC               | OTA_END 时 CRC 对不上</div>
+
+
+<h3>🔑 常量阈值</h3>
+
+<table>
+<tr><th>宏 / 常量</th><th>值</th><th>含义</th></tr>
+<tr><td><code>BOOT_PARAMS_MAGIC</code></td><td><code>0xA5A5A5A5</code></td><td>params 起头的固定字样</td></tr>
+<tr><td><code>BOOT_PARAMS_A_ADDR</code></td><td><code>0x08008000</code></td><td>Params A 地址（sector 2）</td></tr>
+<tr><td><code>BOOT_PARAMS_B_ADDR</code></td><td><code>0x0800C000</code></td><td>Params B 地址（sector 3）</td></tr>
+<tr><td><code>BOOT_SLOT_A_ADDR</code></td><td><code>0x08020000</code></td><td>App Slot A 起始（sector 5）</td></tr>
+<tr><td><code>BOOT_SLOT_B_ADDR</code></td><td><code>0x08040000</code></td><td>App Slot B 起始（sector 6）</td></tr>
+<tr><td><code>MAX_BOOT_ATTEMPTS</code></td><td><code>3</code></td><td>试用期累计几次启动没 MarkBootOk 就回滚</td></tr>
+<tr><td>MarkBootOk 延迟</td><td><code>10000 ms</code></td><td>主循环跑够这么久算稳定，才清 pending_update</td></tr>
+<tr><td>IWDG 超时</td><td>≈ <code>4 s</code></td><td>prescaler=/256, RLR=500。不喂狗就硬复位</td></tr>
+<tr><td><code>SLOT_SIZE</code></td><td><code>128 KB</code></td><td>单个 slot 容量 = sector 5/6 大小</td></tr>
+<tr><td><code>ESP_MAX_PAYLOAD</code></td><td><code>132 B</code></td><td>一帧最大载荷（OTA_DATA 是 offset 4B + data 128B = 132B）</td></tr>
+</table>
+
+
+<h3>🔑 <code>EspComm_Status</code>（App 每秒发给 ESP32 的状态帧）</h3>
+
+<table>
+<tr><th>字段</th><th>本项目里装的</th></tr>
+<tr><td><code>water_temp_x10</code></td><td><b>临时用作 OTA 活性信号</b>。不是真的水温 —<br>Slot A 时循环 1..10，Slot B 时循环 10..20。数字不动 = App 卡死</td></tr>
+<tr><td><code>battery_pct</code></td><td>锂电池电量 0~100%（来自 I2C3 INA226）</td></tr>
+<tr><td><code>total_power_w</code></td><td>24V 输入功率（来自 I2C2 INA226）</td></tr>
+<tr><td><code>ambient_temp_x10</code></td><td>环温 × 10（来自 ADC NTC 7）</td></tr>
+<tr><td><code>error_flags</code></td><td>错误位图，目前常 0</td></tr>
+</table>
+
+
+<h2>② Bootloader 启动决策（核心）</h2>
+
+<div class="flow">
+  <div class="box start">上电 / 复位</div>
+  <div class="arrow">▼</div>
+  <div class="box action">HAL_Init → SystemClock → GPIO_Init<br>启动 IWDG (≈4s 超时)</div>
+  <div class="arrow">▼</div>
+  <div class="box action">BootParams_Read(&amp;params)<br><span class="label">A/B 双读，取 sequence 更大且 CRC 正确的那份</span></div>
+  <div class="arrow">▼</div>
+  <div class="box decide"><span>读到有效 params ?</span></div>
+
+  <div class="row" style="margin-top:8px">
+    <div style="text-align:center">
+      <div style="color:#c33">否</div>
+      <div class="arrow">▼</div>
+      <div class="box danger">Fallback：跳 Slot A<br>LED1 闪 <b>1</b> 次<br><span class="label">首次裸机烧录 / 两份 params 全坏</span></div>
+    </div>
+
+    <div style="text-align:center">
+      <div style="color:#063">是</div>
+      <div class="arrow">▼</div>
+      <div class="box decide"><span>pending_update == 1 ?</span></div>
+
+      <div class="row" style="margin-top:8px">
+        <div style="text-align:center">
+          <div style="color:#555">否（稳态）</div>
+          <div class="arrow">▼</div>
+          <div class="box good">跳 <code>boot_slot</code><br>LED1 闪 <b>2</b>(A) / <b>3</b>(B) 次<br><span class="label">不写 flash，不校 CRC</span><br><span class="label">→ 调试卡死不会误触发回滚</span></div>
+        </div>
+
+        <div style="text-align:center">
+          <div style="color:#063">是（OTA 观察窗口）</div>
+          <div class="arrow">▼</div>
+          <div class="box action">boot_count++</div>
+          <div class="arrow">▼</div>
+          <div class="box decide"><span>boot_count ≥ 3 <br>或 目标槽 CRC 失配 ?</span></div>
+
+          <div class="row" style="margin-top:8px">
+            <div style="text-align:center">
+              <div style="color:#c33">是 → 回滚</div>
+              <div class="arrow">▼</div>
+              <div class="box danger">boot_slot 翻面<br>pending_update = 0<br>boot_count = 0<br>LED1 闪 <b>4</b> 次</div>
+            </div>
+
+            <div style="text-align:center">
+              <div style="color:#063">否 → 再给一次机会</div>
+              <div class="arrow">▼</div>
+              <div class="box action">保持原 boot_slot<br>仅 boot_count 变化</div>
+            </div>
+          </div>
+
+          <div class="arrow">▼</div>
+          <div class="box action">BootParams_Write(&amp;params)<br><span class="label">sequence+1，B 先写后 A</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="arrow">▼</div>
+  <div class="box action">RTC-&gt;BKP0R = BOOT_MARK_A / B<br><span class="label">告诉 App 自己跑在哪个槽</span></div>
+  <div class="arrow">▼</div>
+  <div class="box action">blink_led1(n)</div>
+  <div class="arrow">▼</div>
+  <div class="box action">jump_to_app(app_addr)<br><span class="label">NVIC 清 → VTOR → 设 MSP → 跳 Reset_Handler</span></div>
+</div>
+
+<div class="note">
+<b>为什么 pending_update=0 时不做 CRC 校验？</b><br>
+如果每次启动都校 CRC，那 ST-Link 在线调试让 App 卡死、反复复位时：<br>
+→ Slot A 本身好好的，但你在 Bootloader 里 "数圈" 并最终切到了空的 Slot B → 砖！<br>
+所以稳态下 Bootloader 什么都不管，只有刚 OTA 完的"试用期"才做监视。
+</div>
+
+
+<h2>③ App 主循环</h2>
+
+<div class="flow">
+  <div class="box start">Reset_Handler</div>
+  <div class="arrow">▼</div>
+  <div class="box action">SystemInit → HAL_Init → 外设初始化<br>I2C / ADC / TIM / USART2 / INA226</div>
+  <div class="arrow">▼</div>
+  <div class="box action">PowerCtrl_StartupSequence()<br>Buzzer_PlayHajimi()</div>
+  <div class="arrow">▼</div>
+  <div class="box start" style="background: #cfe;">while(1) 主循环 每轮 ≈500ms</div>
+</div>
+
+<table style="margin-top:12px">
+<tr><th>步骤</th><th>动作</th><th>目的</th></tr>
+<tr><td>1</td><td><code>IWDG-&gt;KR = 0xAAAA</code></td><td>喂狗（Bootloader 起的那个 IWDG）</td></tr>
+<tr><td>2</td><td>uptime ≥ 10s 时调 <code>Ota_MarkBootOk()</code>（一次性）</td><td>清 pending_update / boot_count → 告诉 Bootloader "我活下来了"</td></tr>
+<tr><td>3</td><td><code>INA226_UpdateData</code> × 3</td><td>读 3 路电压电流</td></tr>
+<tr><td>4</td><td><code>EspComm_Poll()</code></td><td>处理 ESP32 过来的命令（含 OTA）</td></tr>
+<tr><td>5</td><td><code>OtaProto_TakeResetRequest()</code> 真 → 50ms + NVIC_SystemReset</td><td>OTA_END ACK 发完就复位</td></tr>
+<tr><td>6</td><td>根据 gear 命令 设置 FAN / 压缩机 / 泵</td><td>业务</td></tr>
+<tr><td>7</td><td>每 1s 若 <code>!OtaProto_IsBusy()</code> 发 STATUS 帧</td><td>OTA 期间闭嘴，防污染 ACK 流</td></tr>
+<tr><td>8</td><td><code>HAL_Delay(500)</code></td><td>循环节拍</td></tr>
+</table>
+
+
+<h2>④ 一次完整 OTA 的时序</h2>
+
+<div class="seq">PC 网页         ESP32-C3         STM32 (当前跑 Slot A)        Flash
+   │                │                        │                        │
+   │─BLE notify────▶│                        │                        │
+   │ OTA_START      │──UART F1 [size|ver]───▶│                        │
+   │                │                        │ OtaProto_HandleStart   │
+   │                │                        │   target = Slot B      │
+   │                │                        │   Ota_Begin(B)         │
+   │                │                        │ ───擦 Sector 6 (128K)──▶│
+   │                │◀──ACK F1 OK (0xF0)─────│                        │
+   │◀─BLE notify────│                        │                        │
+   │                │                        │ (state = RECEIVING     │
+   │                │                        │  → 停发 STATUS 帧)     │
+   │                │                        │                        │
+   │─OTA_DATA(0)───▶│──UART F2 [0|128B]─────▶│ 写 @ 0x08040000+0      │
+   │◀──ACK F2 OK────│                        │                        │
+   │─OTA_DATA(128)─▶│──UART F2 [128|128B]───▶│ 写 @ 0x08040000+128    │
+   │ ...            │ ...                    │ ...                    │
+   │─OTA_DATA(N-1)─▶│                        │                        │
+   │                │                        │                        │
+   │─OTA_END(crc)──▶│──UART F3 [crc32]──────▶│ 校 CRC32                │
+   │                │                        │ BootParams_Write:      │
+   │                │                        │   boot_slot = B        │
+   │                │                        │   slot_crc32[B]=crc    │
+   │                │                        │   slot_size[B]=size    │
+   │                │                        │   pending_update=1     │
+   │                │                        │   boot_count=0         │
+   │                │                        │   sequence+=1          │
+   │                │◀──ACK F3 OK───────────│                        │
+   │◀─BLE notify────│                        │                        │
+   │                │                        │ reset_pending = 1      │
+   │                │                        │ HAL_Delay(50)          │
+   │                │                        │ NVIC_SystemReset() ────▶│ (复位)
+</div>
+
+
+<h2>⑤ 复位后的回滚判定</h2>
+
+<div class="two-col">
+  <div>
+    <h3>场景 A：新镜像正常</h3>
+    <div class="seq">Boot: pending=1, boot_count 0→1
+      CRC(SlotB) ✔, boot_count(1) &lt; 3
+      → 继续跳 Slot B，写 params
+
+App  : 起来 → 主循环 10s
+      → Ota_MarkBootOk()
+      → pending=0, boot_count=0
+
+Boot (下次复位):
+      pending=0 → 无条件跳 B</div>
+    <div class="ok">→ OTA 成功</div>
+  </div>
+
+  <div>
+    <h3>场景 B：新镜像一起来就炸</h3>
+    <div class="seq">复位 1: boot_count 0→1, 跳 B → App 崩/IWDG
+复位 2: boot_count 1→2, 跳 B → App 崩/IWDG
+复位 3: boot_count 2→3  ≥3
+      → 翻 boot_slot = A
+      → pending=0, boot_count=0
+      → LED1 闪 4 次
+      → 跳 Slot A（旧版、稳定）</div>
+    <div class="warn">→ 自动回滚到 A</div>
+  </div>
+</div>
+
+<div class="two-col" style="margin-top:20px">
+  <div>
+    <h3>场景 C：Slot B 被写坏</h3>
+    <div class="seq">ST-Link 硬伤 Slot B 起始 4 字节
+复位: pending=1, boot_count 0→1
+      CRC(SlotB) ✘  → 立即回滚
+      翻 boot_slot = A, LED 闪 4 次</div>
+    <div class="warn">→ 秒回 A，无需等 3 次</div>
+  </div>
+
+  <div>
+    <h3>场景 D：平时调试 App 卡死（无 OTA）</h3>
+    <div class="seq">params.pending_update = 0
+ST-Link 复位 N 次
+      Boot: pending=0 → 不数圈，不校 CRC
+            直接跳当前 boot_slot
+            (永远不会切到对面)</div>
+    <div class="ok">→ 不会误伤，无论复位多少次</div>
+  </div>
+</div>
+
+
+<h2>⑥ 双副本 params 的鲁棒性</h2>
+
+<div class="seq">写入时：                               读取时：
+ seq = max(A.seq, B.seq) + 1              读 A, 读 B (各自验 self_crc)
+ 写 B（先）                               两份都有效 → 取 seq 更大的那份
+ 写 A（后）                               只一份有效 → 用它
+                                           两份都坏   → 返回 false
+
+掉电时机：
+ ① 写 B 之前掉电  → A/B 都是老版本 OK
+ ② 写 B 中掉电    → B 坏 CRC, 用 A（老但完整）OK
+ ③ 写 B 后写 A 前 → B 新 seq, A 老 seq，读到 B，OK
+ ④ 写 A 中掉电    → A 坏 CRC, 用 B（新且完整）OK</div>
+
+<div class="ok">任何一步掉电都能恢复到一个"完整、最新可用"的 params 副本。</div>
+
+
+<h2>⑦ 两种看门狗的分工</h2>
+
+<table>
+<tr><th></th><th>IWDG（独立看门狗）</th><th>"软看门狗" = boot_count</th></tr>
+<tr><td>保护什么</td><td>代码真的跑飞/死循环</td><td>代码能跑，但新镜像有 bug（永远不到 MarkBootOk）</td></tr>
+<tr><td>触发时机</td><td>4s 不喂狗 → 硬件复位</td><td>3 次复位都没到 10s → Bootloader 切槽</td></tr>
+<tr><td>谁能关</td><td>一旦开启无法关，只能喂</td><td>Ota_MarkBootOk() 清</td></tr>
+<tr><td>谁喂</td><td>Bootloader 启动，App 主循环喂</td><td>Bootloader 数，App 清</td></tr>
+</table>
+
+<div class="note">
+IWDG 保护 "CPU 还在转" 层面的故障；boot_count 保护 "代码在跑但行为错误" 层面的故障。<br>
+两者叠加后：新镜像只要有任何一种挂掉模式，都会在最多 3~4 次复位内自动回滚。
+</div>
+
+
+<h2>⑧ 关键约束复盘</h2>
+
+<ul>
+  <li><b>USART2 归 ESP32</b> → Bootloader 全程静默（只 LED 指示）</li>
+  <li><b>OTA 共享 UART</b> → App 在 OtaProto_IsBusy() 期间不发 STATUS，防 ACK 污染</li>
+  <li><b>调试不能误回滚</b> → pending_update=0 时 Bootloader 什么都不校、什么都不写</li>
+  <li><b>掉电安全</b> → params 双副本 + sequence 仲裁，任意单点掉电都能恢复</li>
+  <li><b>卡死自愈</b> → IWDG 硬复位 + boot_count 逻辑回滚，两层兜底</li>
+</ul>
+
+</body>
+</html>

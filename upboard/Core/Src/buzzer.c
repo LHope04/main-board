@@ -50,6 +50,7 @@ void Buzzer_PlayHajimi(void)
 
     /* 演奏一遍 ≈ 10s，LED1(PD13)↔LED2(PD14) 随每拍交替 */
     for (uint32_t i = 0; i < 25; i++) {
+        IWDG->KR = 0xAAAAU;   /* 曲子 10s > IWDG 4s，必须在循环里喂狗 */
         if (i & 1U) {
             HAL_GPIO_WritePin(GPIOD, GPIO_PIN_13, GPIO_PIN_RESET);
             HAL_GPIO_WritePin(GPIOD, GPIO_PIN_14, GPIO_PIN_SET);
@@ -89,6 +90,7 @@ void Buzzer_PlayStartup(void)
     static const uint16_t durs[]  = { 140, 200,  260, 100,  130, 150, 350, 200, 180, 140,  200, 420 };
 
     for (uint32_t i = 0; i < 12; i++) {
+        IWDG->KR = 0xAAAAU;
         if (notes[i]) {
             uint32_t arr = 1000000UL / notes[i] - 1U;
             __HAL_TIM_SET_AUTORELOAD(s_htim, arr);

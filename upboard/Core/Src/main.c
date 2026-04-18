@@ -270,6 +270,22 @@ int main(void)
     /* USER CODE END WHILE */
     /* USER CODE BEGIN 3 */
 
+    /* Refresh IWDG — the Bootloader starts it (~4s timeout) and we must
+     * keep feeding it. If launched directly via ST-Link, IWDG never ran
+     * and this write is a harmless no-op. */
+    IWDG->KR = 0xAAAAU;
+
+    /* Confirm a stable boot once. After BOOT_OK_DELAY_MS of healthy loop
+     * iterations the OTA "pending" flag is cleared so the Bootloader
+     * stops watching this slot for rollback. */
+    {
+        static uint8_t s_boot_marked = 0;
+        if (!s_boot_marked && HAL_GetTick() >= 10000U) {
+            s_boot_marked = 1;
+            (void)Ota_MarkBootOk();
+        }
+    }
+
     /* Update INA226 power measurements */
     for (int i = 0; i < 3; i++) {
         INA226_UpdateData(&sensors[i]);

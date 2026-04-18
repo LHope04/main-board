@@ -37,7 +37,8 @@ typedef struct {
     uint32_t slot_version[2];
     uint32_t pending_update;     /* 1 = freshly written image awaiting first boot */
     uint32_t boot_count;         /* incremented by Bootloader, cleared by App once stable */
-    uint32_t reserved[4];        /* pad for future fields without bumping struct */
+    uint32_t sequence;           /* monotonic write counter; reader picks max valid seq */
+    uint32_t reserved[3];        /* pad for future fields without bumping struct */
     uint32_t self_crc;           /* CRC32 over all preceding fields */
 } boot_params_t;
 

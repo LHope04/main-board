@@ -183,6 +183,17 @@ uint8_t OtaProto_IsBusy(void)
     return (s_state == OTA_PROTO_RECEIVING) ? 1U : 0U;
 }
 
+bool Ota_MarkBootOk(void)
+{
+    boot_params_t p;
+    if (!BootParams_Read(&p)) return false;
+    if (p.pending_update == 0U && p.boot_count == 0U) return true;
+
+    p.pending_update = 0U;
+    p.boot_count     = 0U;
+    return BootParams_Write(&p);
+}
+
 void Ota_SelfTest(uint32_t copy_size)
 {
     if (copy_size > SLOT_SIZE) copy_size = SLOT_SIZE;
