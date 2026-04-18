@@ -1,4 +1,5 @@
 #include "esp_comm.h"
+#include "ota.h"
 #include <string.h>
 
 /* ---- private types ---- */
@@ -22,7 +23,7 @@ static volatile uint8_t  s_rx_xor;
 static volatile uint8_t  s_rx_buf[ESP_MAX_PAYLOAD];
 
 /* Complete frame buffer (double-buffer: ISR writes, Poll reads) */
-#define FRAME_SLOTS  4
+#define FRAME_SLOTS  2
 static volatile uint8_t  s_frame_cmd[FRAME_SLOTS];
 static volatile uint8_t  s_frame_len[FRAME_SLOTS];
 static volatile uint8_t  s_frame_payload[FRAME_SLOTS][ESP_MAX_PAYLOAD];
@@ -50,6 +51,76 @@ static void send_ping_ack(void)
 {
     const uint8_t frame[] = { 0xAA, 0x81, 0x00, 0x81 };
     send_raw(frame, 4);
+}
+
+/* ACK frame: AA | (cmd|0x80) | 0x01 | status | XOR */
+static void send_ota_ack(uint8_t orig_cmd, uint8_t status)
+{
+    uint8_t ack_cmd = (uint8_t)(orig_cmd | ESP_CMD_OTA_ACK_BIT);
+    uint8_t len     = 1;
+    uint8_t xor     = ack_cmd ^ len ^ status;
+    uint8_t frame[5] = { ESP_FRAME_HEADER, ack_cmd, len, status, xor };
+    send_raw(frame, 5);
+}
+
+static uint32_t rd_u32_le(const volatile uint8_t *p)
+{
+    return (uint32_t)p[0]
+         | ((uint32_t)p[1] << 8)
+         | ((uint32_t)p[2] << 16)
+         | ((uint32_t)p[3] << 24);
+}
+
+static uint16_t rd_u16_le(const volatile uint8_t *p)
+{
+    return (uint16_t)((uint16_t)p[0] | ((uint16_t)p[1] << 8));
+}
+
+static void handle_ota_start(const volatile uint8_t *payload, uint8_t len)
+{
+    uint8_t status;
+    if (len < 6) {
+        status = OTA_STATUS_BAD_PARAM;
+    } else {
+        uint32_t size    = rd_u32_le(payload);
+        uint16_t version = rd_u16_le(payload + 4);
+        status = OtaProto_HandleStart(size, version);
+    }
+    send_ota_ack(ESP_CMD_OTA_START, status);
+}
+
+static void handle_ota_data(const volatile uint8_t *payload, uint8_t len)
+{
+    static uint8_t chunk[ESP_MAX_PAYLOAD];  /* scratch for word-aligned access */
+    uint8_t status;
+    if (len < 4 || len > ESP_MAX_PAYLOAD) {
+        status = OTA_STATUS_BAD_PARAM;
+    } else {
+        uint32_t offset = rd_u32_le(payload);
+        uint32_t dlen   = (uint32_t)len - 4U;
+        for (uint32_t i = 0; i < dlen; i++)
+            chunk[i] = payload[4 + i];
+        status = OtaProto_HandleData(offset, chunk, dlen);
+    }
+    send_ota_ack(ESP_CMD_OTA_DATA, status);
+}
+
+static void handle_ota_end(const volatile uint8_t *payload, uint8_t len)
+{
+    uint8_t status;
+    if (len < 4) {
+        status = OTA_STATUS_BAD_PARAM;
+    } else {
+        uint32_t crc = rd_u32_le(payload);
+        status = OtaProto_HandleEnd(crc);
+    }
+    send_ota_ack(ESP_CMD_OTA_END, status);
+}
+
+static void handle_ota_abort(void)
+{
+    uint8_t status = OtaProto_HandleAbort();
+    send_ota_ack(ESP_CMD_OTA_ABORT, status);
 }
 
 static void handle_set_gear(const volatile uint8_t *payload, uint8_t len)
@@ -168,6 +239,19 @@ void EspComm_Poll(void)
             break;
         case ESP_CMD_OTA_SELFTEST:
             s_ota_selftest_req = 1;
+            break;
+        case ESP_CMD_OTA_START:
+            handle_ota_start(s_frame_payload[slot], len);
+            break;
+        case ESP_CMD_OTA_DATA:
+            handle_ota_data(s_frame_payload[slot], len);
+            break;
+        case ESP_CMD_OTA_END:
+            handle_ota_end(s_frame_payload[slot], len);
+            break;
+        case ESP_CMD_OTA_ABORT:
+            (void)len;
+            handle_ota_abort();
             break;
         default:
             break;

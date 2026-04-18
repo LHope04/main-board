@@ -7,12 +7,17 @@
  */
 
 #include "ota.h"
+#include "esp_comm.h"
 #include "boot_params.h"
 #include "crc32.h"
 #include "stm32f4xx_hal.h"
 #include <string.h>
 
 #define SLOT_SIZE   (128U * 1024U)
+
+/* Markers the Bootloader writes to RTC->BKP0R before jumping */
+#define BOOT_MARK_A   0xA0A0A0A0U
+#define BOOT_MARK_B   0xB0B0B0B0U
 
 static uint32_t slot_base_addr(uint8_t slot)
 {
@@ -80,6 +85,102 @@ bool Ota_End(uint8_t slot, uint32_t size, uint32_t version)
     p.boot_count          = 0;
 
     return BootParams_Write(&p);
+}
+
+/* ---- OTA protocol state machine ---- */
+
+typedef enum {
+    OTA_PROTO_IDLE,
+    OTA_PROTO_RECEIVING,
+} OtaProtoState;
+
+static OtaProtoState s_state       = OTA_PROTO_IDLE;
+static uint8_t       s_target_slot = OTA_SLOT_B;
+static uint32_t      s_total_size  = 0;
+static uint16_t      s_version     = 0;
+static uint32_t      s_next_offset = 0;
+static uint8_t       s_reset_pending = 0;
+
+static uint8_t pick_target_slot(void)
+{
+    /* If we're running from B (BKP0R=B), target A. Otherwise target B. */
+    return (RTC->BKP0R == BOOT_MARK_B) ? OTA_SLOT_A : OTA_SLOT_B;
+}
+
+uint8_t OtaProto_HandleStart(uint32_t total_size, uint16_t version)
+{
+    if (total_size == 0 || total_size > SLOT_SIZE) return OTA_STATUS_BAD_PARAM;
+    if (total_size & 0x3U)                         return OTA_STATUS_BAD_PARAM;
+
+    s_target_slot  = pick_target_slot();
+    s_total_size   = total_size;
+    s_version      = version;
+    s_next_offset  = 0;
+    s_reset_pending = 0;
+
+    if (!Ota_Begin(s_target_slot)) {
+        s_state = OTA_PROTO_IDLE;
+        return OTA_STATUS_FLASH_ERR;
+    }
+
+    s_state = OTA_PROTO_RECEIVING;
+    return OTA_STATUS_OK;
+}
+
+uint8_t OtaProto_HandleData(uint32_t offset, const void *data, uint32_t len)
+{
+    if (s_state != OTA_PROTO_RECEIVING)            return OTA_STATUS_BAD_STATE;
+    if (offset != s_next_offset)                   return OTA_STATUS_BAD_PARAM;
+    if (len == 0 || (len & 0x3U))                  return OTA_STATUS_BAD_PARAM;
+    if (offset + len > s_total_size)               return OTA_STATUS_BAD_PARAM;
+
+    if (!Ota_WriteChunk(s_target_slot, offset, data, len)) {
+        s_state = OTA_PROTO_IDLE;
+        return OTA_STATUS_FLASH_ERR;
+    }
+    s_next_offset += len;
+    return OTA_STATUS_OK;
+}
+
+uint8_t OtaProto_HandleEnd(uint32_t expected_crc32)
+{
+    if (s_state != OTA_PROTO_RECEIVING) return OTA_STATUS_BAD_STATE;
+    if (s_next_offset != s_total_size)  return OTA_STATUS_BAD_PARAM;
+
+    uint32_t base = (s_target_slot == OTA_SLOT_B) ? BOOT_SLOT_B_ADDR : BOOT_SLOT_A_ADDR;
+    uint32_t got  = crc32_compute((const void *)base, s_total_size);
+    if (got != expected_crc32) {
+        s_state = OTA_PROTO_IDLE;
+        return OTA_STATUS_BAD_CRC;
+    }
+
+    if (!Ota_End(s_target_slot, s_total_size, s_version)) {
+        s_state = OTA_PROTO_IDLE;
+        return OTA_STATUS_FLASH_ERR;
+    }
+
+    s_state = OTA_PROTO_IDLE;
+    s_reset_pending = 1;   /* main loop will reset after ACK is sent */
+    return OTA_STATUS_OK;
+}
+
+uint8_t OtaProto_HandleAbort(void)
+{
+    s_state = OTA_PROTO_IDLE;
+    s_next_offset = 0;
+    return OTA_STATUS_OK;
+}
+
+uint8_t OtaProto_TakeResetRequest(void)
+{
+    uint8_t r = s_reset_pending;
+    s_reset_pending = 0;
+    return r;
+}
+
+uint8_t OtaProto_IsBusy(void)
+{
+    return (s_state == OTA_PROTO_RECEIVING) ? 1U : 0U;
 }
 
 void Ota_SelfTest(uint32_t copy_size)

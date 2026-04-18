@@ -1,6 +1,6 @@
 Dependencies for Project 'upboard', Target 'upboard': (DO NOT MODIFY !)
 F (startup_stm32f407xx.s)(0x69884049)(--cpu Cortex-M4.fp -g --apcs=interwork --pd "__MICROLIB SETA 1"-I.\RTE\_upboard-IC:\Keil_v5\ARM\PACK\ARM\CMSIS\5.0.1\CMSIS\Include-IC:\Keil_v5\ARM\PACK\Keil\STM32F4xx_DFP\2.17.0\Drivers\CMSIS\Device\ST\STM32F4xx\Include--pd "__UVISION_VERSION SETA 524" --pd "_RTE_ SETA 1" --pd "STM32F407xx SETA 1"--list startup_stm32f407xx.lst --xref -o upboard\startup_stm32f407xx.o --depend upboard\startup_stm32f407xx.d)
-F (../Core/Src/main.c)(0x69E1F4BD)(--c99 -c --cpu Cortex-M4.fp -D__MICROLIB -g -O3 --apcs=interwork --split_sections -I ../Core/Inc -I ../Common -I ../Drivers/STM32F4xx_HAL_Driver/Inc -I ../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy -I ../Drivers/CMSIS/Device/ST/STM32F4xx/Include -I ../Drivers/CMSIS/Include-I.\RTE\_upboard-IC:\Keil_v5\ARM\PACK\ARM\CMSIS\5.0.1\CMSIS\Include-IC:\Keil_v5\ARM\PACK\Keil\STM32F4xx_DFP\2.17.0\Drivers\CMSIS\Device\ST\STM32F4xx\Include-D__UVISION_VERSION="524" -D_RTE_ -DSTM32F407xx -DUSE_HAL_DRIVER -DSTM32F407xx -DVECT_TAB_OFFSET="0x00020000U"-o upboard\main.o --omf_browse upboard\main.crf --depend upboard\main.d)
+F (../Core/Src/main.c)(0x69E2FB16)(--c99 -c --cpu Cortex-M4.fp -D__MICROLIB -g -O3 --apcs=interwork --split_sections -I ../Core/Inc -I ../Common -I ../Drivers/STM32F4xx_HAL_Driver/Inc -I ../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy -I ../Drivers/CMSIS/Device/ST/STM32F4xx/Include -I ../Drivers/CMSIS/Include-I.\RTE\_upboard-IC:\Keil_v5\ARM\PACK\ARM\CMSIS\5.0.1\CMSIS\Include-IC:\Keil_v5\ARM\PACK\Keil\STM32F4xx_DFP\2.17.0\Drivers\CMSIS\Device\ST\STM32F4xx\Include-D__UVISION_VERSION="524" -D_RTE_ -DSTM32F407xx -DUSE_HAL_DRIVER -DSTM32F407xx -DVECT_TAB_OFFSET="0x00020000U"-o upboard\main.o --omf_browse upboard\main.crf --depend upboard\main.d)
 I (../Core/Inc/main.h)(0x6984A0BB)
 I (../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal.h)(0x68E5D8A0)
 I (../Core/Inc/stm32f4xx_hal_conf.h)(0x69C49E5E)
@@ -46,8 +46,8 @@ I (../Core/Inc/fan_ctrl.h)(0x69C4E21D)
 I (../Core/Inc/compressor_ctrl.h)(0x69C4E239)
 I (../Core/Inc/sensor_acq.h)(0x69C4F9CD)
 I (../Core/Inc/buzzer.h)(0x69C50CE3)
-I (../Core/Inc/esp_comm.h)(0x69E1EECB)
-I (../Core/Inc/ota.h)(0x69E1EEAE)
+I (../Core/Inc/esp_comm.h)(0x69E2040E)
+I (../Core/Inc/ota.h)(0x69E2FB0E)
 I (C:\Keil_v5\ARM\ARMCC\include\stdbool.h)(0x588B8344)
 F (../Core/Src/gpio.c)(0x69C50579)(--c99 -c --cpu Cortex-M4.fp -D__MICROLIB -g -O3 --apcs=interwork --split_sections -I ../Core/Inc -I ../Common -I ../Drivers/STM32F4xx_HAL_Driver/Inc -I ../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy -I ../Drivers/CMSIS/Device/ST/STM32F4xx/Include -I ../Drivers/CMSIS/Include-I.\RTE\_upboard-IC:\Keil_v5\ARM\PACK\ARM\CMSIS\5.0.1\CMSIS\Include-IC:\Keil_v5\ARM\PACK\Keil\STM32F4xx_DFP\2.17.0\Drivers\CMSIS\Device\ST\STM32F4xx\Include-D__UVISION_VERSION="524" -D_RTE_ -DSTM32F407xx -DUSE_HAL_DRIVER -DSTM32F407xx -DVECT_TAB_OFFSET="0x00020000U"-o upboard\gpio.o --omf_browse upboard\gpio.crf --depend upboard\gpio.d)
 I (../Core/Inc/gpio.h)(0x6984A180)
@@ -201,7 +201,7 @@ I (../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_tim.h)(0x68E5D8A0)
 I (../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_tim_ex.h)(0x68E5D8A0)
 I (../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_uart.h)(0x68E5D8A0)
 I (../Core/Inc/stm32f4xx_it.h)(0x6984A0BB)
-I (../Core/Inc/esp_comm.h)(0x69E1EECB)
+I (../Core/Inc/esp_comm.h)(0x69E2040E)
 F (../Core/Src/stm32f4xx_hal_msp.c)(0x6984A0BB)(--c99 -c --cpu Cortex-M4.fp -D__MICROLIB -g -O3 --apcs=interwork --split_sections -I ../Core/Inc -I ../Common -I ../Drivers/STM32F4xx_HAL_Driver/Inc -I ../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy -I ../Drivers/CMSIS/Device/ST/STM32F4xx/Include -I ../Drivers/CMSIS/Include-I.\RTE\_upboard-IC:\Keil_v5\ARM\PACK\ARM\CMSIS\5.0.1\CMSIS\Include-IC:\Keil_v5\ARM\PACK\Keil\STM32F4xx_DFP\2.17.0\Drivers\CMSIS\Device\ST\STM32F4xx\Include-D__UVISION_VERSION="524" -D_RTE_ -DSTM32F407xx -DUSE_HAL_DRIVER -DSTM32F407xx -DVECT_TAB_OFFSET="0x00020000U"-o upboard\stm32f4xx_hal_msp.o --omf_browse upboard\stm32f4xx_hal_msp.crf --depend upboard\stm32f4xx_hal_msp.d)
 I (../Core/Inc/main.h)(0x6984A0BB)
 I (../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal.h)(0x68E5D8A0)
@@ -462,8 +462,8 @@ I (../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_pwr_ex.h)(0x68E5D8A0)
 I (../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_tim.h)(0x68E5D8A0)
 I (../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_tim_ex.h)(0x68E5D8A0)
 I (../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_uart.h)(0x68E5D8A0)
-F (../Core/Src/esp_comm.c)(0x69E1EED3)(--c99 -c --cpu Cortex-M4.fp -D__MICROLIB -g -O3 --apcs=interwork --split_sections -I ../Core/Inc -I ../Common -I ../Drivers/STM32F4xx_HAL_Driver/Inc -I ../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy -I ../Drivers/CMSIS/Device/ST/STM32F4xx/Include -I ../Drivers/CMSIS/Include-I.\RTE\_upboard-IC:\Keil_v5\ARM\PACK\ARM\CMSIS\5.0.1\CMSIS\Include-IC:\Keil_v5\ARM\PACK\Keil\STM32F4xx_DFP\2.17.0\Drivers\CMSIS\Device\ST\STM32F4xx\Include-D__UVISION_VERSION="524" -D_RTE_ -DSTM32F407xx -DUSE_HAL_DRIVER -DSTM32F407xx -DVECT_TAB_OFFSET="0x00020000U"-o upboard\esp_comm.o --omf_browse upboard\esp_comm.crf --depend upboard\esp_comm.d)
-I (../Core/Inc/esp_comm.h)(0x69E1EECB)
+F (../Core/Src/esp_comm.c)(0x69E20499)(--c99 -c --cpu Cortex-M4.fp -D__MICROLIB -g -O3 --apcs=interwork --split_sections -I ../Core/Inc -I ../Common -I ../Drivers/STM32F4xx_HAL_Driver/Inc -I ../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy -I ../Drivers/CMSIS/Device/ST/STM32F4xx/Include -I ../Drivers/CMSIS/Include-I.\RTE\_upboard-IC:\Keil_v5\ARM\PACK\ARM\CMSIS\5.0.1\CMSIS\Include-IC:\Keil_v5\ARM\PACK\Keil\STM32F4xx_DFP\2.17.0\Drivers\CMSIS\Device\ST\STM32F4xx\Include-D__UVISION_VERSION="524" -D_RTE_ -DSTM32F407xx -DUSE_HAL_DRIVER -DSTM32F407xx -DVECT_TAB_OFFSET="0x00020000U"-o upboard\esp_comm.o --omf_browse upboard\esp_comm.crf --depend upboard\esp_comm.d)
+I (../Core/Inc/esp_comm.h)(0x69E2040E)
 I (../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal.h)(0x68E5D8A0)
 I (../Core/Inc/stm32f4xx_hal_conf.h)(0x69C49E5E)
 I (../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_rcc.h)(0x68E5D8A0)
@@ -499,14 +499,14 @@ I (../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_pwr_ex.h)(0x68E5D8A0)
 I (../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_tim.h)(0x68E5D8A0)
 I (../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_tim_ex.h)(0x68E5D8A0)
 I (../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_uart.h)(0x68E5D8A0)
+I (../Core/Inc/ota.h)(0x69E2FB0E)
+I (C:\Keil_v5\ARM\ARMCC\include\stdbool.h)(0x588B8344)
 I (C:\Keil_v5\ARM\ARMCC\include\string.h)(0x588B8344)
-F (../Core/Src/ota.c)(0x69E1EEBD)(--c99 -c --cpu Cortex-M4.fp -D__MICROLIB -g -O3 --apcs=interwork --split_sections -I ../Core/Inc -I ../Common -I ../Drivers/STM32F4xx_HAL_Driver/Inc -I ../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy -I ../Drivers/CMSIS/Device/ST/STM32F4xx/Include -I ../Drivers/CMSIS/Include-I.\RTE\_upboard-IC:\Keil_v5\ARM\PACK\ARM\CMSIS\5.0.1\CMSIS\Include-IC:\Keil_v5\ARM\PACK\Keil\STM32F4xx_DFP\2.17.0\Drivers\CMSIS\Device\ST\STM32F4xx\Include-D__UVISION_VERSION="524" -D_RTE_ -DSTM32F407xx -DUSE_HAL_DRIVER -DSTM32F407xx -DVECT_TAB_OFFSET="0x00020000U"-o upboard\ota.o --omf_browse upboard\ota.crf --depend upboard\ota.d)
-I (../Core/Inc/ota.h)(0x69E1EEAE)
+F (../Core/Src/ota.c)(0x69E2FB12)(--c99 -c --cpu Cortex-M4.fp -D__MICROLIB -g -O3 --apcs=interwork --split_sections -I ../Core/Inc -I ../Common -I ../Drivers/STM32F4xx_HAL_Driver/Inc -I ../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy -I ../Drivers/CMSIS/Device/ST/STM32F4xx/Include -I ../Drivers/CMSIS/Include-I.\RTE\_upboard-IC:\Keil_v5\ARM\PACK\ARM\CMSIS\5.0.1\CMSIS\Include-IC:\Keil_v5\ARM\PACK\Keil\STM32F4xx_DFP\2.17.0\Drivers\CMSIS\Device\ST\STM32F4xx\Include-D__UVISION_VERSION="524" -D_RTE_ -DSTM32F407xx -DUSE_HAL_DRIVER -DSTM32F407xx -DVECT_TAB_OFFSET="0x00020000U"-o upboard\ota.o --omf_browse upboard\ota.crf --depend upboard\ota.d)
+I (../Core/Inc/ota.h)(0x69E2FB0E)
 I (C:\Keil_v5\ARM\ARMCC\include\stdint.h)(0x588B8344)
 I (C:\Keil_v5\ARM\ARMCC\include\stdbool.h)(0x588B8344)
-I (../Common/boot_params.h)(0x69E1E8EB)
-I (../Common/crc32.h)(0x69E1E8CC)
-I (C:\Keil_v5\ARM\ARMCC\include\stddef.h)(0x588B8344)
+I (../Core/Inc/esp_comm.h)(0x69E2040E)
 I (../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal.h)(0x68E5D8A0)
 I (../Core/Inc/stm32f4xx_hal_conf.h)(0x69C49E5E)
 I (../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_rcc.h)(0x68E5D8A0)
@@ -520,6 +520,7 @@ I (../Drivers/CMSIS/Include/cmsis_armcc.h)(0x68E5D8A0)
 I (../Drivers/CMSIS/Include/mpu_armv7.h)(0x68E5D8A0)
 I (../Drivers/CMSIS/Device/ST/STM32F4xx/Include/system_stm32f4xx.h)(0x68E5D8A0)
 I (../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy/stm32_hal_legacy.h)(0x68E5D8A0)
+I (C:\Keil_v5\ARM\ARMCC\include\stddef.h)(0x588B8344)
 I (../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_rcc_ex.h)(0x68E5D8A0)
 I (../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_gpio.h)(0x68E5D8A0)
 I (../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_gpio_ex.h)(0x68E5D8A0)
@@ -540,6 +541,8 @@ I (../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_pwr_ex.h)(0x68E5D8A0)
 I (../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_tim.h)(0x68E5D8A0)
 I (../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_tim_ex.h)(0x68E5D8A0)
 I (../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_uart.h)(0x68E5D8A0)
+I (../Common/boot_params.h)(0x69E1E8EB)
+I (../Common/crc32.h)(0x69E1E8CC)
 I (C:\Keil_v5\ARM\ARMCC\include\string.h)(0x588B8344)
 F (../Common/boot_params.c)(0x69E1E8FC)(--c99 -c --cpu Cortex-M4.fp -D__MICROLIB -g -O3 --apcs=interwork --split_sections -I ../Core/Inc -I ../Common -I ../Drivers/STM32F4xx_HAL_Driver/Inc -I ../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy -I ../Drivers/CMSIS/Device/ST/STM32F4xx/Include -I ../Drivers/CMSIS/Include-I.\RTE\_upboard-IC:\Keil_v5\ARM\PACK\ARM\CMSIS\5.0.1\CMSIS\Include-IC:\Keil_v5\ARM\PACK\Keil\STM32F4xx_DFP\2.17.0\Drivers\CMSIS\Device\ST\STM32F4xx\Include-D__UVISION_VERSION="524" -D_RTE_ -DSTM32F407xx -DUSE_HAL_DRIVER -DSTM32F407xx -DVECT_TAB_OFFSET="0x00020000U"-o upboard\boot_params.o --omf_browse upboard\boot_params.crf --depend upboard\boot_params.d)
 I (../Common/boot_params.h)(0x69E1E8EB)

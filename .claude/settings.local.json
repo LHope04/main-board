@@ -43,7 +43,10 @@
       "WebFetch(domain:www.utmel.com)",
       "Bash(ST-LINK_CLI.exe *)",
       "Bash(\"C:/Keil_v5/UV4/UV4.exe\" -j0 -b \"MDK-ARM/bootloader.uvprojx\")",
-      "Bash(C:/Keil_v5/UV4/UV4.exe *)"
+      "Bash(C:/Keil_v5/UV4/UV4.exe *)",
+      "Bash(\"C:/Keil_v5/ARM/ARMCC/Bin/fromelf.exe\" --bin --output \"MDK-ARM/upboard_B/upboard_B.bin\" \"MDK-ARM/upboard_B/upboard_B.axf\")",
+      "Bash(\"C:/Keil_v5/ARM/ARMCC/Bin/fromelf.exe\" --bin --output \"MDK-ARM/upboard/upboard.bin\" \"MDK-ARM/upboard/upboard.axf\")",
+      "Bash(\"C:/Keil_v5/UV4/UV4.exe\" -j0 -b \"MDK-ARM/upboard_B.uvprojx\")"
     ]
   }
 }

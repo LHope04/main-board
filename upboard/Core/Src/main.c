@@ -285,6 +285,13 @@ int main(void)
         Ota_SelfTest(32U * 1024U);
     }
 
+    /* OTA protocol: after OTA_END ACK is sent, reboot into the new slot. */
+    if (OtaProto_TakeResetRequest()) {
+        HAL_Delay(50);   /* let the UART TX drain */
+        __DSB();
+        NVIC_SystemReset();
+    }
+
     /* Apply gear/on command to actuators */
     EspComm_GearCmd *cmd = EspComm_GetGearCmd();
     if (cmd->updated) {
@@ -352,7 +359,9 @@ int main(void)
             st.ambient_temp_x10 = (int16_t)(ambient_c * 10.0f);
             (void)v_24in;
 
-            EspComm_SendStatus(&st);
+            if (!OtaProto_IsBusy()) {
+                EspComm_SendStatus(&st);
+            }
         }
     }
 

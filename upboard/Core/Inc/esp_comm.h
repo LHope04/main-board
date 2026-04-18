@@ -10,15 +10,27 @@ extern "C" {
 
 /* Frame protocol constants */
 #define ESP_FRAME_HEADER      0xAA
-#define ESP_MAX_PAYLOAD       32
-#define ESP_MAX_FRAME         (1 + 1 + 1 + ESP_MAX_PAYLOAD + 1)  /* 36 */
+#define ESP_MAX_PAYLOAD       132      /* 128B chunk + 4B offset */
+#define ESP_MAX_FRAME         (1 + 1 + 1 + ESP_MAX_PAYLOAD + 1)  /* 136 */
 
 /* Command codes */
 #define ESP_CMD_PING          0x01   /* C3 -> STM32 */
 #define ESP_CMD_SET_GEAR      0x20   /* C3 -> STM32 */
 #define ESP_CMD_OTA_SELFTEST  0xF0   /* C3 -> STM32, payload=0, triggers A→B self-copy+reset */
+#define ESP_CMD_OTA_START     0xF1   /* C3 -> STM32, payload: size(4B LE) + version(2B LE) */
+#define ESP_CMD_OTA_DATA      0xF2   /* C3 -> STM32, payload: offset(4B LE) + chunk[≤128B] */
+#define ESP_CMD_OTA_END       0xF3   /* C3 -> STM32, payload: expected_crc32(4B LE) */
+#define ESP_CMD_OTA_ABORT     0xF4   /* C3 -> STM32, payload=0 */
 #define ESP_CMD_PING_ACK      0x81   /* STM32 -> C3 */
 #define ESP_CMD_STATUS        0xA0   /* STM32 -> C3 */
+#define ESP_CMD_OTA_ACK_BIT   0x80   /* ACK cmd = original | 0x80, payload = 1B status */
+
+/* OTA ACK status codes */
+#define OTA_STATUS_OK         0x00
+#define OTA_STATUS_BAD_STATE  0x01   /* wrong sequence (e.g. DATA before START) */
+#define OTA_STATUS_BAD_PARAM  0x02   /* offset not aligned / size too big */
+#define OTA_STATUS_FLASH_ERR  0x03   /* erase/program failed */
+#define OTA_STATUS_BAD_CRC    0x04   /* END: computed crc ≠ expected */
 
 /* Gear command received from ESP32 */
 typedef struct {
