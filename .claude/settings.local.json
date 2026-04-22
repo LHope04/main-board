@@ -93,7 +93,13 @@
       "Bash(ninja --version)",
       "Bash(brew install:*)",
       "Read(//Applications/ArmGNUToolchain/**)",
-      "Read(//opt/homebrew/**)"
+      "Read(//opt/homebrew/**)",
+      "Bash(cp -n upboard/.claude/settings.json .claude/)",
+      "Bash(cp upboard/.claude/stm32-dev-pitfalls.md .claude/)",
+      "Bash(cp -r upboard/.claude/skills .claude/)",
+      "Bash(git rm:*)",
+      "Bash(git mv:*)",
+      "Bash(git add:*)"
     ]
   }
 }
