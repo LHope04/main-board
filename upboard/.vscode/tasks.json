@@ -1,0 +1,137 @@
+{
+  "version": "2.0.0",
+  "options": {
+    "cwd": "${workspaceFolder}",
+    "env": {
+      "PATH": "C:\\Users\\q7591\\AppData\\Local\\vcpkg\\downloads\\tools\\cmake-3.31.10-windows\\cmake-3.31.10-windows-x86_64\\bin;C:\\Users\\q7591\\AppData\\Local\\vcpkg\\downloads\\tools\\ninja\\1.13.1-windows;${env:PATH}"
+    }
+  },
+  "tasks": [
+    {
+      "label": "Build Bootloader",
+      "type": "shell",
+      "command": "cmake",
+      "args": ["--build", "--preset", "bootloader"],
+      "group": "build",
+      "problemMatcher": ["$gcc"]
+    },
+    {
+      "label": "Build App A",
+      "type": "shell",
+      "command": "cmake",
+      "args": ["--build", "--preset", "app-a"],
+      "group": "build",
+      "problemMatcher": ["$gcc"]
+    },
+    {
+      "label": "Build App B",
+      "type": "shell",
+      "command": "cmake",
+      "args": ["--build", "--preset", "app-b"],
+      "group": "build",
+      "problemMatcher": ["$gcc"]
+    },
+    {
+      "label": "Build All",
+      "dependsOn": ["Build Bootloader", "Build App A", "Build App B"],
+      "group": { "kind": "build", "isDefault": true },
+      "problemMatcher": []
+    },
+
+    {
+      "label": "Configure Bootloader",
+      "type": "shell",
+      "command": "cmake",
+      "args": ["--preset", "bootloader"],
+      "problemMatcher": []
+    },
+    {
+      "label": "Configure App A",
+      "type": "shell",
+      "command": "cmake",
+      "args": ["--preset", "app-a"],
+      "problemMatcher": []
+    },
+    {
+      "label": "Configure App B",
+      "type": "shell",
+      "command": "cmake",
+      "args": ["--preset", "app-b"],
+      "problemMatcher": []
+    },
+    {
+      "label": "Configure All",
+      "dependsOn": ["Configure Bootloader", "Configure App A", "Configure App B"],
+      "problemMatcher": []
+    },
+
+    {
+      "label": "Flash Bootloader (ST-Link)",
+      "type": "shell",
+      "command": "C:/Program Files (x86)/STMicroelectronics/STM32 ST-LINK Utility/ST-LINK Utility/ST-LINK_CLI.exe",
+      "args": [
+        "-c", "SWD", "UR",
+        "-P", "${workspaceFolder}/build/bootloader/bootloader/bootloader.hex",
+        "-V", "after_programming"
+      ],
+      "dependsOn": ["Build Bootloader"],
+      "problemMatcher": []
+    },
+    {
+      "label": "Flash Params A (ST-Link)",
+      "type": "shell",
+      "command": "C:/Program Files (x86)/STMicroelectronics/STM32 ST-LINK Utility/ST-LINK Utility/ST-LINK_CLI.exe",
+      "args": [
+        "-c", "SWD", "UR",
+        "-P", "${workspaceFolder}/build/app-a/app/params_A.bin", "0x08008000",
+        "-V", "after_programming"
+      ],
+      "dependsOn": ["Build App A"],
+      "problemMatcher": []
+    },
+    {
+      "label": "Flash Params B (ST-Link)",
+      "type": "shell",
+      "command": "C:/Program Files (x86)/STMicroelectronics/STM32 ST-LINK Utility/ST-LINK Utility/ST-LINK_CLI.exe",
+      "args": [
+        "-c", "SWD", "UR",
+        "-P", "${workspaceFolder}/build/app-b/app/params_B.bin", "0x08008000",
+        "-V", "after_programming"
+      ],
+      "dependsOn": ["Build App B"],
+      "problemMatcher": []
+    },
+    {
+      "label": "Flash App A (ST-Link)",
+      "type": "shell",
+      "command": "C:/Program Files (x86)/STMicroelectronics/STM32 ST-LINK Utility/ST-LINK Utility/ST-LINK_CLI.exe",
+      "args": [
+        "-c", "SWD", "UR",
+        "-P", "${workspaceFolder}/build/app-a/app/upboard_A.hex",
+        "-V", "after_programming", "-Rst"
+      ],
+      "dependsOn": ["Build App A"],
+      "problemMatcher": []
+    },
+    {
+      "label": "Flash App B (ST-Link)",
+      "type": "shell",
+      "command": "C:/Program Files (x86)/STMicroelectronics/STM32 ST-LINK Utility/ST-LINK Utility/ST-LINK_CLI.exe",
+      "args": [
+        "-c", "SWD", "UR",
+        "-P", "${workspaceFolder}/build/app-b/app/upboard_B.hex",
+        "-V", "after_programming", "-Rst"
+      ],
+      "dependsOn": ["Build App B"],
+      "problemMatcher": []
+    },
+    {
+      "label": "Mass Erase Chip (ST-Link)",
+      "type": "shell",
+      "command": "C:/Program Files (x86)/STMicroelectronics/STM32 ST-LINK Utility/ST-LINK Utility/ST-LINK_CLI.exe",
+      "args": ["-c", "SWD", "UR", "-ME"],
+      "problemMatcher": [],
+      "detail": "Wipes all flash. First-time bring-up sequence: Mass Erase -> Flash Bootloader -> Flash Params A -> Flash App A -> 'Debug App A' (F5)."
+    }
+  ]
+}

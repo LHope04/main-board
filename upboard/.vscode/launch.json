@@ -1,0 +1,106 @@
+{
+  "version": "0.2.0",
+  "_note": [
+    "Cortex-Debug uses OpenOCD as the GDB server. ST-Link config + STM32F4 target",
+    "are auto-located via OpenOCD's bundled scripts dir.",
+    "",
+    "First-time setup before any 'launch' config will boot end-to-end:",
+    "  1. Run task 'Flash Bootloader (ST-Link)' once.",
+    "  2. Run task 'Flash Params A (ST-Link)' once (writes 0x08008000).",
+    "  3. Then F5 — 'Debug App A' will only re-flash sector 5 each time.",
+    "",
+    "Bootloader and App live in non-overlapping sectors, so flashing the App",
+    "ELF never touches the bootloader sector. symbolFiles loads bootloader",
+    "debug info too so you can step across the jump boundary."
+  ],
+  "configurations": [
+    {
+      "name": "Debug Bootloader",
+      "type": "cortex-debug",
+      "request": "launch",
+      "cwd": "${workspaceFolder}",
+      "executable": "${workspaceFolder}/build/bootloader/bootloader/bootloader.elf",
+      "servertype": "openocd",
+      "configFiles": [
+        "interface/stlink.cfg",
+        "target/stm32f4x.cfg"
+      ],
+      "device": "STM32F407VG",
+      "armToolchainPath": "C:\\ProgramData\\chocolatey\\bin",
+      "gdbPath": "C:\\ProgramData\\chocolatey\\bin\\arm-none-eabi-gdb.exe",
+      "runToEntryPoint": "main",
+      "preLaunchTask": "Build Bootloader",
+      "showDevDebugOutput": "none"
+    },
+    {
+      "name": "Debug App A",
+      "type": "cortex-debug",
+      "request": "launch",
+      "cwd": "${workspaceFolder}",
+      "executable": "${workspaceFolder}/build/app-a/app/upboard_A.elf",
+      "loadFiles": [
+        "${workspaceFolder}/build/app-a/app/upboard_A.elf"
+      ],
+      "symbolFiles": [
+        { "file": "${workspaceFolder}/build/bootloader/bootloader/bootloader.elf" },
+        { "file": "${workspaceFolder}/build/app-a/app/upboard_A.elf" }
+      ],
+      "servertype": "openocd",
+      "configFiles": [
+        "interface/stlink.cfg",
+        "target/stm32f4x.cfg"
+      ],
+      "device": "STM32F407VG",
+      "armToolchainPath": "C:\\ProgramData\\chocolatey\\bin",
+      "gdbPath": "C:\\ProgramData\\chocolatey\\bin\\arm-none-eabi-gdb.exe",
+      "runToEntryPoint": "main",
+      "preLaunchTask": "Build App A",
+      "showDevDebugOutput": "none"
+    },
+    {
+      "name": "Debug App B",
+      "type": "cortex-debug",
+      "request": "launch",
+      "cwd": "${workspaceFolder}",
+      "executable": "${workspaceFolder}/build/app-b/app/upboard_B.elf",
+      "loadFiles": [
+        "${workspaceFolder}/build/app-b/app/upboard_B.elf"
+      ],
+      "symbolFiles": [
+        { "file": "${workspaceFolder}/build/bootloader/bootloader/bootloader.elf" },
+        { "file": "${workspaceFolder}/build/app-b/app/upboard_B.elf" }
+      ],
+      "servertype": "openocd",
+      "configFiles": [
+        "interface/stlink.cfg",
+        "target/stm32f4x.cfg"
+      ],
+      "device": "STM32F407VG",
+      "armToolchainPath": "C:\\ProgramData\\chocolatey\\bin",
+      "gdbPath": "C:\\ProgramData\\chocolatey\\bin\\arm-none-eabi-gdb.exe",
+      "runToEntryPoint": "main",
+      "preLaunchTask": "Build App B",
+      "showDevDebugOutput": "none"
+    },
+    {
+      "name": "Attach (no flash, current slot)",
+      "type": "cortex-debug",
+      "request": "attach",
+      "cwd": "${workspaceFolder}",
+      "executable": "${workspaceFolder}/build/app-a/app/upboard_A.elf",
+      "symbolFiles": [
+        { "file": "${workspaceFolder}/build/bootloader/bootloader/bootloader.elf" },
+        { "file": "${workspaceFolder}/build/app-a/app/upboard_A.elf" }
+      ],
+      "servertype": "openocd",
+      "configFiles": [
+        "interface/stlink.cfg",
+        "target/stm32f4x.cfg"
+      ],
+      "device": "STM32F407VG",
+      "armToolchainPath": "C:\\ProgramData\\chocolatey\\bin",
+      "gdbPath": "C:\\ProgramData\\chocolatey\\bin\\arm-none-eabi-gdb.exe",
+      "showDevDebugOutput": "none"
+    }
+  ]
+}

@@ -18,8 +18,9 @@ from pathlib import Path
 
 MAGIC = 0xA5A5A5A5
 
-# Layout: magic, boot_slot, slot_valid[2], slot_size[2], slot_crc32[2],
-#         slot_version[2], pending_update, boot_count, reserved[4], self_crc
+# Layout (matches Common/boot_params.h exactly):
+#   magic, boot_slot, slot_valid[2], slot_size[2], slot_crc32[2],
+#   slot_version[2], pending_update, boot_count, sequence, reserved[3], self_crc
 # 17 x uint32 = 68 bytes; self_crc is the 17th word.
 FMT_BODY = "<IIIIIIIIIIIIIIII"  # 16 uint32 before self_crc
 FMT_FULL = FMT_BODY + "I"
@@ -34,13 +35,14 @@ def build(slot: str) -> bytes:
         FMT_BODY,
         MAGIC,         # magic
         boot_slot,     # boot_slot
-        0, 0,          # slot_valid[2]
+        0, 0,          # slot_valid[2]   (0 = unvalidated; bootloader still tries it)
         0, 0,          # slot_size[2]
         0, 0,          # slot_crc32[2]
         0, 0,          # slot_version[2]
         0,             # pending_update
         0,             # boot_count
-        0, 0, 0, 0,    # reserved[4]
+        0,             # sequence        (BootParams_Write bumps it past 0)
+        0, 0, 0,       # reserved[3]
     )
     self_crc = zlib.crc32(body) & 0xFFFFFFFF
     return body + struct.pack("<I", self_crc)

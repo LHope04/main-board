@@ -1,0 +1,60 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": { "major": 3, "minor": 22, "patch": 0 },
+  "configurePresets": [
+    {
+      "name": "base",
+      "hidden": true,
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "toolchainFile": "${sourceDir}/cmake/arm-none-eabi-gcc.cmake",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+    {
+      "name": "bootloader",
+      "inherits": "base",
+      "displayName": "Bootloader @ 0x08000000 (32 KB)",
+      "cacheVariables": { "UPBOARD_TARGET": "bootloader" }
+    },
+    {
+      "name": "bootloader-debug",
+      "inherits": "bootloader",
+      "displayName": "Bootloader (debug, -Og)",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug" }
+    },
+    {
+      "name": "app-a",
+      "inherits": "base",
+      "displayName": "App Slot A @ 0x08020000 (128 KB)",
+      "cacheVariables": { "UPBOARD_TARGET": "app-a" }
+    },
+    {
+      "name": "app-b",
+      "inherits": "base",
+      "displayName": "App Slot B @ 0x08040000 (128 KB)",
+      "cacheVariables": { "UPBOARD_TARGET": "app-b" }
+    },
+    {
+      "name": "app-a-debug",
+      "inherits": "app-a",
+      "displayName": "App Slot A (debug, -Og)",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug" }
+    },
+    {
+      "name": "app-b-debug",
+      "inherits": "app-b",
+      "displayName": "App Slot B (debug, -Og)",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug" }
+    }
+  ],
+  "buildPresets": [
+    { "name": "bootloader",       "configurePreset": "bootloader" },
+    { "name": "bootloader-debug", "configurePreset": "bootloader-debug" },
+    { "name": "app-a",            "configurePreset": "app-a" },
+    { "name": "app-b",            "configurePreset": "app-b" },
+    { "name": "app-a-debug",      "configurePreset": "app-a-debug" },
+    { "name": "app-b-debug",      "configurePreset": "app-b-debug" }
+  ]
+}

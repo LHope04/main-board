@@ -1,0 +1,38 @@
+# Build artifacts
+build/
+*.elf
+*.hex
+*.bin
+*.map
+*.lst
+*.o
+*.d
+
+# Keep the linker scripts (.ld) and CMake artifact-generation scripts
+!cmake/ld/*.ld
+
+# Keep the boot params blob template (committed for first-time bring-up)
+# (params_A.bin / params_B.bin are produced into build/<preset>/app/ — root copies are stale, ignore them)
+
+# CubeMX residue (Keil-era — repo is now CMake-only)
+.mxproject
+*.uvprojx
+*.uvoptx
+*.uvgu*
+MDK-ARM/
+
+# IDE / editor
+.vs/
+.idea/
+*.swp
+*~
+.DS_Store
+Thumbs.db
+
+# Python / OTA tools cache
+__pycache__/
+*.pyc
+.venv/
+
+# Serial monitor capture (regenerated each run)
+tools/serial_log.txt

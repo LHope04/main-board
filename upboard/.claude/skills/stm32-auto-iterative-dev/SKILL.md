@@ -1,241 +1,158 @@
 ---
 name: stm32-auto-iterative-dev
-description: "Run an automatic iterative STM32 firmware workflow in the current repository: modify code, compile with Keil, flash with ST-Link, verify through serial logs or memory reads, and repeat until the requested behavior passes. Use when the user asks Codex to keep debugging and iterating instead of stopping after a single code change."
+description: Run an automatic iterative STM32 firmware workflow in any CMake-Presets + arm-none-eabi-gcc + ST-Link project: edit code, build with the right preset, flash, verify by memory read or serial, and repeat until a quantified pass condition is met. Use when the user asks to keep debugging until something works rather than stopping after a single edit. Toolchain-agnostic about how many images the project produces (single-image, bootloader+app, OTA A/B) — preset list is discovered at runtime.
 ---
 
 # Auto Iterative Development
 
-Use this skill when the task requires repeated code-edit, build, flash, and verification loops. Keep iterating until the requested behavior is verified or a concrete external blocker prevents progress.
+Use this skill when the task requires repeated edit / build / flash / verify loops. Keep iterating until the requested behavior is verified or a concrete external blocker prevents progress.
 
-## Step 0 — Discover Project Paths (run once at start)
+This skill composes two siblings:
+- `stm32-cmake-stlink` — the discover/build/flash/verify workflow it leans on each iteration.
+- `stm32-stlink-workflow` — the ST-LINK_CLI / OpenOCD command surface for verification reads.
 
-Do NOT assume fixed paths. Discover them first:
+It adds the **iteration loop**, **hypothesis discipline**, and **pitfalls list** on top.
+
+## Step 0 — Discover project paths (run once at start)
+
+Do NOT hardcode preset names, image filenames, or output subdirs.
 
 ```bash
-# 1. Find Keil executable
-KEIL=$(find /c/Keil_v5 /c/Keil /c/Keil_MDK -name "UV4.exe" 2>/dev/null | head -1)
-echo "Keil: $KEIL"
+# 1. CMake-Presets root
+PRESETS=$(find . -maxdepth 3 -name "CMakePresets.json" 2>/dev/null | head -1)
+[ -z "$PRESETS" ] && { echo "No CMakePresets.json — this skill targets CMake-Presets projects."; exit 1; }
+ROOT=$(dirname "$PRESETS")
 
-# 2. Find Keil project file
-PROJ=$(find . -name "*.uvprojx" 2>/dev/null | head -1)
-echo "Project: $PROJ"
+# 2. Non-hidden configurePresets (one per image)
+PRESETS_LIST=$(python -c "
+import json
+d = json.load(open(r'$PRESETS', encoding='utf-8'))
+print(' '.join(p['name'] for p in d.get('configurePresets', []) if not p.get('hidden')))
+")
+echo "Presets: $PRESETS_LIST"
 
-# 3. Derive target name, hex and build log from project path
-# Example: foo/MDK-ARM/bar.uvprojx → target=bar
-#   hex      -> foo/MDK-ARM/bar/bar.hex
-#   build log-> foo/MDK-ARM/bar/bar.build_log.htm
-TARGET=$(basename "$PROJ" .uvprojx)
-PROJ_DIR=$(dirname "$PROJ")
-HEX="$PROJ_DIR/$TARGET/$TARGET.hex"
-LOG="$PROJ_DIR/$TARGET/$TARGET.build_log.htm"
-MAP="$PROJ_DIR/$TARGET/$TARGET.map"
-echo "Hex: $HEX  Log: $LOG"
+# 3. ST-Link tool
+STLINK=$(command -v ST-LINK_CLI.exe 2>/dev/null \
+    || find "/c/Program Files (x86)/STMicroelectronics" -name "ST-LINK_CLI.exe" 2>/dev/null | head -1)
+echo "ST-Link: ${STLINK:-NOT FOUND}"
 
-# 4. Find serial monitor script (OPTIONAL — not all projects have one)
+# 4. Optional serial monitor (only some projects ship one)
 SERIAL_MON=$(find . -name "serial_monitor.py" 2>/dev/null | head -1)
-echo "Serial monitor: ${SERIAL_MON:-NOT FOUND — will use memory reads only}"
+echo "Serial monitor: ${SERIAL_MON:-NOT FOUND — use memory reads only}"
 
-# 5. Find Python binary with pyserial (only needed if SERIAL_MON exists)
-if [ -n "$SERIAL_MON" ]; then
-  PYBIN=$(python -c "import serial; import sys; print(sys.executable)" 2>/dev/null)
-  echo "Python: $PYBIN"
-fi
+# 5. Python with pyserial (needed only if SERIAL_MON exists)
+[ -n "$SERIAL_MON" ] && PYBIN=$(python -c "import serial,sys; print(sys.executable)" 2>/dev/null)
 ```
 
-Save these paths before continuing:
-- `KEIL`       — path to `UV4.exe`
-- `PROJ`       — path to `.uvprojx`
-- `HEX`        — path to `.hex`
-- `LOG`        — path to `.build_log.htm`
-- `MAP`        — path to `.map` (for symbol addresses)
-- `SERIAL_MON` — path to serial monitor script (**optional**, empty if not found)
-- `PYBIN`      — python binary with pyserial (only needed if `SERIAL_MON` exists)
+Save before continuing:
+- `ROOT`, `PRESETS_LIST`, `STLINK`, `SERIAL_MON` (optional), `PYBIN` (optional)
 
-## Default Loop
+For each preset, the build dir is `build/<preset>/` and the output files land in `build/<preset>/<sub>/<image>.{elf,hex,bin,map}` where `<sub>` and `<image>` are decided by the preset's `add_subdirectory()` / `add_executable()`. Discover with `ls build/<preset>/**/*.{elf,hex,bin,map}` after the first build.
 
-1. Write or modify code for the requested behavior.
-2. Add minimal test points when needed:
-   - counters
-   - markers
-   - `snprintf` + `uart_send_string` prints (**not** `printf` — see Pitfalls)
-   - variables readable with ST-Link
-3. Compile (bash syntax, not PowerShell), using `$KEIL` discovered in Step 0:
+## Default loop
 
-```bash
-"$KEIL" -j0 -b "$PROJ"
-```
+1. **State the hypothesis.** Before touching code, write one sentence: what you expect to be wrong, what fix you'll try, what observation will prove it. No silent edits.
+2. **Edit code** for the requested behavior.
+3. **Add minimal test points** when needed:
+   - counters (uint32 incremented in the loop / ISR you want to verify)
+   - status flags written from the path under test
+   - `snprintf(buf,...) + uart_send_string(buf)` if serial is needed (do **not** rely on `printf` unless the project explicitly retargets it)
+   - any variable readable later via `-r32` against its `.map` address
+4. **Pick which preset(s) to rebuild** (see *Affected preset rules* below).
+5. **Build incrementally** — ninja figures out which `.o` to redo:
+   ```bash
+   cmake --build --preset <name>
+   # or, if shared code changed:
+   for p in $PRESETS_LIST; do cmake --build --preset $p || break; done
+   ```
+   Build success = exit 0 AND the link step prints a `Memory region Used Size` table. No log file to grep.
+6. **Flash** — use the preset's actual output paths (discover with `ls build/<preset>/**/*.hex`):
+   ```bash
+   "$STLINK" -c SWD UR -P build/<preset>/<sub>/<image>.hex -V after_programming -Rst
+   ```
+   Add `-Rst` only on the **last** image in a multi-image flash. Multi-image: each `.hex` carries its own LMA, so flashing one image does not touch sectors used by another (assuming non-overlapping linker scripts — verify if unsure).
+   Flash success = ST-LINK_CLI prints **both** `Programming Complete` and `Verification...OK`.
+7. **Verify — memory reads first.** Always.
+   ```bash
+   grep -E "\b<symbol>\b" build/<preset>/<sub>/<image>.map     # find address
+   "$STLINK" -c SWD HotPlug -r32 0x2000xxxx 1                  # read one word, non-invasive
+   ```
+   Memory reads beat serial because they require no wiring, no port permission, no tail of stale logs, and the CPU keeps running.
+8. **Fall back to serial** only when memory cannot answer (timing, ordering, printf traces). If `SERIAL_MON` is empty, state that serial is unavailable and continue with memory reads.
+9. **If verification passes**, stop and deliver the result with the observed value and the threshold it met.
+10. **If it fails**, write the new hypothesis (step 1) — do not just re-try the same change with a tweak. Loop.
 
-4. Check build result:
+## Affected preset rules (which images to rebuild)
 
-```bash
-grep -E "Error\(s\)|Warning\(s\)|Program Size" "$LOG" | tail -4
-```
+| Edit location | Rebuild |
+|---|---|
+| Inside one image's subdir only (e.g. `bootloader/Src/foo.c`) | That preset only |
+| Shared code (`Common/`, `Drivers/`, `Core/Src/system_*.c`, top-level `CMakeLists.txt`, toolchain file) | Every preset |
+| Linker script `cmake/ld/<X>.ld` | The preset(s) whose `LINK_DEPENDS` references it |
+| Preset definition (`CMakePresets.json`) | Reconfigure (`cmake --preset <name>`) then build that preset |
 
-Accept only if output contains `0 Error(s)`.
+When in doubt, rebuild everything — ninja's incremental build skips untouched `.o` files anyway. Don't manually `rm -rf build/` to "force a clean build" unless a CMake graph corruption is actually proven; you throw away the entire dep graph for nothing.
 
-5. Flash:
+## Iteration discipline
 
-```bash
-ST-LINK_CLI.exe -c SWD -P "$HEX" -V after_programming -Rst
-```
+- **One hypothesis at a time.** If your edit changes both "the timer config" and "the ISR body," and the result is still wrong, you can't tell which was right and which was wrong. Bisect.
+- **Counters > breakpoints** for "is this code path running" questions. A counter you read with `-r32` in 2 seconds beats a 30-second GDB attach.
+- **Snapshot for multi-variable state.** Reading three `volatile`s with three `-r32` calls means three different points in time — your numbers will not be self-consistent. Make a `struct` snapshot, copy with interrupts disabled, then read the snapshot's address.
+- **Quantified pass condition agreed up front.** Before iterating, write down what "it works" looks like as a number range, register value, or hex pattern. "Looks reasonable" is not a pass.
+- **Stop early when blocked.** If verification needs hardware you don't have (a working sensor, a calibrated load), say so and stop — don't fake-pass with a heuristic.
 
-6. Treat flashing as successful only if output contains `Verification...OK` and `Programming Complete`.
+## Common failure modes
 
-7. Verify behavior — **always try memory reads first; fall back to serial only if memory reads cannot prove the behavior**.
+- **Build fails**:
+  - Read the ninja error line (the file path is in the error itself); open that file at the line; fix; rebuild that preset only.
+  - For "undefined reference," the symbol is in a `.c` file the preset's CMakeLists doesn't list — add it.
+- **Flash fails (`No ST-LINK detected`)** — probe / wiring / Vtarget; no software fix. Stop and surface.
+- **Flash succeeds but device misbehaves** — first read the vector table base via `-r32` and confirm reset handler == expected symbol address from the map. If they disagree, you flashed the wrong slot or the linker script's FLASH origin is wrong for this image.
+- **Memory read returns `0x00000000` or `0xFFFFFFFF`** — symbol address from a stale map (rebuild without re-flashing), or the variable lives in `.bss` and hasn't been written yet. Reset and re-read.
+- **Sensor / peripheral value stuck at zero** — read the raw register first, not the cooked value. If raw moves but cooked doesn't, the math is wrong. If raw is also zero, the peripheral clock or GPIO is wrong.
+- **`printf` produces no output** — many projects don't link a `_write` / `fputc` retarget. Use `snprintf` + the project's existing UART send function instead.
 
-**Primary: Memory read (non-invasive HotPlug — never halts CPU)**:
-```bash
-# Look up symbol address in map file
-grep "symbol_name" "$MAP"
-
-# Read one word at a time (count > 2 is unreliable on some ST-LINK versions)
-ST-LINK_CLI.exe -c SWD HotPlug -r32 <address> 1
-
-# Read multiple variables individually and correlate
-ST-LINK_CLI.exe -c SWD HotPlug -r32 <addr1> 1
-ST-LINK_CLI.exe -c SWD HotPlug -r32 <addr2> 1
-```
-
-Memory reads are preferred because:
-- No serial wiring or port access needed
-- Non-invasive — CPU keeps running
-- Works even when serial output is missing or held by another process
-- ST-LINK HotPlug is always available if the probe is connected
-
-**Fallback: Serial log** (only when the behavior cannot be observed via memory — e.g. timing, printf traces):
-```bash
-# Only if SERIAL_MON was found in Step 0
-# Start monitor in background, wait for output, then read
-"$PYBIN" "$SERIAL_MON" <COM_PORT> &
-sleep 8
-SERIAL_LOG=$(dirname "$SERIAL_MON")/serial_log.txt
-cat "$SERIAL_LOG"
-```
-
-> If the COM port returns `PermissionError`, another process holds it. Use memory reads instead — do not wait or retry the port.
-
-8. If verification passes, stop and deliver the result.
-9. If verification fails, analyze the failure, choose the next fix, and return to step 1.
-
-## Core Commands
-
-All paths use variables discovered in Step 0.
-
-```bash
-# Compile
-"$KEIL" -j0 -b "$PROJ"
-
-# Check build result
-grep -E "Error\(s\)|Warning\(s\)|Program Size" "$LOG" | tail -4
-
-# Flash
-ST-LINK_CLI.exe -c SWD -P "$HEX" -V after_programming -Rst
-
-# Memory read — PRIMARY verification method (HotPlug = non-invasive)
-# Always read one word at a time; count > 2 is unreliable
-grep "symbol_name" "$MAP"                              # find address
-ST-LINK_CLI.exe -c SWD HotPlug -r32 <address> 1       # read value
-
-# Find COM port (only needed for serial fallback)
-python -c "import serial.tools.list_ports; [print(p.device, p.description) for p in serial.tools.list_ports.comports()]"
-
-# Serial monitor (fallback — only if SERIAL_MON found in Step 0)
-"$PYBIN" "$SERIAL_MON" <COM_PORT>
-```
-
-## Iteration Strategy
-
-1. Start with the smallest possible test.
-2. Add functionality in narrow increments.
-3. Use counters to prove loops and periodic tasks are running.
-4. **Always try memory reads first.** Only reach for serial when memory cannot prove the behavior (e.g. ordering of events, printf traces).
-5. Change one main hypothesis at a time when isolating a fault.
-6. If using serial: check `$SERIAL_LOG` modification time before reading — stale logs mislead diagnosis.
-
-## Common Checks
-
-- **Compile failure**:
-  - `grep -E "error:|warning:" "$LOG"` to find the actual compiler line
-  - Summarize the real error before changing code
-- **Flash failure**:
-  - If `No ST-LINK detected` → hardware not connected, stop and report
-  - If `Can't reset the core` → try HotPlug mode or power-cycle the board
-  - Do not claim the board is updated if programming did not complete
-- **Serial log is empty or stale** (serial fallback only):
-  - Switch to memory reads first — avoids the problem entirely
-  - If serial is required: check mtime with `stat "$SERIAL_LOG" | grep Modify`
-  - If stale: start the monitor, wait, then re-read
-  - If `PermissionError` on port open → another process holds it; use memory reads instead
-- **`printf` produces no output**:
-  - Keil projects may not enable MicroLib (`useUlib=0` in `.uvprojx`)
-  - Without MicroLib, `fputc` retargeting is inactive; `printf` goes to semihosting (no output)
-  - Fix: use `snprintf(buf, sizeof(buf), ...) + uart_send_string(buf)` instead
-- **Sensor/peripheral value stuck at zero or wrong**:
-  - Read the raw register or variable via memory first — skip serial entirely
-  - If raw changes but processed value is wrong: check sign convention, scale factor, offset
-  - If raw is always zero: check GPIO clock, pin mode, peripheral clock enable
-- **Peripheral bring-up issues**:
-  - Verify GPIO clock is enabled (`__HAL_RCC_GPIOx_CLK_ENABLE()`)
-  - Verify pin mode, pull, alternate function, initial output level
-  - Verify SCL/SDA or CLK/DATA wiring assumptions match code
-  - Read peripheral status/control registers via HotPlug to confirm configuration took effect
-
-## Pitfalls (learned from this project)
+## Pitfalls (cross-project, learned the hard way)
 
 | Pitfall | Symptom | Fix |
-|---------|---------|-----|
-| `& "..."` PowerShell syntax in bash | `syntax error near unexpected token '&'` | Remove `&`, use `"C:/path/tool.exe"` directly |
-| `printf` without MicroLib | No serial output at all | Use `snprintf + uart_send_string` |
-| `r32` without HotPlug | `Can't reset the core` | Add `HotPlug` flag |
-| Reading stale serial_log.txt | Appears to pass when board runs old firmware | Check file mtime; restart monitor |
-| Wrong Python for serial monitor | `ModuleNotFoundError: No module named 'serial'` | Use `python -c "import serial"` to verify; fall back to full path |
-| Sensor sign inversion | Processed value always 0 despite raw changing | Output raw; check if `offset - raw` needed instead of `raw - offset` |
-| TIM8 dual IRQ vectors | Capture or overflow interrupt never fires | TIM8 splits into two vectors: enable both `TIM8_UP_TIM13_IRQn` (overflow) and `TIM8_CC_IRQn` (capture); general timers (TIM3 etc.) use a single `TIMx_IRQn` |
-| Mixed PWM + IC on same TIM | IC never triggers, or PWM stops after IC config | Call `HAL_TIM_PWM_Init` first (initialises base), then `HAL_TIM_IC_ConfigChannel` for IC channels; overflow interrupt is NOT enabled by `HAL_TIM_IC_Start_IT` — call `__HAL_TIM_ENABLE_IT(&htimx, TIM_IT_UPDATE)` separately |
-| `-r32 count > 2` returns fewer words than requested | Multi-variable diagnosis yields incomplete data | Read each address individually; do not rely on count > 2 returning all words |
-| volatile variables read at different times | val1/val2/overflow from different interrupt moments; calculated frequency is nonsense | Add a snapshot struct; copy all fields with interrupts disabled, then read the snapshot address |
+|---|---|---|
+| Vector table mis-set after multi-image flash | App boots wrong handler / Hard Faults on first IRQ | Verify `VECT_TAB_OFFSET` (or `SCB->VTOR`) matches the LMA of the image; re-link with the correct offset |
+| Stack top mis-checked by a parent (e.g. bootloader's MSP sanity check) | Bootloader silently refuses to jump; no fault, no UART | Range-check `msp` against actual SRAM bounds (`< 0x20000000` or `> 0x20000000+SIZE`), not a bitmask — GCC's `_estack` lands at the very top |
+| `-r32` with `count > 2` returns truncated data | Multi-variable read is incomplete | Read each address individually |
+| `volatile` reads not atomic across multiple `-r32` calls | Inconsistent timestamps / counters | Snapshot struct, copy with interrupts off, read the snapshot |
+| TIMx dual IRQ vectors (TIM1/TIM8) | Capture or update IRQ never fires | Enable BOTH `TIMx_UP_*_IRQn` and `TIMx_CC_IRQn`; general-purpose timers (TIM2/3/4/5) use a single vector |
+| Mixed PWM + Input Capture on same TIM | IC never triggers, or PWM stops after IC config | `HAL_TIM_PWM_Init` first (initializes the time base), then `HAL_TIM_IC_ConfigChannel`; update IRQ is **not** enabled by `HAL_TIM_IC_Start_IT` — call `__HAL_TIM_ENABLE_IT(&htimx, TIM_IT_UPDATE)` separately |
+| `& "..."` PowerShell syntax inside bash | `syntax error near unexpected token '&'` | Drop the `&`; quote-only: `"C:/path/tool.exe"` |
+| Reading stale `serial_log.txt` | "Pass" while board still runs old firmware | Check mtime (`stat ... | grep Modify`); restart the monitor; better — switch to memory reads |
+| Sensor sign / offset inversion | Cooked value pinned at 0 while raw moves | Print raw; verify whether it's `(raw - offset)` or `(offset - raw)` for this sensor |
+| Mass-erase "to clean up" wipes a sibling app slot in OTA projects | Bootloader jumps into 0xFFFFFFFF and Hard Faults | Never mass-erase a multi-image project unless you're prepared to re-flash everything in order |
 
-## Key Files (all discovered in Step 0, never hardcoded)
+## Acceptance criteria
 
-| Variable | Derived from | Purpose |
-|----------|-------------|---------|
-| `$KEIL` | found under `/c/Keil*` | Build tool |
-| `$PROJ` | `find . -name "*.uvprojx"` | Keil project |
-| `$HEX` | `$PROJ_DIR/$TARGET/$TARGET.hex` | Flash image |
-| `$LOG` | `$PROJ_DIR/$TARGET/$TARGET.build_log.htm` | Build result |
-| `$MAP` | `$PROJ_DIR/$TARGET/$TARGET.map` | Symbol → address lookup |
-| `$SERIAL_MON` | `find . -name "serial_monitor.py"` | Serial fallback (**optional**) |
-| `$SERIAL_LOG` | `$(dirname $SERIAL_MON)/serial_log.txt` | Serial output (**optional**) |
-| `$PYBIN` | `python -c "import sys; print(sys.executable)"` | Python for serial only |
+Verification is complete only when a **quantified** pass condition is met. Agree on the range before starting:
+- Input capture: expected frequency range (e.g. "30–200 Hz at 50% PWM")
+- ADC: expected raw range at a known input
+- GPIO: expected ODR pattern as a hex mask
+- PWM duty: expected `CCR/ARR` ratio
 
-## Acceptance Criteria
+Measured value in range → pass. Out of range → diagnose; do not change code on a hunch.
 
-Verification is only complete when a **quantified** pass condition is met. Before starting a feature, agree on the expected range, not just "looks reasonable":
+## Execution rules
 
-- Input capture: state the expected frequency range (e.g. "30~200 Hz at 50% PWM")
-- ADC: state the expected raw value range at a known temperature/load
-- GPIO: state the expected ODR bit pattern as a hex mask
-- PWM duty: state the expected CCR value and ARR
-
-If the measured value falls within the agreed range → pass. If not → diagnose before changing code.
-
-## Execution Rules
-
-- Discover all project paths at the start using Step 0; never hardcode `upboard`, `C:/Keil_v5`, or `tools/`.
-- Use bash syntax for all shell commands (not PowerShell).
-- Always use `HotPlug` when reading memory from a running target.
-- **Verify with memory reads by default.** Only use serial when memory cannot answer the question.
-- If serial is needed and `$SERIAL_MON` was not found in Step 0, state that serial is unavailable and continue with memory reads only.
+- Discover preset names, image names, and output dirs at runtime — never hardcode.
+- Use bash syntax (forward slashes, `"$VAR"`, no PowerShell `& "..."`).
+- Verify with memory reads by default; serial only when memory cannot answer.
+- Always use `HotPlug` for reads on a running target.
+- Confirm GPIO / interface mapping with the user before writing peripheral code — partial pin lists cause mid-development rework.
 - Do not stop after a single failed attempt if another concrete iteration is available.
-- Do not report success without a quantified verification step (memory value in expected range, or serial output matching expected pattern).
-- Confirm the complete GPIO/interface mapping with the user before writing any peripheral code — partial pin lists cause mid-development rework.
-- If blocked by hardware, missing tools, or unavailable verification signals, state the blocker precisely and stop only when further local iteration would be speculative.
+- Do not report success without a quantified observation tied to the agreed pass condition.
+- If blocked by hardware, missing tools, or unobservable signals, state the blocker precisely and stop — don't iterate speculatively.
 
-## Trigger Phrases
+## Trigger phrases
 
 This skill is a good match when the user says things like:
-
-- `auto iterative development`
-- `write code and debug it yourself`
-- `keep iterating until it works`
-- `continue debugging until success`
+- "auto iterative development"
+- "write the code and debug it yourself"
+- "keep iterating until it works"
+- "continue debugging until success"
+- "试一下，不行就改" / "自己迭代直到通过"

@@ -1,0 +1,174 @@
+# AGENTS.md
+> 每次会话自动加载。所有规则在整个会话中持续有效。
+> **本文件由 commonskill/CLAUDE.md.template 衍生，把 `<...>` 占位替换为本项目实际值后投入使用。**
+
+---
+
+## 全局规则
+
+- 未经验证，永远不报告成功
+- 每次会话开始必须执行冷启动握手（见下）
+- 遇到架构决策时，立即追加到 `.context/decisions.log.md`，不等会话结束
+- 报告硬件问题时，必须输出精确测量指引，禁止说"可能是硬件问题"
+- 每轮迭代开始前必须声明实验假设和排除目标
+- 修改代码前检查 `.context/hardware.context.md`，确认引脚和外设配置
+
+---
+
+## 工具链约定
+
+构建系统：**CMake + Ninja + arm-none-eabi-gcc**。Mac/Linux/Windows 命令一致。
+
+目标芯片：`<CHIP>`（例如 `STM32F407VGT6`）
+
+### Preset / image 列表
+
+<!-- 单 image 工程，删掉表里多余行；多 image / OTA 工程按需增减 -->
+
+| Image | Preset | Flash 地址 | 产物目录 |
+|---|---|---|---|
+| `<image-1>` | `<preset-1>` | `<addr-1>` | `build/<preset-1>/<sub>/` |
+| `<image-2>` | `<preset-2>` | `<addr-2>` | `build/<preset-2>/<sub>/` |
+
+每个 preset 有独立 `build/<preset>/` 目录，互不干扰。
+
+### 构建命令
+
+```bash
+# 单 image：增量编译
+cmake --build --preset <preset>
+
+# 多 image 工程，共享代码改动时全编：
+for p in <preset-1> <preset-2>; do cmake --build --preset $p; done
+
+# 首次 / CMake 文件改动后必须先 configure：
+cmake --preset <preset>
+cmake --build --preset <preset>
+```
+
+**本机工具链 PATH（替换为本机实际位置）**：
+
+```
+<TOOLCHAIN_PATHS>
+# 示例（Windows + vcpkg + chocolatey）：
+# C:/Users/<user>/AppData/Local/vcpkg/.../cmake-3.31.10-windows-x86_64/bin
+# C:/Users/<user>/AppData/Local/vcpkg/.../ninja/1.13.1-windows
+# C:/ProgramData/chocolatey/bin   # arm-none-eabi-gcc, openocd
+```
+
+### 烧录（ST-LINK_CLI 推荐）
+
+```bash
+STLINK="<STLINK_CLI_PATH>"
+# 例：STLINK="/c/Program Files (x86)/STMicroelectronics/STM32 ST-LINK Utility/ST-LINK Utility/ST-LINK_CLI.exe"
+
+# 烧录单个 image，最后一步加 -Rst 复位运行
+"$STLINK" -c SWD UR -P build/<preset>/<sub>/<image>.hex -V after_programming -Rst
+```
+
+如果只用 OpenOCD：
+
+```bash
+openocd -f interface/stlink.cfg -f target/<chip-family>.cfg \
+        -c "program build/<preset>/<sub>/<image>.elf verify reset exit"
+```
+
+### 调试 / 内存读取
+
+- **VSCode F5**：建议在 `.vscode/launch.json` 配 Cortex-Debug，每个 image 一套（Bootloader / App A / App B / Attach），走 OpenOCD + arm-none-eabi-gdb
+- **命令行 OpenOCD**：`openocd -f interface/stlink.cfg -f target/<chip-family>.cfg -c "init; reset halt; mdw <addr>; exit"`
+- **ST-Link_CLI 内存读**（不打断 CPU，运行中可用）：`"$STLINK" -c SWD HotPlug -r32 <address> 1`
+
+### 关键文件
+
+- 编译产物：`build/<preset>/<sub>/<image>.{elf,hex,bin,map}`
+- MAP 文件：`build/<preset>/<sub>/<image>.map`
+- 链接脚本：`cmake/ld/<chip>_<image>.ld`
+- 工具链文件：`cmake/arm-none-eabi-gcc.cmake`
+- Preset 定义：`CMakePresets.json`
+- 串口日志（如有 monitor）：`tools/serial_log.txt`
+- 逻辑分析仪导出（如有）：`tools/logic_analyzer.csv`
+
+### 调试串口规则
+
+<DEBUG_UART_RULES>
+<!-- 例：
+USART2 (PD5/PD6) 归 ESP32 协议使用，禁止打明文调试输出。
+Bootloader 阶段所有调试只能通过 LED 闪烁或 ST-LINK 内存读。
+App 调试串口请使用 USART1 (PA9/PA10)。
+单 image 简单工程可以删除本段。
+-->
+
+### OTA 槽位标记（如适用）
+
+<SLOT_MARK>
+<!-- 例：
+RTC->BKP0R (0x40002850) 由 bootloader 写入：
+- 0xA0A0A0A0 = 跳转 Slot A
+- 0xB0B0B0B0 = 跳转 Slot B
+App 启动后读取该值确认自己运行在哪个槽。
+非 OTA 工程：删除整段。
+-->
+
+---
+
+## 上下文文件
+
+| 文件 | 内容 | 读写规则 |
+|------|------|----------|
+| `.context/project.context.md` | 模块状态 · todo · Flash/RAM 用量 | 每次会话读取，结束时更新 |
+| `.context/hardware.context.md` | 引脚表 · 外设配置 · 时钟树 | 每次会话读取，硬件变更时更新 |
+| `.context/decisions.log.md` | 架构决策 · 排除方案 | 只追加，不修改历史记录 |
+
+---
+
+## 知识库
+
+路径：`knowledge-base/`（独立仓库，挂载或相对路径引用）
+
+按需检索，匹配当前任务涉及的芯片、外设或问题类型：
+
+| 文件 | 检索时机 |
+|------|----------|
+| `hal-patterns.md` | 开发外设驱动时 |
+| `known-bugs.md` | 遇到外设异常 · 初始化问题时 |
+| `rtos-patterns.md` | 涉及任务/队列/信号量时 |
+| `debug-recipes.md` | 进入调试排查阶段时 |
+
+---
+
+## 冷启动握手（每次新会话必须执行）
+
+```
+1. 读取 .context/ 下三个文件
+2. 用一段话复述：当前项目是什么 · 哪些模块已完成 · 哪些进行中 · 遗留问题
+3. 确认本次任务目标
+4. 声明将使用哪个 skill · 完成后更新哪些文件
+```
+
+---
+
+## Skill 索引与选择规则
+
+| 场景 | 执行路径 |
+|------|----------|
+| 全新项目启动 | skill-0 → skill-1 → skill-2 → skill-3 → skill-4 → skill-5 |
+| 已有项目，开发新功能 | skill-0 → skill-4 → skill-5 |
+| 遇到硬件相关异常 | skill-2（重新检索）+ knowledge-base |
+| 当前功能调试迭代中 | skill-5 |
+| 所有功能完成 | skill-6 |
+| 任意时刻换新终端 | skill-0 冷启动，然后继续上次 skill |
+| **从 Keil 工程迁移到 CMake** | skill-migrate-keil-to-cmake → skill-3 建立基线 → 后续主流程 |
+
+---
+
+## .skills/ 文件列表
+
+- `.skills/skill-0-memory.md`
+- `.skills/skill-1-requirements.md`
+- `.skills/skill-2-hardware.md`
+- `.skills/skill-3-baseline.md`
+- `.skills/skill-4-breakdown.md`
+- `.skills/skill-5-iterative-dev.md`
+- `.skills/skill-6-integration.md`
+- `.skills/skill-migrate-keil-to-cmake.md` （工具型，按需触发）

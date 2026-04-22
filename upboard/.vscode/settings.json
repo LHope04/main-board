@@ -1,0 +1,14 @@
+{
+  "// note": "Windows-only PATH injection — cmake/ninja live in vcpkg's bundled tools dir, not on system PATH. Mac users get cmake/ninja from `brew install cmake ninja` and don't need this.",
+  "terminal.integrated.env.windows": {
+    "PATH": "C:\\Users\\q7591\\AppData\\Local\\vcpkg\\downloads\\tools\\cmake-3.31.10-windows\\cmake-3.31.10-windows-x86_64\\bin;C:\\Users\\q7591\\AppData\\Local\\vcpkg\\downloads\\tools\\ninja\\1.13.1-windows;${env:PATH}"
+  },
+  "cmake.useCMakePresets": "always",
+  "cmake.configureOnOpen": false,
+  "C_Cpp.default.intelliSenseMode": "linux-gcc-arm",
+  "C_Cpp.default.compilerPath": "C:\\ProgramData\\chocolatey\\bin\\arm-none-eabi-gcc.exe",
+  "C_Cpp.default.compileCommands": "${workspaceFolder}/build/${command:cmake.activeConfigurePresetName}/compile_commands.json",
+  "files.associations": {
+    "*.ld": "linkerscript"
+  }
+}

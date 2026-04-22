@@ -9,7 +9,7 @@
  *   0x08020000  App Slot A (128KB, sector 5)
  *   0x08040000  App Slot B (128KB, sector 6)
  *
- * Decision policy (see OTA_PLAN.md Phase 7):
+ * Decision policy:
  *   - pending_update == 0 → boot selected slot unconditionally (no writes,
  *     no CRC check) so debug sessions that hang the App never roll back.
  *   - pending_update == 1 → this is the "confirm-once" window after an OTA.
@@ -139,8 +139,11 @@ static void jump_to_app(uint32_t app_addr)
     uint32_t msp = *(volatile uint32_t *)app_addr;
     uint32_t pc  = *(volatile uint32_t *)(app_addr + 4);
 
-    /* Sanity: MSP must point into SRAM */
-    if ((msp & 0x2FFE0000U) != 0x20000000U) {
+    /* Sanity: initial MSP must land inside SRAM1+SRAM2 (128 KB at 0x20000000).
+     * 0x20020000 is the top-of-stack value GCC startup files emit (full
+     * descending stack — first push lands at 0x2001FFFC, still in SRAM),
+     * so the upper bound is inclusive. */
+    if (msp < 0x20000000U || msp > 0x20020000U) {
         return;
     }
 
