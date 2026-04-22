@@ -5,8 +5,8 @@
     "are auto-located via OpenOCD's bundled scripts dir.",
     "",
     "First-time setup before any 'launch' config will boot end-to-end:",
-    "  1. Run task 'Flash Bootloader (ST-Link)' once.",
-    "  2. Run task 'Flash Params A (ST-Link)' once (writes 0x08008000).",
+    "  1. Run task 'Flash Bootloader' once.",
+    "  2. Run task 'Flash Params A' once (writes 0x08008000).",
     "  3. Then F5 — 'Debug App A' will only re-flash sector 5 each time.",
     "",
     "Bootloader and App live in non-overlapping sectors, so flashing the App",
@@ -26,8 +26,6 @@
         "target/stm32f4x.cfg"
       ],
       "device": "STM32F407VG",
-      "armToolchainPath": "C:\\ProgramData\\chocolatey\\bin",
-      "gdbPath": "C:\\ProgramData\\chocolatey\\bin\\arm-none-eabi-gdb.exe",
       "runToEntryPoint": "main",
       "preLaunchTask": "Build Bootloader",
       "showDevDebugOutput": "none"
@@ -51,8 +49,6 @@
         "target/stm32f4x.cfg"
       ],
       "device": "STM32F407VG",
-      "armToolchainPath": "C:\\ProgramData\\chocolatey\\bin",
-      "gdbPath": "C:\\ProgramData\\chocolatey\\bin\\arm-none-eabi-gdb.exe",
       "runToEntryPoint": "main",
       "preLaunchTask": "Build App A",
       "showDevDebugOutput": "none"
@@ -76,8 +72,6 @@
         "target/stm32f4x.cfg"
       ],
       "device": "STM32F407VG",
-      "armToolchainPath": "C:\\ProgramData\\chocolatey\\bin",
-      "gdbPath": "C:\\ProgramData\\chocolatey\\bin\\arm-none-eabi-gdb.exe",
       "runToEntryPoint": "main",
       "preLaunchTask": "Build App B",
       "showDevDebugOutput": "none"
@@ -98,8 +92,6 @@
         "target/stm32f4x.cfg"
       ],
       "device": "STM32F407VG",
-      "armToolchainPath": "C:\\ProgramData\\chocolatey\\bin",
-      "gdbPath": "C:\\ProgramData\\chocolatey\\bin\\arm-none-eabi-gdb.exe",
       "showDevDebugOutput": "none"
     }
   ]

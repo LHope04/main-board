@@ -3,6 +3,9 @@
   "terminal.integrated.env.windows": {
     "PATH": "C:\\Users\\q7591\\AppData\\Local\\vcpkg\\downloads\\tools\\cmake-3.31.10-windows\\cmake-3.31.10-windows-x86_64\\bin;C:\\Users\\q7591\\AppData\\Local\\vcpkg\\downloads\\tools\\ninja\\1.13.1-windows;${env:PATH}"
   },
+  "cortex-debug.armToolchainPath": "/opt/homebrew/bin",
+  "cortex-debug.gdbPath": "/opt/homebrew/bin/arm-none-eabi-gdb",
+  "cortex-debug.openocdPath": "/opt/homebrew/bin/openocd",
   "cmake.useCMakePresets": "always",
   "cmake.configureOnOpen": false,
   "C_Cpp.default.intelliSenseMode": "linux-gcc-arm",

@@ -1,10 +1,7 @@
 {
   "version": "2.0.0",
   "options": {
-    "cwd": "${workspaceFolder}",
-    "env": {
-      "PATH": "C:\\Users\\q7591\\AppData\\Local\\vcpkg\\downloads\\tools\\cmake-3.31.10-windows\\cmake-3.31.10-windows-x86_64\\bin;C:\\Users\\q7591\\AppData\\Local\\vcpkg\\downloads\\tools\\ninja\\1.13.1-windows;${env:PATH}"
-    }
+    "cwd": "${workspaceFolder}"
   },
   "tasks": [
     {
@@ -66,72 +63,90 @@
     },
 
     {
-      "label": "Flash Bootloader (ST-Link)",
+      "label": "Flash Bootloader",
       "type": "shell",
-      "command": "C:/Program Files (x86)/STMicroelectronics/STM32 ST-LINK Utility/ST-LINK Utility/ST-LINK_CLI.exe",
+      "command": "openocd",
       "args": [
-        "-c", "SWD", "UR",
-        "-P", "${workspaceFolder}/build/bootloader/bootloader/bootloader.hex",
-        "-V", "after_programming"
+        "-f", "interface/stlink.cfg",
+        "-f", "target/stm32f4x.cfg",
+        "-c", "program ${workspaceFolder}/build/bootloader/bootloader/bootloader.hex verify reset exit"
       ],
       "dependsOn": ["Build Bootloader"],
       "problemMatcher": []
     },
     {
-      "label": "Flash Params A (ST-Link)",
+      "label": "Flash Params A",
       "type": "shell",
-      "command": "C:/Program Files (x86)/STMicroelectronics/STM32 ST-LINK Utility/ST-LINK Utility/ST-LINK_CLI.exe",
+      "command": "openocd",
       "args": [
-        "-c", "SWD", "UR",
-        "-P", "${workspaceFolder}/build/app-a/app/params_A.bin", "0x08008000",
-        "-V", "after_programming"
+        "-f", "interface/stlink.cfg",
+        "-f", "target/stm32f4x.cfg",
+        "-c", "program ${workspaceFolder}/build/app-a/app/params_A.bin 0x08008000 verify reset exit"
       ],
       "dependsOn": ["Build App A"],
       "problemMatcher": []
     },
     {
-      "label": "Flash Params B (ST-Link)",
+      "label": "Flash Params B",
       "type": "shell",
-      "command": "C:/Program Files (x86)/STMicroelectronics/STM32 ST-LINK Utility/ST-LINK Utility/ST-LINK_CLI.exe",
+      "command": "openocd",
       "args": [
-        "-c", "SWD", "UR",
-        "-P", "${workspaceFolder}/build/app-b/app/params_B.bin", "0x08008000",
-        "-V", "after_programming"
+        "-f", "interface/stlink.cfg",
+        "-f", "target/stm32f4x.cfg",
+        "-c", "program ${workspaceFolder}/build/app-b/app/params_B.bin 0x08008000 verify reset exit"
       ],
       "dependsOn": ["Build App B"],
       "problemMatcher": []
     },
     {
-      "label": "Flash App A (ST-Link)",
+      "label": "Flash App A",
       "type": "shell",
-      "command": "C:/Program Files (x86)/STMicroelectronics/STM32 ST-LINK Utility/ST-LINK Utility/ST-LINK_CLI.exe",
+      "command": "openocd",
       "args": [
-        "-c", "SWD", "UR",
-        "-P", "${workspaceFolder}/build/app-a/app/upboard_A.hex",
-        "-V", "after_programming", "-Rst"
+        "-f", "interface/stlink.cfg",
+        "-f", "target/stm32f4x.cfg",
+        "-c", "program ${workspaceFolder}/build/app-a/app/upboard_A.hex verify reset exit"
       ],
       "dependsOn": ["Build App A"],
       "problemMatcher": []
     },
     {
-      "label": "Flash App B (ST-Link)",
+      "label": "Flash App B",
       "type": "shell",
-      "command": "C:/Program Files (x86)/STMicroelectronics/STM32 ST-LINK Utility/ST-LINK Utility/ST-LINK_CLI.exe",
+      "command": "openocd",
       "args": [
-        "-c", "SWD", "UR",
-        "-P", "${workspaceFolder}/build/app-b/app/upboard_B.hex",
-        "-V", "after_programming", "-Rst"
+        "-f", "interface/stlink.cfg",
+        "-f", "target/stm32f4x.cfg",
+        "-c", "program ${workspaceFolder}/build/app-b/app/upboard_B.hex verify reset exit"
       ],
       "dependsOn": ["Build App B"],
       "problemMatcher": []
     },
     {
-      "label": "Mass Erase Chip (ST-Link)",
-      "type": "shell",
-      "command": "C:/Program Files (x86)/STMicroelectronics/STM32 ST-LINK Utility/ST-LINK Utility/ST-LINK_CLI.exe",
-      "args": ["-c", "SWD", "UR", "-ME"],
+      "label": "Build + Flash App A",
+      "dependsOn": ["Flash App A"],
+      "group": "build",
       "problemMatcher": [],
-      "detail": "Wipes all flash. First-time bring-up sequence: Mass Erase -> Flash Bootloader -> Flash Params A -> Flash App A -> 'Debug App A' (F5)."
+      "detail": "One-click: build App A then flash via OpenOCD"
+    },
+    {
+      "label": "Mass Erase Chip",
+      "type": "shell",
+      "command": "openocd",
+      "args": [
+        "-f", "interface/stlink.cfg",
+        "-f", "target/stm32f4x.cfg",
+        "-c", "init; reset halt; stm32f4x mass_erase 0; exit"
+      ],
+      "problemMatcher": [],
+      "detail": "Wipes all flash. First-time: Mass Erase -> Flash Bootloader -> Flash Params A -> Flash App A -> F5"
+    },
+    {
+      "label": "Full Flash (Bootloader + Params A + App A)",
+      "dependsOn": ["Flash Bootloader", "Flash Params A", "Flash App A"],
+      "dependsOrder": "sequence",
+      "problemMatcher": [],
+      "detail": "First-time bring-up: flash everything in order"
     }
   ]
 }

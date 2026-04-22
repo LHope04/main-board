@@ -89,7 +89,11 @@
       "Bash(rm -f .mxproject params_A.bin)",
       "Bash(mkdir -p app/Src app/Inc)",
       "Bash(mv Core/Src/__TRACKED_VAR__.c app/Src/__TRACKED_VAR__.c)",
-      "Bash(mv Core/Inc/__TRACKED_VAR__.h app/Inc/__TRACKED_VAR__.h)"
+      "Bash(mv Core/Inc/__TRACKED_VAR__.h app/Inc/__TRACKED_VAR__.h)",
+      "Bash(ninja --version)",
+      "Bash(brew install:*)",
+      "Read(//Applications/ArmGNUToolchain/**)",
+      "Read(//opt/homebrew/**)"
     ]
   }
 }
