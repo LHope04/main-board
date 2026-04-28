@@ -125,3 +125,24 @@
 - 业务代码就地保留 + 给 Core/ 改名：CubeMX 重新生成代码时仍会写到 Core/，无法解决
 
 **验证**：三 preset 全编 0 error 0 warning，bootloader 6008 B / app 17880 B Flash 用量与重构前完全一致。
+
+---
+
+## [2026-04-28] 目标芯片修正：STM32F407VGT6 → STM32F407VET6（Flash 1024 KB → 512 KB）
+
+**背景**：迁移到 macOS + OpenOCD 烧录链后第一次给新板子做 bring-up，OpenOCD 报 `device id = 0x10076413` + `flash size = 512 KiB`，`mdh 0x1FFF7A22 = 0x0200`，与原文档 STM32F407VG**T6**（1024 KB）不符。芯片丝印确认为 STM32F407VE**T6**。
+
+**决策**：项目目标芯片更正为 **STM32F407VET6 / 512 KB**。同步更新 `hardware.context.md`、`project.context.md`、`README.md`、`.vscode/launch.json`（Cortex-Debug `device` 字段）。链接脚本注释里残留的 "STM32F407VG" 不动（地址正确，纯注释，无功能影响）。
+
+**原因**：
+- VE 与 VG 仅 Flash 容量差异（512 vs 1024 KB），外设 / RAM / 封装 / 引脚一致 → 现有代码、链接脚本地址段、HAL 配置全部不需要改动
+- 当前 OTA 布局仅占 0x08000000~0x0805FFFF = 384 KB，512 KB 容下绰绰有余（剩 128 KB 可作未来日志/参数备份扩展）
+- 错误的容量标注会误导未来 agent 在末端 sector 规划新功能时越界
+
+**验证**：本次完整 bring-up（mass erase → bootloader → params_A @ 0x08008000 → App A @ 0x08020000）全部 `Verified OK`；mdw 回读 BL 入口 / params A magic / App A 入口全部正确，板子复位后 LED2 槽位指示由用户肉眼确认。
+
+**排除方案**：
+- 保留旧文档不动 — 错误的"1024 KB"假设会污染未来规划（如 OTA 日志扩到末端 sector）
+- 同时维护 VG 和 VE 两套配置 — 项目只有一种板子，无收益
+
+**衍生约束**：未来若要使用 0x08060000 以上地址（如末端 sector 做日志/工厂数据），必须先确认实际板子容量；不可再假设 1024 KB。

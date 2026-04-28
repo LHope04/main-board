@@ -99,7 +99,22 @@
       "Bash(cp -r upboard/.claude/skills .claude/)",
       "Bash(git rm:*)",
       "Bash(git mv:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(openocd -f interface/stlink.cfg -c \"reset_config srst_only srst_nogate connect_assert_srst\" -f target/stm32f4x.cfg -c \"init; reset halt; mdw 0xE0042000 1; exit\")",
+      "Bash(openocd -f interface/stlink.cfg -c \"adapter speed 100\" -f target/stm32f4x.cfg -c \"init; reset halt; mdw 0xE0042000 1; mdw 0x1FFF7A10 3; exit\")",
+      "Bash(openocd -f interface/stlink.cfg -f target/stm32f4x.cfg -c \"init; reset halt; mdw 0xE0042000 1; mdw 0x1FFF7A10 3; exit\")",
+      "Bash(system_profiler SPUSBDataType)",
+      "Bash(ioreg -p IOUSB)",
+      "Bash(pkill -9 openocd)",
+      "Bash(openocd -f interface/stlink.cfg -f target/stm32f4x.cfg -c \"init; reset halt; mdw 0xE0042000 1; exit\")",
+      "Bash(openocd -f interface/stlink.cfg -f target/stm32f4x.cfg -c init -c 'reset halt' -c 'stm32f4x mass_erase 0' -c 'program build/bootloader/bootloader/bootloader.hex verify' -c 'program build/app-a/app/params_A.bin 0x08008000 verify' -c 'program build/app-a/app/upboard_A.hex verify reset' -c exit)",
+      "Bash(openocd -f interface/stlink.cfg -f target/stm32f4x.cfg -c init -c 'reset halt' -c 'echo {=== Bootloader vector @ 0x08000000 ===}' -c 'mdw 0x08000000 4' -c 'echo {=== Boot params copy A @ 0x08008000 ===}' -c 'mdw 0x08008000 4' -c 'echo {=== Boot params copy B @ 0x0800C000 ===}' -c 'mdw 0x0800C000 4' -c 'echo {=== App A vector @ 0x08020000 ===}' -c 'mdw 0x08020000 4' -c 'echo {=== App B slot @ 0x08040000 \\(should be erased = 0xFF\\) ===}' -c 'mdw 0x08040000 4' -c 'echo {=== F4 flash size halfword @ 0x1FFF7A22 ===}' -c 'mdh 0x1FFF7A22 1' -c exit)",
+      "Bash(openocd -f interface/stlink.cfg -f target/stm32f4x.cfg -c \"init; reset halt; mdw 0xE0042000 1; mdh 0x1FFF7A22 1; exit\")",
+      "Bash(git ls-tree *)",
+      "Bash(git log *)",
+      "Bash(sed -n '105,112p' 板子/Netlist_Schematic6_2026-04-28.tel)",
+      "Bash(sed -n '117,124p' 板子/Netlist_Schematic6_2026-04-28.tel)",
+      "Bash(sed -n '157,163p' docs/控制板Netlist_Schematic3_2026-03-25.tel)"
     ]
   }
 }

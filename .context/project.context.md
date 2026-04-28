@@ -4,7 +4,7 @@
 > 目录规范化：业务模块（buzzer/esp_comm/fan_ctrl/compressor_ctrl/sensor_acq/ina226/power_ctrl/ota）已从 `Core/Src,Inc` 迁至 `app/Src,Inc`（2026-04-20），Core/ 仅留 CubeMX 生成的 wiring
 
 ## 项目概述
-STM32F407VGT6 摩托车液冷系统主控板：受控上电、风扇/压缩机 PWM 控制、8 路 NTC 采集、3 路 INA226 功率监测、蜂鸣器、BLE OTA（带回滚）。
+STM32F407VET6 摩托车液冷系统主控板：受控上电、风扇/压缩机 PWM 控制、8 路 NTC 采集、3 路 INA226 功率监测、蜂鸣器、BLE OTA（带回滚）。
 
 业务接口以源代码 + 头文件注释为准；硬件映射见 `.context/hardware.context.md`；历史决策见 `.context/decisions.log.md`。
 
@@ -42,7 +42,7 @@ STM32F407VGT6 摩托车液冷系统主控板：受控上电、风扇/压缩机 P
 | 基线（CubeMX 空工程） | — | — | 项目早于 skill 系统建立，无基线 |
 | 当前 App（2026-04-18） | 16.86 KB / 128 KB（Slot 容量，13%） | 2.51 KB / 192 KB | RO=16600+660，RW=156，ZI=2412 |
 | 当前 Bootloader | 5.26 KB / 128 KB（BL 区） | — | 0x08000000~0x0801FFFF |
-| 上限 | 128 KB / Slot | 192 KB | F407VG 总 Flash 1024 KB，App Slot 各 128 KB |
+| 上限 | 128 KB / Slot | 192 KB | F407VE 总 Flash 512 KB，OTA 布局占前 384 KB（App Slot 各 128 KB） |
 
 Flash 布局：
 - `0x08000000`：Bootloader（128 KB 区域，实际 5.3 KB）

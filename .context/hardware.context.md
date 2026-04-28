@@ -7,9 +7,9 @@
 
 | 字段 | 值 |
 |------|-----|
-| 型号 | STM32F407VGT6（LQFP-100） |
+| 型号 | STM32F407VET6（LQFP-100） |
 | 主频 | 168 MHz |
-| Flash | 1024 KB（按 OTA 布局拆 BL / Slot A / Slot B） |
+| Flash | 512 KB（OTA 布局占前 384 KB：BL 32K + 参数区 32K + Slot A/B 各 128K，余 128 KB 备用） |
 | RAM | 192 KB（128 KB SRAM1 + 64 KB CCM） |
 
 ---

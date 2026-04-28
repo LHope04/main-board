@@ -1,6 +1,6 @@
 # upboard — 摩托车液冷主控板固件
 
-STM32F407VGT6 主控板：受控上电、风扇/压缩机 PWM、8 路 NTC 采集、3 路 INA226 功率监测、蜂鸣器、BLE OTA（A/B 槽 + 回滚）。
+STM32F407VET6 主控板：受控上电、风扇/压缩机 PWM、8 路 NTC 采集、3 路 INA226 功率监测、蜂鸣器、BLE OTA（A/B 槽 + 回滚）。
 
 > 本文档面向**人**。AI 协作约定见 `CLAUDE.md`，会话上下文在 `.context/`，技能脚本在 `.skills/`。
 

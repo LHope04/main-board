@@ -25,7 +25,7 @@
         "interface/stlink.cfg",
         "target/stm32f4x.cfg"
       ],
-      "device": "STM32F407VG",
+      "device": "STM32F407VE",
       "runToEntryPoint": "main",
       "preLaunchTask": "Build Bootloader",
       "showDevDebugOutput": "none"
@@ -48,7 +48,7 @@
         "interface/stlink.cfg",
         "target/stm32f4x.cfg"
       ],
-      "device": "STM32F407VG",
+      "device": "STM32F407VE",
       "runToEntryPoint": "main",
       "preLaunchTask": "Build App A",
       "showDevDebugOutput": "none"
@@ -71,7 +71,7 @@
         "interface/stlink.cfg",
         "target/stm32f4x.cfg"
       ],
-      "device": "STM32F407VG",
+      "device": "STM32F407VE",
       "runToEntryPoint": "main",
       "preLaunchTask": "Build App B",
       "showDevDebugOutput": "none"
@@ -91,7 +91,7 @@
         "interface/stlink.cfg",
         "target/stm32f4x.cfg"
       ],
-      "device": "STM32F407VG",
+      "device": "STM32F407VE",
       "showDevDebugOutput": "none"
     }
   ]
