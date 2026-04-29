@@ -4,20 +4,23 @@
 #include "stm32f4xx_hal.h"
 
 /*
- * Power rail control (all outputs start LOW after reset via gpio.c):
- *   CHARGE_EN  — PB12: lithium battery charger enable (HIGH = on)
- *   EN_TPS43060— PB13: 12V→24V boost enable           (HIGH = on)
- *   EN_24TO12  — PB14: 24V→12V buck enable            (HIGH = on)
- *   PUMP_EN    — PB15: pump output enable              (HIGH = on)
+ * V6 power-rail control (all outputs start LOW after reset via gpio.c):
+ *   PE6 CTRL_DCDCboost_EN — DCDC boost enable        (HIGH = on)
+ *   PE5 CTRL_LOAD_OUT     — 24V load output enable   (HIGH = on)
+ *   PC15 CTRL_CHARGE_NTC  — battery charger NTC enable (HIGH = on)
+ *   PC10 FAN_VCC_CTRL     — fan 12V rail enable      (HIGH = on)
+ *   PC11 PUMP_CTRL        — water pump enable         (HIGH = on)
  *
- * Startup sequence: PB13 → 500ms → PB14 → 200ms → PB12 → 50ms → PB15
+ * Startup sequence: PE6 → 200ms → PE5 → 100ms → PC15 → 50ms (each step
+ * IWDG-fed). Fan / pump remain off until business commands them on.
  */
 
 void PowerCtrl_StartupSequence(void);
 
-void PowerCtrl_EnableCharger(uint8_t en);   /* PB12 */
-void PowerCtrl_EnableBoost(uint8_t en);     /* PB13 */
-void PowerCtrl_EnableBuck(uint8_t en);      /* PB14 */
-void PowerCtrl_EnablePump(uint8_t en);      /* PB15 */
+void PowerCtrl_EnableBoost(uint8_t en);       /* PE6 */
+void PowerCtrl_EnableLoad(uint8_t en);        /* PE5 */
+void PowerCtrl_EnableChargeNtc(uint8_t en);   /* PC15 */
+void PowerCtrl_EnableFanVcc(uint8_t en);      /* PC10 */
+void PowerCtrl_EnablePump(uint8_t en);        /* PC11 */
 
 #endif /* __POWER_CTRL_H */

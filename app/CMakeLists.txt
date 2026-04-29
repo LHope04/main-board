@@ -69,6 +69,12 @@ set(APP_SOURCES
     ${APP_SRC_DIR}/buzzer.c
     ${APP_SRC_DIR}/esp_comm.c
     ${APP_SRC_DIR}/ota.c
+    ${APP_SRC_DIR}/led_rgb.c
+    ${APP_SRC_DIR}/button.c
+    ${APP_SRC_DIR}/mcf8329a.c
+    ${APP_SRC_DIR}/sampler_comm.c
+    ${APP_SRC_DIR}/remote_ctrl.c
+    ${APP_SRC_DIR}/iot_ctrl.c
     ${REPO_ROOT}/Common/boot_params.c
     ${REPO_ROOT}/Common/crc32.c)
 

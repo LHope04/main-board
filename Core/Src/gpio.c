@@ -1,164 +1,84 @@
-/* USER CODE BEGIN Header */
 /**
-  ******************************************************************************
-  * @file    gpio.c
-  * @brief   This file provides code for the configuration
-  *          of all used GPIO pins.
-  ******************************************************************************
-  * @attention
-  *
-  * Copyright (c) 2026 STMicroelectronics.
-  * All rights reserved.
-  *
-  * This software is licensed under terms that can be found in the LICENSE file
-  * in the root directory of this software component.
-  * If no LICENSE file comes with this software, it is provided AS-IS.
-  *
-  ******************************************************************************
-  */
-/* USER CODE END Header */
-
-/* Includes ------------------------------------------------------------------*/
+ * @file    Core/Src/gpio.c
+ * @brief   GPIO configuration for V6 main board (STM32F407VET6).
+ *
+ * Pin map (authoritative source: 板子/SCH_Schematic6_2026-04-21 + IO 未分配 page).
+ * AF pins (TIM/I2C/USART) are configured by their respective MspInit, not here.
+ *
+ * Layout:
+ *   - Outputs default to safe state (LOW for all enables/drivers)
+ *   - Inputs: BUTTON / ACC / nFAULT / KEYWAKE
+ *   - LEDs: PE2 (R) / PE3 (G) / PE4 (B)
+ *   - MCF8329A control: PC12 DROFF / PD0 SPEED_WAKE / PD3 DIR / PD4 BREAK
+ *   - Power enables: PE5 LOAD / PE6 BOOST / PC10 FAN_VCC / PC11 PUMP / PC15 CHARGE_NTC
+ */
 #include "gpio.h"
 
-/* USER CODE BEGIN 0 */
-
-/* USER CODE END 0 */
-
-/*----------------------------------------------------------------------------*/
-/* Configure GPIO                                                             */
-/*----------------------------------------------------------------------------*/
-/* USER CODE BEGIN 1 */
-
-/* USER CODE END 1 */
-
-/** Configure pins as
-        * Analog
-        * Input
-        * Output
-        * EVENT_OUT
-        * EXTI
-*/
 void MX_GPIO_Init(void)
 {
+    GPIO_InitTypeDef gi = {0};
 
-  GPIO_InitTypeDef GPIO_InitStruct = {0};
+    __HAL_RCC_GPIOA_CLK_ENABLE();
+    __HAL_RCC_GPIOB_CLK_ENABLE();
+    __HAL_RCC_GPIOC_CLK_ENABLE();
+    __HAL_RCC_GPIOD_CLK_ENABLE();
+    __HAL_RCC_GPIOE_CLK_ENABLE();
+    __HAL_RCC_GPIOH_CLK_ENABLE();   /* OSC_IN/OUT (PH0/PH1) */
 
-  /* GPIO Ports Clock Enable */
-  __HAL_RCC_GPIOC_CLK_ENABLE();
-  __HAL_RCC_GPIOH_CLK_ENABLE();
-  __HAL_RCC_GPIOA_CLK_ENABLE();
-  __HAL_RCC_GPIOB_CLK_ENABLE();
-  __HAL_RCC_GPIOD_CLK_ENABLE();
+    /* ====== Outputs: default LOW (safe state) ====== */
 
-  /* Enable GPIOE clock (not yet enabled) */
-  __HAL_RCC_GPIOE_CLK_ENABLE();
+    /* RGB LED: PE2 R, PE3 G, PE4 B — common-anode wiring, default HIGH=off */
+    HAL_GPIO_WritePin(GPIOE, GPIO_PIN_2 | GPIO_PIN_3 | GPIO_PIN_4, GPIO_PIN_SET);
 
-  /* NTC ADC inputs: PA0~PA7 — GPIO_MODE_ANALOG, no pull */
-  GPIO_InitStruct.Pin = GPIO_PIN_0|GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_3
-                       |GPIO_PIN_4|GPIO_PIN_5|GPIO_PIN_6|GPIO_PIN_7;
-  GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+    /* Power enables — polarity per board design:
+     *   PE6 BOOST       active LOW  → default HIGH = OFF
+     *   PE5 LOAD        active HIGH → default LOW  = OFF
+     *   PC15 CHARGE_NTC active LOW  → default HIGH = OFF */
+    HAL_GPIO_WritePin(GPIOE, GPIO_PIN_5, GPIO_PIN_RESET);   /* LOAD off */
+    HAL_GPIO_WritePin(GPIOE, GPIO_PIN_6, GPIO_PIN_SET);     /* BOOST off (active LOW) */
+    HAL_GPIO_WritePin(GPIOC, GPIO_PIN_15, GPIO_PIN_SET);    /* CHARGE off (active LOW) */
 
-  /*Configure GPIO pin Output Level - PD11 PD12 高电平解锁运放电路 */
-  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_11|GPIO_PIN_12, GPIO_PIN_SET);
+    /* Fan VCC + Pump: PC10, PC11 */
+    HAL_GPIO_WritePin(GPIOC, GPIO_PIN_10 | GPIO_PIN_11, GPIO_PIN_RESET);
 
-  /*Configure GPIO pins : PD11 PD12 */
-  GPIO_InitStruct.Pin = GPIO_PIN_11|GPIO_PIN_12;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
+    /* MCF8329A control: PC12 DROFF (LOW=disabled),
+     * PD0 SPEED_WAKE (LOW=sleep), PD3 DIR (LOW=CW),
+     * PD4 BREAK (LOW=engaged) — all safe defaults */
+    HAL_GPIO_WritePin(GPIOC, GPIO_PIN_12, GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(GPIOD, GPIO_PIN_0 | GPIO_PIN_3 | GPIO_PIN_4, GPIO_PIN_RESET);
 
-  /* power_ctrl outputs — default LOW:
-   *   CHARGE_EN(PB12): 锂电池充电模块使能，HIGH=开启
-   *   EN_TPS43060(PB13): 12→24V升压使能，HIGH=开启
-   *   EN_24TO12(PB14):   24→12V降压使能，HIGH=开启
-   *   PUMP_EN(PB15):     水泵输出使能，HIGH=开启
-   */
-  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12|GPIO_PIN_13|GPIO_PIN_14|GPIO_PIN_15, GPIO_PIN_RESET);
-  GPIO_InitStruct.Pin = GPIO_PIN_12|GPIO_PIN_13|GPIO_PIN_14|GPIO_PIN_15;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+    gi.Mode  = GPIO_MODE_OUTPUT_PP;
+    gi.Pull  = GPIO_NOPULL;
+    gi.Speed = GPIO_SPEED_FREQ_LOW;
 
-  /* actuator_ctrl output: FAN_VCC_CTRL(PC6) — default LOW */
-  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, GPIO_PIN_RESET);
-  GPIO_InitStruct.Pin = GPIO_PIN_6;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+    gi.Pin = GPIO_PIN_2 | GPIO_PIN_3 | GPIO_PIN_4 | GPIO_PIN_5 | GPIO_PIN_6;
+    HAL_GPIO_Init(GPIOE, &gi);
 
-  /* FAN_PWM_CTRL(PC8) — TIM3_CH3 AF2 */
-  GPIO_InitStruct.Pin = GPIO_PIN_8;
-  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
-  GPIO_InitStruct.Alternate = GPIO_AF2_TIM3;
-  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+    gi.Pin = GPIO_PIN_10 | GPIO_PIN_11 | GPIO_PIN_12 | GPIO_PIN_15;
+    HAL_GPIO_Init(GPIOC, &gi);
 
-  /* YSJ_PWM(PB5) — TIM3_CH2 AF2, compressor speed control */
-  GPIO_InitStruct.Pin = GPIO_PIN_5;
-  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
-  GPIO_InitStruct.Alternate = GPIO_AF2_TIM3;
-  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+    gi.Pin = GPIO_PIN_0 | GPIO_PIN_3 | GPIO_PIN_4;
+    HAL_GPIO_Init(GPIOD, &gi);
 
-  /* SC_COUNT(PB4) — TIM3_CH1 AF2, input capture for compressor speed */
-  GPIO_InitStruct.Pin = GPIO_PIN_4;
-  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
-  GPIO_InitStruct.Alternate = GPIO_AF2_TIM3;
-  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+    /* ====== Inputs ====== */
 
-  /* FAN_FB(PC7) — TIM8_CH2 AF3, input capture for fan speed
-   * FG is open-drain, internal pull-up required */
-  GPIO_InitStruct.Pin = GPIO_PIN_7;
-  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-  GPIO_InitStruct.Pull = GPIO_PULLUP;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
-  GPIO_InitStruct.Alternate = GPIO_AF3_TIM8;
-  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+    /* BUTTON (PC13), ACC (PC14): pull-up, active LOW */
+    gi.Mode  = GPIO_MODE_INPUT;
+    gi.Pull  = GPIO_PULLUP;
+    gi.Speed = GPIO_SPEED_FREQ_LOW;
+    gi.Pin   = GPIO_PIN_13 | GPIO_PIN_14;
+    HAL_GPIO_Init(GPIOC, &gi);
 
-  /* actuator_ctrl outputs: DIR_CTRL(PB3), BEEP_CTRL(PA15) — default LOW */
-  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_3, GPIO_PIN_RESET);
-  GPIO_InitStruct.Pin = GPIO_PIN_3;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+    /* MCF8329A nFAULT (PD5): pull-up, LOW=fault */
+    gi.Pin = GPIO_PIN_5;
+    HAL_GPIO_Init(GPIOD, &gi);
 
-  /* BEEP_CTRL(PA15) — TIM2_CH1 AF1, passive buzzer PWM */
-  GPIO_InitStruct.Pin = GPIO_PIN_15;
-  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
-  GPIO_InitStruct.Alternate = GPIO_AF1_TIM2;
-  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+    /* KEYWAKE (PA0/SYS_WKUP): no pull (WKUP hardware controls) */
+    gi.Mode = GPIO_MODE_INPUT;
+    gi.Pull = GPIO_NOPULL;
+    gi.Pin  = GPIO_PIN_0;
+    HAL_GPIO_Init(GPIOA, &gi);
 
-  /* actuator_ctrl output: BREAK_CTRL(PD7) — default LOW */
-  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_7, GPIO_PIN_RESET);
-  GPIO_InitStruct.Pin = GPIO_PIN_7;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
-
-  /* LED1(PD13), LED2(PD14) — default LOW */
-  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_13|GPIO_PIN_14, GPIO_PIN_RESET);
-  GPIO_InitStruct.Pin = GPIO_PIN_13|GPIO_PIN_14;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
-
+    /* AF pins (TIM1/2/3/4/14, I2C1/2/3, USART1/2/3/6) — configured by their
+     * own MspInit / MX init functions. Not initialized here. */
 }
-
-/* USER CODE BEGIN 2 */
-
-/* USER CODE END 2 */

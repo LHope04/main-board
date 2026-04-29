@@ -1,3 +1,17 @@
+/**
+ * @file    app/Src/buzzer.c
+ * @brief   Passive buzzer on PB14 / TIM1_CH2N (V6 board).
+ *
+ * V3 was PA15/TIM2_CH1; V6 reuses PA15 for FAN_PWM, so buzzer moved to
+ * PB14 which is TIM1_CH2N (an advanced-timer complementary output).
+ * Two extra concerns vs V3:
+ *   1. __HAL_TIM_MOE_ENABLE() must be called in Init or the output is muted.
+ *   2. Use HAL_TIMEx_PWMN_Start/Stop, not HAL_TIM_PWM_Start.
+ *
+ * LED status output during chimes (V3 toggled PD13/PD14) removed — the
+ * led_rgb module owns the new RGB LEDs (PE2/PE3/PE4) and runs independently.
+ * Buzzer only feeds the IWDG inside long tunes.
+ */
 #include "buzzer.h"
 
 static TIM_HandleTypeDef *s_htim;
@@ -5,41 +19,41 @@ static TIM_HandleTypeDef *s_htim;
 void Buzzer_Init(TIM_HandleTypeDef *htim)
 {
     s_htim = htim;
+    __HAL_TIM_MOE_ENABLE(s_htim);   /* 高级定时器: BDTR.MOE=1, 否则 CH2N 静音 */
+}
+
+static inline void buzzer_set_freq_50pct(uint32_t freq_hz)
+{
+    if (freq_hz == 0) return;
+    uint32_t arr = 1000000UL / freq_hz - 1U;
+    __HAL_TIM_SET_AUTORELOAD(s_htim, arr);
+    __HAL_TIM_SET_COMPARE(s_htim, TIM_CHANNEL_2, arr / 2U);
 }
 
 void Buzzer_PlayTone(uint32_t freq_hz, uint32_t duration_ms)
 {
     if (freq_hz == 0) return;
-    uint32_t arr = 1000000UL / freq_hz - 1U;
-    __HAL_TIM_SET_AUTORELOAD(s_htim, arr);
-    __HAL_TIM_SET_COMPARE(s_htim, TIM_CHANNEL_1, arr / 2U);
-    HAL_TIM_PWM_Start(s_htim, TIM_CHANNEL_1);
+    buzzer_set_freq_50pct(freq_hz);
+    __HAL_TIM_MOE_ENABLE(s_htim);   /* PWMN_Stop 会清 MOE, 每次 Start 前必须重启 */
+    HAL_TIMEx_PWMN_Start(s_htim, TIM_CHANNEL_2);
     HAL_Delay(duration_ms);
-    HAL_TIM_PWM_Stop(s_htim, TIM_CHANNEL_1);
+    HAL_TIMEx_PWMN_Stop(s_htim, TIM_CHANNEL_2);
 }
 
 void Buzzer_Stop(void)
 {
-    HAL_TIM_PWM_Stop(s_htim, TIM_CHANNEL_1);
+    HAL_TIMEx_PWMN_Stop(s_htim, TIM_CHANNEL_2);
 }
 
 void Buzzer_PlayHajimi(void)
 {
-    /* 祝你生日快乐 — Happy Birthday to You
-     * G大调: G4=392 A4=440 B4=494 C5=523 D5=587 E5=659 F5=698 G5=784
-     *
-     * 节拍 ~90BPM: 附点四分=500ms  八分=165ms  四分=330ms  二分=660ms
-     *
-     * 祝  你  生  日  快  乐
-     * 祝  你  生  日  快  乐
-     * 祝  你  生  日  亲爱的…
-     * 祝  你  生  日  快  乐
-     */
+    /* 祝你生日快乐 — Happy Birthday to You (G大调, ~90BPM, ≈10s)
+     * 必须在循环里喂狗 (IWDG 4s 超时). */
     static const uint16_t notes[] = {
-        392, 392, 440, 392, 523, 494,   /* 祝你生日快乐 */
-        392, 392, 440, 392, 587, 523,   /* 祝你生日快乐 */
-        392, 392, 784, 659, 523, 494, 440,  /* 祝你生日亲爱的 */
-        698, 698, 659, 523, 587, 523    /* 祝你生日快乐 */
+        392, 392, 440, 392, 523, 494,
+        392, 392, 440, 392, 587, 523,
+        392, 392, 784, 659, 523, 494, 440,
+        698, 698, 659, 523, 587, 523
     };
     static const uint16_t durs[] = {
         300, 100, 200, 200, 200, 400,
@@ -48,57 +62,31 @@ void Buzzer_PlayHajimi(void)
         300, 100, 200, 200, 200, 400
     };
 
-    /* 演奏一遍 ≈ 10s，LED1(PD13)↔LED2(PD14) 随每拍交替 */
-    for (uint32_t i = 0; i < 25; i++) {
-        IWDG->KR = 0xAAAAU;   /* 曲子 10s > IWDG 4s，必须在循环里喂狗 */
-        if (i & 1U) {
-            HAL_GPIO_WritePin(GPIOD, GPIO_PIN_13, GPIO_PIN_RESET);
-            HAL_GPIO_WritePin(GPIOD, GPIO_PIN_14, GPIO_PIN_SET);
-        } else {
-            HAL_GPIO_WritePin(GPIOD, GPIO_PIN_13, GPIO_PIN_SET);
-            HAL_GPIO_WritePin(GPIOD, GPIO_PIN_14, GPIO_PIN_RESET);
-        }
-        uint32_t arr = 1000000UL / notes[i] - 1U;
-        __HAL_TIM_SET_AUTORELOAD(s_htim, arr);
-        __HAL_TIM_SET_COMPARE(s_htim, TIM_CHANNEL_1, arr / 2U);
-        HAL_TIM_PWM_Start(s_htim, TIM_CHANNEL_1);
+    for (uint32_t i = 0; i < (sizeof(notes) / sizeof(notes[0])); i++) {
+        IWDG->KR = 0xAAAAU;
+        buzzer_set_freq_50pct(notes[i]);
+        __HAL_TIM_MOE_ENABLE(s_htim);   /* PWMN_Stop 会清 MOE, 每次 Start 前必须重启 */
+        HAL_TIMEx_PWMN_Start(s_htim, TIM_CHANNEL_2);
         HAL_Delay(durs[i]);
-        HAL_TIM_PWM_Stop(s_htim, TIM_CHANNEL_1);
-        HAL_GPIO_WritePin(GPIOD, GPIO_PIN_13 | GPIO_PIN_14, GPIO_PIN_RESET);
+        HAL_TIMEx_PWMN_Stop(s_htim, TIM_CHANNEL_2);
         HAL_Delay(20);
     }
-    HAL_GPIO_WritePin(GPIOD, GPIO_PIN_13 | GPIO_PIN_14, GPIO_PIN_RESET);
 }
 
 void Buzzer_PlayStartup(void)
 {
-    /* "凌犀创新，欢迎你" — 用五声音阶模拟普通话声调轮廓
-     *
-     * 凌(Líng 2声↗): G5(784)→B5(988)  上行
-     * 犀(Xī   1声→): C6(1047)          平高
-     * [短停顿]
-     * 创(Chuàng 4声↘): D6(1175)→G5(784) 下行
-     * 新(Xīn  1声→): A5(880)            平高收句
-     * [句间停顿]
-     * 欢(Huān 1声→): B5(988)            平高
-     * 迎(Yíng 2声↗): A5(880)→C6(1047)  上行
-     * 你(Nǐ   3声↙): G5(784)            低落收尾
-     *
-     * notes=0 表示静音停顿
-     */
+    /* "凌犀创新，欢迎你" — 五声音阶模拟普通话声调轮廓. notes=0 → 静音停顿. */
     static const uint16_t notes[] = { 784, 988, 1047,   0, 1175, 784, 880,   0, 988, 880, 1047, 784 };
     static const uint16_t durs[]  = { 140, 200,  260, 100,  130, 150, 350, 200, 180, 140,  200, 420 };
 
     for (uint32_t i = 0; i < 12; i++) {
         IWDG->KR = 0xAAAAU;
         if (notes[i]) {
-            uint32_t arr = 1000000UL / notes[i] - 1U;
-            __HAL_TIM_SET_AUTORELOAD(s_htim, arr);
-            __HAL_TIM_SET_COMPARE(s_htim, TIM_CHANNEL_1, arr / 2U);
-            HAL_TIM_PWM_Start(s_htim, TIM_CHANNEL_1);
+            buzzer_set_freq_50pct(notes[i]);
+            HAL_TIMEx_PWMN_Start(s_htim, TIM_CHANNEL_2);
             HAL_Delay(durs[i]);
-            HAL_TIM_PWM_Stop(s_htim, TIM_CHANNEL_1);
-            HAL_Delay(30);   /* 音符间隙 */
+            HAL_TIMEx_PWMN_Stop(s_htim, TIM_CHANNEL_2);
+            HAL_Delay(30);
         } else {
             HAL_Delay(durs[i]);
         }

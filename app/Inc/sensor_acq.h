@@ -4,15 +4,25 @@
 #include "stm32f4xx_hal.h"
 
 /*
- * NTC channel mapping (ADC1 scan order, adc_buf index):
- *   0=2-NTC2 (PA0/IN0)   1=2-NTC3 (PA1/IN1)   2=2-NTC4 (PA2/IN2)   3=2-NTC1 (PA3/IN3)
- *   4=1-NTC2 (PA4/IN4)   5=1-NTC3 (PA5/IN5)   6=1-NTC4 (PA6/IN6)   7=1-NTC1 (PA7/IN7)
+ * V6: NTC sampling moved off-board to the sampler 综合采样板. Main board no
+ * longer drives ADC1; instead, raw NTC ADC values arrive over USART3 framed
+ * by SamplerComm (阶段 7). This module exposes the same upper-level API as
+ * before so business code (status reporting, protection state machine, etc.)
+ * doesn't need to care where the data came from.
+ *
+ * NTC channel mapping (matches old V3 layout, sampler firmware must preserve):
+ *   0=2-NTC2  1=2-NTC3  2=2-NTC4  3=2-NTC1 (水温)
+ *   4=1-NTC2  5=1-NTC3  6=1-NTC4  7=1-NTC1 (环温)
  */
 
-void            SensorAcq_Init(ADC_HandleTypeDef *hadc);
-void            SensorAcq_Start(void);
-uint16_t        SensorAcq_GetNTC(uint8_t ch);      /* ch 0~7, returns raw 12-bit value */
-const uint16_t *SensorAcq_GetAllNTC(void);         /* pointer to internal adc_buf[8]   */
-float           SensorAcq_NTCToCelsius(uint16_t raw); /* raw -> °C, NaN if out of range */
+void     SensorAcq_Init(void);
+uint16_t SensorAcq_GetNTC(uint8_t ch);                 /* ch 0~7, raw 12-bit */
+float    SensorAcq_NTCToCelsius(uint16_t raw);         /* raw -> °C, NaN if out of range */
+
+/* 阶段 7 新增, USART3 SamplerComm 调: */
+void     SensorAcq_OnNtcFrame(const uint8_t *payload16);    /* 8 × u16 LE */
+void     SensorAcq_OnSelftestFrame(const uint8_t *p, uint8_t len);
+void     SensorAcq_Tick(uint32_t now_ms);              /* stale 检测 + 心跳节拍 */
+uint8_t  SensorAcq_IsStale(void);                      /* 1 = 500ms 没收到帧 */
 
 #endif /* __SENSOR_ACQ_H */

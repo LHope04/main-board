@@ -24,9 +24,13 @@
  *
  * Silent on USART2 — that line is owned by the App/ESP32 protocol, any
  * stray bytes would desync the ESP. Status is reported via LEDs only:
- *   LED1 (PD13) flash count = 1 fallback (no params), 2 jump A, 3 jump B,
- *                             4 rollback fired
- *   LED2 (PD14): blinks forever if the jump was aborted (bad MSP)
+ *   LED1 (PE2, RED) flash count = 1 fallback (no params), 2 jump A, 3 jump B,
+ *                                 4 rollback fired
+ *   LED2 (PE3, GREEN): blinks forever if the jump was aborted (bad MSP)
+ *
+ * V6 board pin migration (2026-04-28): old PD13/PD14 LEDs are unused on the
+ * new board (NC); LEDs moved to PE2/PE3/PE4 (RGB). Bootloader uses PE2 (red)
+ * for the slot-flash indicator and PE3 (green) for the abort-blink.
  */
 
 #include "stm32f4xx_hal.h"
@@ -112,7 +116,7 @@ int main(void)
     jump_to_app(app_addr);
 
     while (1) {
-        HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_14);
+        HAL_GPIO_TogglePin(GPIOE, GPIO_PIN_3);
         HAL_Delay(200);
         iwdg_refresh();
     }
@@ -179,12 +183,13 @@ static void publish_boot_mark(uint32_t mark)
     RTC->BKP0R = mark;
 }
 
+/* V6: common-anode RGB on PE2/PE3/PE4 — LOW = on, HIGH = off. */
 static void blink_led1(uint8_t count)
 {
     for (uint8_t i = 0; i < count; i++) {
-        HAL_GPIO_WritePin(GPIOD, GPIO_PIN_13, GPIO_PIN_SET);
+        HAL_GPIO_WritePin(GPIOE, GPIO_PIN_2, GPIO_PIN_RESET);  /* on */
         HAL_Delay(80);
-        HAL_GPIO_WritePin(GPIOD, GPIO_PIN_13, GPIO_PIN_RESET);
+        HAL_GPIO_WritePin(GPIOE, GPIO_PIN_2, GPIO_PIN_SET);    /* off */
         HAL_Delay(120);
         iwdg_refresh();
     }
@@ -209,16 +214,17 @@ static void iwdg_refresh(void)
 
 static void GPIO_Init(void)
 {
-    __HAL_RCC_GPIOD_CLK_ENABLE();
+    __HAL_RCC_GPIOE_CLK_ENABLE();
 
     GPIO_InitTypeDef gi = {0};
-    gi.Pin   = GPIO_PIN_13 | GPIO_PIN_14;
+    gi.Pin   = GPIO_PIN_2 | GPIO_PIN_3;
     gi.Mode  = GPIO_MODE_OUTPUT_PP;
     gi.Pull  = GPIO_NOPULL;
     gi.Speed = GPIO_SPEED_FREQ_LOW;
-    HAL_GPIO_Init(GPIOD, &gi);
+    HAL_GPIO_Init(GPIOE, &gi);
 
-    HAL_GPIO_WritePin(GPIOD, GPIO_PIN_13 | GPIO_PIN_14, GPIO_PIN_RESET);
+    /* Common-anode: HIGH = off (default both LEDs idle, blink_led1 toggles). */
+    HAL_GPIO_WritePin(GPIOE, GPIO_PIN_2 | GPIO_PIN_3, GPIO_PIN_SET);
 }
 
 /* Matches App's clock config: HSE 25MHz → PLL → 168MHz */

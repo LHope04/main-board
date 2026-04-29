@@ -4,26 +4,32 @@
 #include "stm32f4xx_hal.h"
 
 /*
- * Compressor (YSJ) control — shares TIM3 with fan_ctrl:
- *   PWM    — TIM3_CH2, PB5 (AF2), PMOS inverted (TIM_OCPOLARITY_LOW), 20kHz, ARR=49
- *   DIR    — PB3 (OUTPUT_PP): direction control
- *   BRAKE  — PD7 (OUTPUT_PP): HIGH=release brake, LOW=engage brake
- *   SC_COUNT— TIM3_CH1, PB4 (AF2), input capture for speed feedback
+ * V6 compressor control: TI MCF8329A 三相 BLDC sensorless driver via I2C3.
+ * Rewrites V3's PMOS+single-PWM model. STAGE 1 keeps the old function names
+ * as STUBs so main.c still compiles; real implementation lands in 阶段 6.
  *
- * RPM formula: sc_rpm = freq_hz * 10  (6 pole pairs → 60/6 = 10)
+ * Hardware signals (set by gpio.c, used by mcf8329a driver):
+ *   PA8/PC9   I2C3 SCL/SDA  — register R/W
+ *   PC12      DROFF         — hardware enable (LOW=disabled)
+ *   PD0       SPEED_WAKE    — wake/sleep
+ *   PD3       DIR           — direction (LOW=CW)
+ *   PD4       BREAK         — brake (LOW=engaged)
+ *   PD5       nFAULT        — input, LOW=fault
+ *   PB9       FG (TIM4_CH4) — input capture for speed feedback
+ *   PC1       SOX           — ADC1_IN11 current sense (stage 6, 待启用)
+ *   PA7       EXT_CLK (TIM14_CH1) — optional external clock (stub)
  *
- * NOTE: MX_TIM3_Init() in main.c initialises TIM3 base + all channels.
- *       CompressorCtrl_Init() only starts IC — it does NOT re-init TIM3.
+ * RPM formula unchanged: rpm = freq_hz * 10 (6 pole pairs).
  */
 
-void     CompressorCtrl_Init(TIM_HandleTypeDef *htim);   /* TIM3 */
-void     CompressorCtrl_SetDuty(uint8_t percent);        /* 0~100 %, PMOS-corrected */
-void     CompressorCtrl_SetDirection(uint8_t dir);       /* PB3: 0=default, 1=reverse */
-void     CompressorCtrl_SetBrake(uint8_t en);            /* PD7: 1=release, 0=engage  */
+/* === 旧 API (STUB in stage 1, real impl in stage 6) === */
+void     CompressorCtrl_Init(TIM_HandleTypeDef *htim_fg);   /* TIM4 */
+void     CompressorCtrl_SetDuty(uint8_t percent);           /* legacy: stage 6 maps to SetSpeed */
+void     CompressorCtrl_SetDirection(uint8_t dir);          /* PD3 GPIO */
+void     CompressorCtrl_SetBrake(uint8_t en);               /* PD4 GPIO: 1=release, 0=engage */
 float    CompressorCtrl_GetFreqHz(void);
 uint32_t CompressorCtrl_GetRPM(void);
 
-/* Call from HAL_TIM_IC_CaptureCallback / HAL_TIM_PeriodElapsedCallback in main.c */
 void CompressorCtrl_CaptureCallback(TIM_HandleTypeDef *htim);
 void CompressorCtrl_OverflowCallback(TIM_HandleTypeDef *htim);
 

@@ -14,6 +14,12 @@ typedef enum {
 /* ---- private variables ---- */
 static UART_HandleTypeDef *s_huart;
 
+/* === Debug counters (SWD/watch) === */
+volatile uint32_t g_esp_isr_cnt     = 0;   /* USART6 ISR 进入次数 */
+volatile uint32_t g_esp_frames_rx   = 0;   /* 完整帧数 (XOR 通过) */
+volatile uint32_t g_esp_xor_errors  = 0;   /* XOR 错误数 */
+volatile uint32_t g_esp_status_tx   = 0;   /* 发出的 STATUS 帧次数 */
+
 /* ISR receive state machine */
 static volatile RxState  s_rx_state;
 static volatile uint8_t  s_rx_cmd;
@@ -145,14 +151,16 @@ void EspComm_Init(UART_HandleTypeDef *huart)
     __HAL_UART_CLEAR_FLAG(s_huart, UART_FLAG_ORE | UART_FLAG_FE | UART_FLAG_NE | UART_FLAG_PE);
     (void)s_huart->Instance->DR;  /* dummy read to clear RXNE/ORE */
 
-    /* Enable NVIC + RXNE interrupt */
-    HAL_NVIC_SetPriority(USART2_IRQn, 2, 0);
-    HAL_NVIC_EnableIRQ(USART2_IRQn);
+    /* Enable NVIC + RXNE interrupt.
+     * V6: ESP32-C3 moved from USART2 (PD5/PD6) to USART6 (PC6/PC7). */
+    HAL_NVIC_SetPriority(USART6_IRQn, 1, 1);
+    HAL_NVIC_EnableIRQ(USART6_IRQn);
     __HAL_UART_ENABLE_IT(s_huart, UART_IT_RXNE);
 }
 
 void EspComm_RxISR(void)
 {
+    g_esp_isr_cnt++;
     if (!s_huart) return;
     USART_TypeDef *reg = s_huart->Instance;
     uint32_t sr = reg->SR;
@@ -217,6 +225,9 @@ void EspComm_RxISR(void)
             for (uint8_t i = 0; i < s_rx_len; i++)
                 s_frame_payload[slot][i] = s_rx_buf[i];
             s_frame_wr = wr + 1;
+            g_esp_frames_rx++;
+        } else {
+            g_esp_xor_errors++;
         }
         s_rx_state = RX_WAIT_HEADER;
         break;
@@ -284,6 +295,7 @@ void EspComm_SendStatus(const EspComm_Status *st)
     frame[11] = xor;
 
     send_raw(frame, 12);
+    g_esp_status_tx++;
 }
 
 EspComm_GearCmd *EspComm_GetGearCmd(void)

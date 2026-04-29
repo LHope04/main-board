@@ -12,6 +12,17 @@
 - 每轮迭代开始前必须声明实验假设和排除目标
 - 修改代码前检查 `.context/hardware.context.md`，确认引脚和外设配置
 
+### SWD 调试地址硬规则（务必）
+
+**永远不要把 `arm-none-eabi-nm` 输出的地址当成稳定值跨次重编使用。** 每次新增/修改全局变量,BSS 布局会重排,所有 `.bss` 段地址跟着变。我们已经因此误判过两次：扫描结果"全 0"实际是读了旧地址的零空间。
+
+正确做法（按优先级）：
+1. **优先让用户用 VSCode `Watch`** — 永远跟着最新 ELF 符号表,不用手算地址。地址变化对用户透明
+2. **如果必须用 SWD `mdw`/`mdb`**：每次读取前都重跑 `arm-none-eabi-nm build/<preset>/app/<elf> | grep <symbol>`,拿到当次编译的地址
+3. **结构体字段访问**：用 `offsetof(struct, field)`,不要肉眼数字段偏移（我们因为算错 INA226_Device::voltage_V offset 误判过）
+4. **批量读全字段时**：`mdw <base> <sizeof_struct/4>`,把整块 dump 出来按 layout 解码,别一字一字读
+5. **报告"读到 0/全 FF"前**：先用 nm 重新核对地址 + 检查变量是否在 ELF 里被 GC 掉（无人引用的 volatile 全局会被链接器清除,需要保证有 read 路径）
+
 ---
 
 ## 工具链约定

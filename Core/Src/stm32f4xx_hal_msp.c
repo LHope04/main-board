@@ -1,82 +1,81 @@
-/* USER CODE BEGIN Header */
 /**
-  ******************************************************************************
-  * @file         stm32f4xx_hal_msp.c
-  * @brief        This file provides code for the MSP Initialization
-  *               and de-Initialization codes.
-  ******************************************************************************
-  * @attention
-  *
-  * Copyright (c) 2026 STMicroelectronics.
-  * All rights reserved.
-  *
-  * This software is licensed under terms that can be found in the LICENSE file
-  * in the root directory of this software component.
-  * If no LICENSE file comes with this software, it is provided AS-IS.
-  *
-  ******************************************************************************
-  */
-/* USER CODE END Header */
-
-/* Includes ------------------------------------------------------------------*/
+ * @file    stm32f4xx_hal_msp.c
+ * @brief   MSP init for V6 board peripherals.
+ *
+ * HAL_TIM_PWM_Init / HAL_TIM_IC_Init call into these MspInit hooks during
+ * peripheral bring-up. The default weak implementations do nothing, so if
+ * we don't supply our own the AF pins stay as plain GPIOs and the timer
+ * outputs never reach the pads.
+ *
+ * Pins handled here:
+ *   TIM1_CH2N  PB14  AF1   buzzer (advanced timer)
+ *   TIM2_CH1   PA15  AF1   fan PWM
+ *   TIM3_CH1   PB4   AF2   fan FG input capture
+ *   TIM4_CH4   PB9   AF2   compressor FG input capture
+ */
 #include "main.h"
-/* USER CODE BEGIN Includes */
 
-/* USER CODE END Includes */
-
-/* Private typedef -----------------------------------------------------------*/
-/* USER CODE BEGIN TD */
-
-/* USER CODE END TD */
-
-/* Private define ------------------------------------------------------------*/
-/* USER CODE BEGIN Define */
-
-/* USER CODE END Define */
-
-/* Private macro -------------------------------------------------------------*/
-/* USER CODE BEGIN Macro */
-
-/* USER CODE END Macro */
-
-/* Private variables ---------------------------------------------------------*/
-/* USER CODE BEGIN PV */
-
-/* USER CODE END PV */
-
-/* Private function prototypes -----------------------------------------------*/
-/* USER CODE BEGIN PFP */
-
-/* USER CODE END PFP */
-
-/* External functions --------------------------------------------------------*/
-/* USER CODE BEGIN ExternalFunctions */
-
-/* USER CODE END ExternalFunctions */
-
-/* USER CODE BEGIN 0 */
-
-/* USER CODE END 0 */
-/**
-  * Initializes the Global MSP.
-  */
 void HAL_MspInit(void)
 {
-
-  /* USER CODE BEGIN MspInit 0 */
-
-  /* USER CODE END MspInit 0 */
-
-  __HAL_RCC_SYSCFG_CLK_ENABLE();
-  __HAL_RCC_PWR_CLK_ENABLE();
-
-  /* System interrupt init*/
-
-  /* USER CODE BEGIN MspInit 1 */
-
-  /* USER CODE END MspInit 1 */
+    __HAL_RCC_SYSCFG_CLK_ENABLE();
+    __HAL_RCC_PWR_CLK_ENABLE();
 }
 
-/* USER CODE BEGIN 1 */
+void HAL_TIM_PWM_MspInit(TIM_HandleTypeDef *htim)
+{
+    GPIO_InitTypeDef gi = {0};
+    gi.Mode  = GPIO_MODE_AF_PP;
+    gi.Pull  = GPIO_NOPULL;
+    gi.Speed = GPIO_SPEED_FREQ_HIGH;
 
-/* USER CODE END 1 */
+    if (htim->Instance == TIM1) {
+        /* BEEP_CTRL: PB14 / TIM1_CH2N / AF1 */
+        __HAL_RCC_TIM1_CLK_ENABLE();
+        __HAL_RCC_GPIOB_CLK_ENABLE();
+        gi.Pin       = GPIO_PIN_14;
+        gi.Alternate = GPIO_AF1_TIM1;
+        HAL_GPIO_Init(GPIOB, &gi);
+    }
+    else if (htim->Instance == TIM2) {
+        /* FAN_PWM_CTRL: PA15 / TIM2_CH1 / AF1 */
+        __HAL_RCC_TIM2_CLK_ENABLE();
+        __HAL_RCC_GPIOA_CLK_ENABLE();
+        gi.Pin       = GPIO_PIN_15;
+        gi.Alternate = GPIO_AF1_TIM2;
+        HAL_GPIO_Init(GPIOA, &gi);
+    }
+}
+
+void HAL_TIM_IC_MspInit(TIM_HandleTypeDef *htim)
+{
+    GPIO_InitTypeDef gi = {0};
+    gi.Mode  = GPIO_MODE_AF_PP;
+    gi.Pull  = GPIO_PULLUP;          /* FG/SC are open-drain on the driver IC */
+    gi.Speed = GPIO_SPEED_FREQ_HIGH;
+
+    if (htim->Instance == TIM3) {
+        /* FAN_FB_OUT: PB4 / TIM3_CH1 / AF2 */
+        __HAL_RCC_TIM3_CLK_ENABLE();
+        __HAL_RCC_GPIOB_CLK_ENABLE();
+        gi.Pin       = GPIO_PIN_4;
+        gi.Alternate = GPIO_AF2_TIM3;
+        HAL_GPIO_Init(GPIOB, &gi);
+    }
+    else if (htim->Instance == TIM4) {
+        /* MCF8329A FG: PB9 / TIM4_CH4 / AF2 */
+        __HAL_RCC_TIM4_CLK_ENABLE();
+        __HAL_RCC_GPIOB_CLK_ENABLE();
+        gi.Pin       = GPIO_PIN_9;
+        gi.Alternate = GPIO_AF2_TIM4;
+        HAL_GPIO_Init(GPIOB, &gi);
+    }
+}
+
+void HAL_TIM_Base_MspInit(TIM_HandleTypeDef *htim)
+{
+    /* Cover the case where someone calls HAL_TIM_Base_Init separately. */
+    if (htim->Instance == TIM1) __HAL_RCC_TIM1_CLK_ENABLE();
+    else if (htim->Instance == TIM2) __HAL_RCC_TIM2_CLK_ENABLE();
+    else if (htim->Instance == TIM3) __HAL_RCC_TIM3_CLK_ENABLE();
+    else if (htim->Instance == TIM4) __HAL_RCC_TIM4_CLK_ENABLE();
+}

@@ -74,8 +74,6 @@ openocd -f interface/stlink.cfg -f target/stm32f4x.cfg -c "init" -c "reset halt"
 
 最后 `** Resetting Target **` → 板子复位运行 App A，**LED2 应闪 2 次**（fallback=1 / A=2 / B=3）。
 
----
-
 ## 3. 单 image 增量烧录
 
 仅改了 App 代码，不动 bootloader / params：

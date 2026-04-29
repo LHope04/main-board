@@ -4,9 +4,12 @@
 #include "stm32f4xx_hal.h"
 
 /*
- * Passive buzzer on PA15, TIM2_CH1 AF1.
- * Timer config: PSC=83 → 1MHz tick. ARR = (1MHz / freq_hz) - 1.
- * Startup chime: "凌犀创新，欢迎你" — 五声音阶模拟普通话声调轮廓
+ * V6: passive buzzer on PB14, TIM1_CH2N AF1 (advanced timer, complementary output).
+ * Timer config: PSC=167 → 1MHz tick (TIM1 on APB2×2=168MHz).
+ * ARR = (1MHz / freq_hz) - 1.
+ *
+ * 高级定时器陷阱: __HAL_TIM_MOE_ENABLE() 必须在 Buzzer_Init 里调, 否则 CH2N
+ * 互补输出无信号. 启动用 HAL_TIMEx_PWMN_Start (不是 HAL_TIM_PWM_Start).
  */
 
 void Buzzer_Init(TIM_HandleTypeDef *htim);
