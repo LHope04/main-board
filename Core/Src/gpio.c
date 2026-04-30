@@ -41,11 +41,15 @@ void MX_GPIO_Init(void)
     /* Fan VCC + Pump: PC10, PC11 */
     HAL_GPIO_WritePin(GPIOC, GPIO_PIN_10 | GPIO_PIN_11, GPIO_PIN_RESET);
 
-    /* MCF8329A control: PC12 DROFF (LOW=disabled),
-     * PD0 SPEED_WAKE (LOW=sleep), PD3 DIR (LOW=CW),
-     * PD4 BREAK (LOW=engaged) — all safe defaults */
-    HAL_GPIO_WritePin(GPIOC, GPIO_PIN_12, GPIO_PIN_RESET);
-    HAL_GPIO_WritePin(GPIOD, GPIO_PIN_0 | GPIO_PIN_3 | GPIO_PIN_4, GPIO_PIN_RESET);
+    /* MCF8329A 主控 I2C 控制模式 (motor RUN 状态默认):
+     *   PC12 DRVOFF      推挽输出 LOW  (driver enabled)
+     *   PD0  SPEED_WAKE  推挽输出 HIGH (out of sleep)
+     *   PD3  DIR         推挽输出 LOW  (CW)
+     *   PD4  BREAK       推挽输出 LOW  (RUN, no brake)
+     *   PD5  nFAULT      浮空输入 (外部 5.1kΩ 上拉到 DVCC) */
+    HAL_GPIO_WritePin(GPIOC, GPIO_PIN_12, GPIO_PIN_RESET);                /* DRVOFF=0 */
+    HAL_GPIO_WritePin(GPIOD, GPIO_PIN_3 | GPIO_PIN_4, GPIO_PIN_RESET);    /* DIR=0, BREAK=0 */
+    HAL_GPIO_WritePin(GPIOD, GPIO_PIN_0, GPIO_PIN_SET);                   /* SPEED_WAKE=1 */
 
     gi.Mode  = GPIO_MODE_OUTPUT_PP;
     gi.Pull  = GPIO_NOPULL;
@@ -54,9 +58,11 @@ void MX_GPIO_Init(void)
     gi.Pin = GPIO_PIN_2 | GPIO_PIN_3 | GPIO_PIN_4 | GPIO_PIN_5 | GPIO_PIN_6;
     HAL_GPIO_Init(GPIOE, &gi);
 
+    /* PC10/11/12/15 = FAN_VCC, PUMP, DRVOFF, CHARGE_NTC */
     gi.Pin = GPIO_PIN_10 | GPIO_PIN_11 | GPIO_PIN_12 | GPIO_PIN_15;
     HAL_GPIO_Init(GPIOC, &gi);
 
+    /* PD0/PD3/PD4 = SPEED_WAKE, DIR, BREAK */
     gi.Pin = GPIO_PIN_0 | GPIO_PIN_3 | GPIO_PIN_4;
     HAL_GPIO_Init(GPIOD, &gi);
 
@@ -69,8 +75,10 @@ void MX_GPIO_Init(void)
     gi.Pin   = GPIO_PIN_13 | GPIO_PIN_14;
     HAL_GPIO_Init(GPIOC, &gi);
 
-    /* MCF8329A nFAULT (PD5): pull-up, LOW=fault */
-    gi.Pin = GPIO_PIN_5;
+    /* MCF8329A nFAULT (PD5): 外部 10kΩ 上拉,内部 NOPULL 避免冲突 */
+    gi.Mode = GPIO_MODE_INPUT;
+    gi.Pull = GPIO_NOPULL;
+    gi.Pin  = GPIO_PIN_5;
     HAL_GPIO_Init(GPIOD, &gi);
 
     /* KEYWAKE (PA0/SYS_WKUP): no pull (WKUP hardware controls) */

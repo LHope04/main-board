@@ -28,6 +28,7 @@
 #include "sampler_comm.h"
 #include "remote_ctrl.h"
 #include "iot_ctrl.h"
+#include "mcf8329a.h"
 
 /* ===== Peripheral handles ===== */
 TIM_HandleTypeDef htim1;   /* BEEP_CTRL    PB14 TIM1_CH2N AF1 (高级定时器, 168MHz, MOE 必启) */
@@ -42,6 +43,54 @@ volatile uint8_t g_i2c3_devs[16];
 volatile uint8_t g_i2c1_count = 0;
 volatile uint8_t g_i2c2_count = 0;
 volatile uint8_t g_i2c3_count = 0;
+
+/* I2C3 ping 0x01 (MCF8329A 默认) 诊断 */
+volatile uint32_t g_i2c3_ping_rc  = 0xFF;   /* HAL_OK=0, HAL_ERROR=1, HAL_BUSY=2, HAL_TIMEOUT=3 */
+volatile uint32_t g_i2c3_ping_sr1 = 0;
+volatile uint32_t g_i2c3_ping_sr2 = 0;
+volatile uint32_t g_i2c3_err_code = 0;
+volatile uint32_t g_i2c3_state    = 0;       /* HAL_I2C_StateTypeDef: READY=0x20 */
+
+/* MCF8329A spin diagnostics */
+static MCF8329A_Device s_mcf;
+volatile uint32_t g_mcf_spin_rc      = 0xFFU;   /* HAL_OK=0 等 */
+volatile uint32_t g_mcf_status_rc    = 0xFFU;
+volatile uint32_t g_mcf_algo_status  = 0;       /* ALGO_STATUS 0xE4 */
+volatile uint32_t g_mcf_gate_fault   = 0;       /* GATE_DRIVER_FAULT_STATUS 0xE0 */
+volatile uint32_t g_mcf_ctrl_fault   = 0;       /* CONTROLLER_FAULT_STATUS 0xE2 */
+volatile uint32_t g_mcf_algo_state   = 0xFFFFU; /* ALGORITHM_STATE 0x196 (0=IDLE, 7=OPEN_LOOP, Eh=FAULT) */
+volatile uint32_t g_mcf_state_rc     = 0xFFU;
+volatile uint32_t g_mcf_kick_rc      = 0xFFU;
+volatile uint32_t g_mcf_clrflt_rc    = 0xFFU;
+volatile uint32_t g_mcf_cfg_rc       = 0xFFU;
+volatile uint32_t g_mcf_vm_voltage   = 0;       /* VM_VOLTAGE @ 0x45C, 反映 motor 母线 24V 是否到位 */
+volatile uint32_t g_mcf_phase_a      = 0;       /* PHASE_VOLTAGE_VA @ 0x460 */
+volatile uint32_t g_mcf_motor_su1_rb = 0;       /* 读回 MOTOR_STARTUP1 (0x84) 验证 shadow 写持久 */
+volatile uint32_t g_mcf_cl1_rb       = 0;       /* CLOSED_LOOP1 (0x88) — 含 MAX_SPEED, 限速根因 */
+volatile uint32_t g_mcf_cl4_rb       = 0;       /* CLOSED_LOOP4 (0x8E) — 速度环 / IL 限制 */
+volatile uint32_t g_mcf_dev_cfg2_rb  = 0;       /* DEVICE_CONFIG2 (0xA8) — I2C addr 来源 */
+/* SWD-controlled override for shadow registers. Non-zero = motor stops, write,
+ * read-back, restart at spin_duty. Set to 0 after handled.
+ * 用于实验性突破 EEPROM 限速 — e.g. CLOSED_LOOP1 bump MAX_SPEED. */
+volatile uint32_t g_mcf_cl1_set      = 0;       /* 写入 CLOSED_LOOP1 (0x88) 的新值, 0=不动 */
+volatile uint32_t g_mcf_cl1_set_rc   = 0xFFU;   /* 写结果 */
+volatile uint32_t g_mcf_cl1_set_done = 0;       /* 已处理次数 */
+/* Boot-time CLOSED_LOOP4 override: motor IDLE 时写 shadow, 不动 EEPROM.
+ * Motor Studio 确认 MAX_SPEED = CL4 低 12 位 (CL4=0x08D904B0, MAX=0x4B0=1200).
+ * 实测电机 ~130Hz electrical, 编码约 6 units/Hz.
+ * 0x708 (=1800) → 300Hz electrical = 4500 RPM @ 8极 (规格上限).
+ * 新 CL4 = (0x08D904B0 & ~0xFFF) | 0x708 = 0x08D90708.
+ * 设 0 跳过, 用 EEPROM 默认 (200Hz / 3000 RPM). */
+volatile uint32_t g_mcf_cl4_boot_target = 0x08D90708U;  /* MAX_SPEED 0x4B0→0x708 = 4500 RPM @ 8极 */
+volatile uint32_t g_mcf_cl4_boot_rc     = 0xFFU;
+volatile uint32_t g_mcf_mpet_status  = 0;       /* ALGO_STATUS_MPET @ 0xE8 */
+volatile uint32_t g_mcf_mpet_rc      = 0xFFU;
+volatile uint16_t g_mcf_spin_duty    = 0x7FFF;  /* 100% duty — 出厂模式直接拉满 */
+volatile uint32_t g_mcf_fg_speed     = 0;       /* FG_SPEED_FDBK @ 0x19C */
+volatile uint32_t g_mcf_speed_fdbk   = 0;       /* SPEED_FDBK @ 0x76E (closed-loop 估速) */
+/* 当 = 1, 主循环跳过所有 I2C3 → MCF8329A 操作 (写 / 读 / WD tickle).
+ * 让 Motor Studio 独占总线调参. SWD: mww 0x<g_mcf_i2c_disable_addr> 1 关闭. */
+volatile uint8_t  g_mcf_i2c_disable  = 0;
 
 
 /*
@@ -158,6 +207,14 @@ int main(void)
     HAL_Init();
     SystemClock_Config();
 
+    /* 切到出厂模式: STM32 始终接管 I2C3, 用 EEPROM 默认配置 + SpinDuty 跑.
+     * 清掉 Motor Studio 调试模式持久标志 (上电后总是 STM32 控制).
+     * 仍可在运行时 SWD 设 g_mcf_i2c_disable=1 临时让出总线. */
+    __HAL_RCC_PWR_CLK_ENABLE();
+    HAL_PWR_EnableBkUpAccess();
+    RTC->BKP2R = 0U;
+    g_mcf_i2c_disable = 0;
+
     MX_GPIO_Init();
     MX_TIM1_BEEP_Init();
     MX_TIM2_FANPWM_Init();
@@ -165,7 +222,7 @@ int main(void)
     MX_TIM4_CMPRFG_Init();
     MX_I2C1_Init();
     MX_I2C2_Init();
-    MX_I2C3_Init();
+    MX_I2C3_Init();   /* MCF8329A 通信 */
     MX_USART1_UART_Init();   /* RemoteCtrl  stub */
     MX_USART2_UART_Init();   /* IotCtrl     stub */
     MX_USART3_UART_Init();   /* SamplerComm 阶段 7 */
@@ -179,7 +236,8 @@ int main(void)
     /* 业务模块 Init: 接口签名保留, 内部实现各阶段重写 */
     SensorAcq_Init();                       /* 阶段 7 改 USART3 收帧 */
     FanCtrl_Init(&htim2, &htim3);           /* 阶段 4: PWM=TIM2_CH1, IC=TIM3_CH1 */
-    CompressorCtrl_Init(&htim4);            /* 阶段 6: I2C3 + FG IC=TIM4_CH4 */
+    /* CompressorCtrl_Init() — 暂停: 用户外接调试器直连 MCF8329A,
+     * 主控不动 PD3/PD4/PB9 等控制信号. */
     Buzzer_Init(&htim1);                    /* 阶段 2: TIM1_CH2N + MOE */
     EspComm_Init(&huart6);                  /* 阶段 8: USART6 (旧 huart2) */
     LedRgb_Init();                          /* 阶段 2: PE2/PE3/PE4 */
@@ -190,11 +248,76 @@ int main(void)
 
     PowerCtrl_StartupSequence();            /* 阶段 3: 新引脚时序 */
 
-    /* MCF8329A 唤醒: DROFF=HIGH (driver enable), SPEED_WAKE=HIGH (out of sleep).
-     * 在 sleep 模式下 MCF8329A 不响应 I2C, 必须先唤醒才能扫描到地址. */
-    HAL_GPIO_WritePin(GPIOC, GPIO_PIN_12, GPIO_PIN_SET);   /* PC12 DROFF */
-    HAL_GPIO_WritePin(GPIOD, GPIO_PIN_0,  GPIO_PIN_SET);   /* PD0  SPEED_WAKE */
-    HAL_Delay(50);                                          /* MCF8329A wake-up */
+    /* 清 I2C1/I2C2/I2C3 总线 BUSY 锁. */
+    {
+        I2C_HandleTypeDef *handles[3] = { &hi2c1, &hi2c2, &hi2c3 };
+        for (int i = 0; i < 3; i++) {
+            handles[i]->Instance->CR1 |=  I2C_CR1_SWRST;
+            HAL_Delay(1);
+            handles[i]->Instance->CR1 &= ~I2C_CR1_SWRST;
+            HAL_I2C_DeInit(handles[i]);
+            HAL_I2C_Init(handles[i]);
+        }
+    }
+
+    /* MCF8329A wake cycle: 强制 SPEED/WAKE LOW → 100ms → HIGH 触发 wake edge.
+     * 防止芯片上电时已经 HIGH 但错过 wake event 卡 sleep. */
+    HAL_GPIO_WritePin(GPIOD, GPIO_PIN_0, GPIO_PIN_RESET);   /* WAKE LOW */
+    HAL_Delay(100);
+    HAL_GPIO_WritePin(GPIOD, GPIO_PIN_0, GPIO_PIN_SET);     /* WAKE HIGH */
+    HAL_Delay(100);                                          /* wake-up time */
+
+    /* === MCF8329A 直接 I2C 启动: 写 ALGO_DEBUG1 (0xEC) 用 SPEED_OVER_RIDE 强转 ===
+     * I2C mode 必须周期 tickle WATCHDOG_TICKLE (ALGO_CTRL1 bit10), 否则芯片
+     * 进 ext-WD fault 不响应. 启动序列:
+     *   1. 清故障 + tickle WD
+     *   2. 等 50ms 让芯片应用
+     *   3. 读 status / algo state, 写 spin duty (覆盖默认 SPEED_MODE 用 DIGITAL_SPEED_CTRL) */
+    MCF8329A_Init(&s_mcf, &hi2c3, MCF8329A_HAL_ADDR_DEFAULT);
+    HAL_Delay(20);
+    g_mcf_clrflt_rc = (uint32_t)MCF8329A_ClearFault(&s_mcf);
+    HAL_Delay(20);
+    g_mcf_kick_rc   = (uint32_t)MCF8329A_KickWatchdog(&s_mcf);
+    HAL_Delay(20);
+
+    /* 等同 Motor Studio "I2C Speed Command Percentage" 滑块模式:
+     * 不覆盖 shadow 寄存器, 只用 EEPROM 里的出厂/已固化配置 + SPEED_OVERRIDE。
+     * 出厂参数容差大, 通用启动状态机鲁棒, 不需要精确 R/L/Ke 也能转。
+     * 想用精确 FOC 改回 LoadMinimumConfig() 即可。 */
+    g_mcf_cfg_rc = HAL_OK;
+    (void)MCF8329A_Read32(&s_mcf, 0x000084U, (uint32_t *)&g_mcf_motor_su1_rb);
+    /* 读 EEPROM 加载的限速寄存器 (motor 还在 IDLE, 安全) */
+    (void)MCF8329A_Read32(&s_mcf, 0x000088U, (uint32_t *)&g_mcf_cl1_rb);
+    (void)MCF8329A_Read32(&s_mcf, 0x00008EU, (uint32_t *)&g_mcf_cl4_rb);
+    (void)MCF8329A_Read32(&s_mcf, 0x0000A8U, (uint32_t *)&g_mcf_dev_cfg2_rb);
+
+    /* 路径 B: motor IDLE 时写 shadow 提速 (CL4.MAX_SPEED).
+     * Motor Studio 确认: CL4 (0x8E) 低 12 位 = MAX_SPEED. EEPROM = 0x08D904B0 (1200/200Hz).
+     * 改成 0x08D90708 (MAX_SPEED=1800 → 300Hz electrical = 4500 RPM @ 8极).
+     * shadow-only, 断电后自动回 EEPROM 默认. SWD 写 g_mcf_cl4_boot_target=0 跳过. */
+    if (g_mcf_cl4_boot_target != 0U) {
+        g_mcf_cl4_boot_rc = (uint32_t)MCF8329A_Write32(&s_mcf, 0x00008EU,
+                                                       g_mcf_cl4_boot_target);
+        HAL_Delay(20);
+        (void)MCF8329A_Read32(&s_mcf, 0x00008EU, (uint32_t *)&g_mcf_cl4_rb);
+        /* MAX_SPEED 提升后 ramp-up 期间会触发 ABNORMAL_SPEED 类瞬时故障,
+         * 等闭环稳定后清掉 latched fault flag. */
+        HAL_Delay(500);
+        IWDG->KR = 0xAAAAU;
+        (void)MCF8329A_ClearFault(&s_mcf);
+    }
+
+    /* 清空 ALGO_DEBUG2 (确保没有 MPET 残留, 避免和 SpinDuty 抢控制) */
+    g_mcf_mpet_rc = (uint32_t)MCF8329A_Write32(&s_mcf, 0x0000EEU, 0U);
+    HAL_Delay(20);
+    g_mcf_status_rc = (uint32_t)MCF8329A_RefreshStatus(&s_mcf);
+    g_mcf_algo_status = s_mcf.last_algo_status;
+    g_mcf_gate_fault  = s_mcf.last_gate_fault;
+    g_mcf_ctrl_fault  = s_mcf.last_ctrl_fault;
+    g_mcf_state_rc    = (uint32_t)MCF8329A_ReadAlgoState(&s_mcf, (uint32_t *)&g_mcf_algo_state);
+
+    /* 写 spin override. 写不依赖 RepeatedStart, 比读可靠. */
+    g_mcf_spin_rc = (uint32_t)MCF8329A_SpinDuty(&s_mcf, g_mcf_spin_duty);
 
     Buzzer_PlayHajimi();                    /* 开机大疆音; 内部喂狗 */
 
@@ -217,6 +340,28 @@ int main(void)
                 break;
             default: break;
         }
+        /* === I2C3 持续扫描 (debug, 500ms 一次, watch g_i2c3_count/devs/ping_*) === */
+        {
+            static uint32_t s_last_i2c3_scan = 0;
+            if ((uint32_t)(now_ms - s_last_i2c3_scan) >= 500U) {
+                s_last_i2c3_scan = now_ms;
+                g_i2c3_count = 0;
+                for (uint8_t a = 1; a < 128; a++) {
+                    HAL_StatusTypeDef rc = HAL_I2C_IsDeviceReady(&hi2c3, (uint16_t)(a << 1), 1, 2);
+                    if (rc == HAL_OK) {
+                        if (g_i2c3_count < 16) g_i2c3_devs[g_i2c3_count++] = a;
+                    }
+                    if (a == 0x01) {
+                        g_i2c3_ping_rc  = (uint32_t)rc;
+                        g_i2c3_ping_sr1 = hi2c3.Instance->SR1;
+                        g_i2c3_ping_sr2 = hi2c3.Instance->SR2;
+                        g_i2c3_err_code = hi2c3.ErrorCode;
+                        g_i2c3_state    = (uint32_t)hi2c3.State;
+                    }
+                }
+            }
+        }
+
         EspComm_Poll();
         SamplerComm_Poll();
         SensorAcq_Tick(now_ms);
@@ -281,6 +426,80 @@ int main(void)
                     s_boot_marked = 1;
                     (void)Ota_MarkBootOk();
                 }
+            }
+        }
+
+        /* I2C3 释放 / 接管 — 监测 g_mcf_i2c_disable 跳变, 把 PA8 SCL / PC9 SDA
+         * 切到 input no-pull (tri-state), 让 Motor Studio 独占 I2C 总线. */
+        {
+            static uint8_t s_last_disable = 0xFF;
+            if (g_mcf_i2c_disable != s_last_disable) {
+                s_last_disable = g_mcf_i2c_disable;
+                /* Persist to RTC backup, 跨重启生效 */
+                HAL_PWR_EnableBkUpAccess();
+                RTC->BKP2R = g_mcf_i2c_disable ? 0xD15AB1EDU : 0U;
+                if (g_mcf_i2c_disable) {
+                    /* 释放: I2C3 peripheral 关闭 + SCL/SDA 设成浮空输入 */
+                    HAL_I2C_DeInit(&hi2c3);
+                    GPIO_InitTypeDef gi = {0};
+                    gi.Mode = GPIO_MODE_INPUT;
+                    gi.Pull = GPIO_NOPULL;
+                    gi.Pin  = GPIO_PIN_8;
+                    HAL_GPIO_Init(GPIOA, &gi);
+                    gi.Pin  = GPIO_PIN_9;
+                    HAL_GPIO_Init(GPIOC, &gi);
+                } else {
+                    /* 接管: 重新初始化 I2C3 + SWRST 解 BUSY 锁 */
+                    MX_I2C3_Init();
+                    hi2c3.Instance->CR1 |=  I2C_CR1_SWRST;
+                    HAL_Delay(1);
+                    hi2c3.Instance->CR1 &= ~I2C_CR1_SWRST;
+                    HAL_I2C_DeInit(&hi2c3);
+                    HAL_I2C_Init(&hi2c3);
+                }
+            }
+        }
+
+        /* === SWD-triggered shadow register override (CLOSED_LOOP1 MAX_SPEED) ===
+         * 流程: spin=0 → 等 200ms 让芯片进 IDLE → 写 CL1 → 读回 → 恢复 spin_duty.
+         * 一次性, 处理完清 g_mcf_cl1_set, 防止反复写。 */
+        if (!g_mcf_i2c_disable && g_mcf_cl1_set != 0U) {
+            uint16_t saved_duty = g_mcf_spin_duty;
+            g_mcf_spin_duty = 0U;
+            (void)MCF8329A_SpinDuty(&s_mcf, 0U);
+            HAL_Delay(300);                     /* 让闭环停 + 喂狗时间 */
+            IWDG->KR = 0xAAAAU;
+            g_mcf_cl1_set_rc = (uint32_t)MCF8329A_Write32(&s_mcf, 0x000088U, g_mcf_cl1_set);
+            HAL_Delay(20);
+            (void)MCF8329A_Read32(&s_mcf, 0x000088U, (uint32_t *)&g_mcf_cl1_rb);
+            g_mcf_cl1_set = 0U;
+            g_mcf_cl1_set_done++;
+            g_mcf_spin_duty = saved_duty;
+            (void)MCF8329A_SpinDuty(&s_mcf, saved_duty);
+            IWDG->KR = 0xAAAAU;
+        }
+
+        /* === 200ms 分流: MCF8329A WD tickle + spin 重写 + 读故障 / 状态 === */
+        if (!g_mcf_i2c_disable)
+        {
+            static uint32_t s_last_200 = 0;
+            if ((uint32_t)(now_ms - s_last_200) >= 200U) {
+                s_last_200 = now_ms;
+                g_mcf_kick_rc   = (uint32_t)MCF8329A_KickWatchdog(&s_mcf);
+                g_mcf_spin_rc   = (uint32_t)MCF8329A_SpinDuty(&s_mcf, g_mcf_spin_duty);
+                g_mcf_status_rc = (uint32_t)MCF8329A_RefreshStatus(&s_mcf);
+                g_mcf_algo_status = s_mcf.last_algo_status;
+                g_mcf_gate_fault  = s_mcf.last_gate_fault;
+                g_mcf_ctrl_fault  = s_mcf.last_ctrl_fault;
+                g_mcf_state_rc    = (uint32_t)MCF8329A_ReadAlgoState(&s_mcf, (uint32_t *)&g_mcf_algo_state);
+                /* VM_VOLTAGE @ 0x45C — motor 母线电压 (Q-format, ~24V 应该是 0x0180_0000 量级) */
+                (void)MCF8329A_Read32(&s_mcf, 0x00045CU, (uint32_t *)&g_mcf_vm_voltage);
+                (void)MCF8329A_Read32(&s_mcf, 0x000460U, (uint32_t *)&g_mcf_phase_a);
+                (void)MCF8329A_Read32(&s_mcf, 0x0000E8U, (uint32_t *)&g_mcf_mpet_status);
+                /* FG_SPEED_FDBK @ 0x19C — FG 引脚反馈速度 */
+                (void)MCF8329A_Read32(&s_mcf, 0x00019CU, (uint32_t *)&g_mcf_fg_speed);
+                /* SPEED_FDBK @ 0x76E — 闭环估速 (BEMF estimator 输出) */
+                (void)MCF8329A_Read32(&s_mcf, 0x00076EU, (uint32_t *)&g_mcf_speed_fdbk);
             }
         }
 

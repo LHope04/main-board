@@ -146,3 +146,66 @@
 - 同时维护 VG 和 VE 两套配置 — 项目只有一种板子，无收益
 
 **衍生约束**：未来若要使用 0x08060000 以上地址（如末端 sector 做日志/工厂数据），必须先确认实际板子容量；不可再假设 1024 KB。
+
+---
+
+## [2026-04-30] MCF8329A 驱动起转:WAKE 引脚走线断 + Motor Studio 完整配置
+
+**背景**:阶段 6 MCF8329A I2C 通信打通后,芯片始终卡在 ALGORITHM_STATE = 0 (MOTOR_IDLE),三相输出无 PWM。所有 STM32 端尝试 (SPEED_OVERRIDE / FORCE_ALIGN / MPET / 全 Motor Studio 影子寄存器灌入) 都无法让芯片离开 IDLE,但所有故障寄存器全 0,SYS_ENABLE_FLAG = 1。
+
+**根因**:STM32 PD0 (SPEED/WAKE) 到 MCF8329A SPEED/WAKE 引脚的 PCB 走线断开。STM32 端 PD0 拉高 3.3V,但芯片本体 WAKE 引脚实测 0V。芯片内部 1MΩ 下拉把 WAKE 钉死,芯片处于 standby 模式,I2C 寄存器仍可访问 (305+ 次读写零错误),但栅驱被禁用,所以输出永远 0V。PIN_CONFIG 配置为 I2C SPEED_MODE,WAKE 引脚仅作 sleep/wake 阀门,需要 > 0.65 × AVDD = 2.15V 才能 active。
+
+**决策**:
+1. WAKE 走线问题硬件修复 (飞线 / 重焊)
+2. 软件保留 Motor Studio "BLDC_Pump_3A_200Hz_MCF8329A_v1" 的 24 个 EEPROM 影子寄存器配置 (在 `app/Src/mcf8329a.c::MCF8329A_LoadMinimumConfig()`)
+3. 启动序列:I2C SWRST 解锁 → 强制 WAKE 边沿 LOW→HIGH → ClearFault → KickWatchdog → 灌全配置 → 写 ALGO_DEBUG1 spin override
+4. 主循环 200ms 周期 tickle WATCHDOG_TICKLE (ALGO_CTRL1 bit10) + 重写 spin override + 读 status
+
+**原因**:
+- 走线断这种硬件 bug 无法通过软件 workaround
+- 软件层在硬件可用前就准备好了完整的控制路径,修复后立刻生效 (motor 当场起转)
+
+**目标电机**:生利达 ZW50-3.3-24 全封闭旋转式直流变频压缩机 (8 极, 3000~4500 RPM, 24V 3.3A, 0.244Ω L-L, Ld=Lq=0.076mH L-L, 8 Apk 退磁极限)
+
+**Pump_3A_200Hz 配置 vs ZW50 实际差异**:
+- 最高转速:配置 200Hz (3000 RPM) vs 实际需 300Hz (4500 RPM)
+- 推荐升速:配置激进 vs 实际需 60 rpm/s (4 Hz/s 电气)
+- 现状能转,但不优化。生产前需重新 Motor Studio 配置导出 JSON,替换 LoadMinimumConfig 内的常量表。
+
+**排除方案**:
+- 反复尝试不同的 ALGO_DEBUG1 / ALGO_DEBUG2 组合:都失败,因为芯片 standby 模式根本不响应业务命令
+- 怀疑 EEPROM 烧坏 / chip 损坏:误判,实际是 I/O 走线
+- 接受电机不转 + 用 MPET 应付:走错方向,MPET 期间的 10V 是 DC 注入测参,不是真驱动
+
+**验证**:WAKE 走线修复后,同样的固件让 motor 立刻起转;所有诊断全局 (g_mcf_*) 显示 algo_state 离开 IDLE,VOLT_MAG 增长,三相 PWM 切换。
+
+**衍生约束**:任何"芯片 I2C 通但功能不工作"先查关键控制信号是不是真的到了芯片本体引脚 (用万用表对芯片引脚直接测,不要相信 STM32 侧的 GPIO ODR)。
+
+---
+
+## 2026-04-30 — MCF8329A 切到出厂模式 + I2C 地址自动扫描
+
+**决策**:
+1. STM32 启动时**不再调** `MCF8329A_LoadMinimumConfig()`,放弃精确 FOC 路线,改用 EEPROM 出厂/调通配置 + `SpinDuty(SPEED_OVERRIDE)` 直接驱动
+2. `MCF8329A_Init()` 启动时自动扫描 I2C3 总线,**不依赖固定的 0x01 地址**
+3. 移除 `g_mcf_i2c_disable` 的 BKP2R 持久化,启动总是清零让 STM32 接管(运行时仍可 SWD 设 1 让出总线)
+4. `g_mcf_spin_duty` 默认改 `0x4000 (50%)` → `0x7FFF (100%)`
+
+**原因**:
+- 反复 SmartTune 调参始终触发 HW_LOCK_LIMIT(根因疑似 Shunt / Phase R/L 单位 / BEMF 不准),浪费时间
+- Motor Studio 的"I2C Speed Command Percentage"滑块用的是出厂默认配置 + 通用启动状态机,容差 ±50% 都能转 — 直接用同款模式即可
+- Motor Studio 写 EEPROM 把芯片地址从 target 0x01 改到了 **target 0x5A (HAL 0xB4)**,固定 0x02 地址永远 NACK
+- 硬编码地址会随 EEPROM 任意一次写动作失效,自动扫描是唯一鲁棒方案
+
+**实测验证(2026-04-30, ST-Link + OpenOCD)**:
+- `g_mcf_scan_addr = 0xB4` ← 自动扫到 0x5A target
+- `g_mcf_w_ok = 4, g_mcf_w_err = 0` ← I2C 通信 100% 成功
+- `g_mcf_spin_duty = 0x7FFF` ← 100% duty 已写
+- `g_mcf_ctrl_fault = 0, g_mcf_gate_fault = 0` ← 零故障
+- **物理实测电机全速转动**
+
+**衍生约束**:
+- 任何对 MCF8329A 的代码修改,**不要假设 I2C 地址固定**,通过 `dev->addr` 间接访问
+- 想切回精确 FOC,在 main.c 启动序列里恢复一行 `LoadMinimumConfig()` 即可,函数代码留着
+- Motor Studio 调试若要重新接管,运行时 SWD 写 `g_mcf_i2c_disable = 1`(不再跨复位保留)
+

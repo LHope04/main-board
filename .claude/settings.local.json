@@ -114,7 +114,17 @@
       "Bash(git log *)",
       "Bash(sed -n '105,112p' 板子/Netlist_Schematic6_2026-04-28.tel)",
       "Bash(sed -n '117,124p' 板子/Netlist_Schematic6_2026-04-28.tel)",
-      "Bash(sed -n '157,163p' docs/控制板Netlist_Schematic3_2026-03-25.tel)"
+      "Bash(sed -n '157,163p' docs/控制板Netlist_Schematic3_2026-03-25.tel)",
+      "WebFetch(domain:open.feishu.cn)",
+      "Bash(npm --version)",
+      "Bash(npm install *)",
+      "Bash(lark-cli --version)",
+      "Bash(npx *)",
+      "Bash(lark-cli auth *)",
+      "Bash(rm /Users/mac/Github/main-board/.claude/skills/lark-*)",
+      "Bash(rm -rf /Users/mac/Github/main-board/.agents)",
+      "Bash(rm /Users/mac/Github/main-board/skills-lock.json)",
+      "Bash(git -C /Users/mac/Github/main-board status --short)"
     ]
   }
 }
