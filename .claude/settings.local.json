@@ -124,7 +124,15 @@
       "Bash(rm /Users/mac/Github/main-board/.claude/skills/lark-*)",
       "Bash(rm -rf /Users/mac/Github/main-board/.agents)",
       "Bash(rm /Users/mac/Github/main-board/skills-lock.json)",
-      "Bash(git -C /Users/mac/Github/main-board status --short)"
+      "Bash(git -C /Users/mac/Github/main-board status --short)",
+      "Bash(openocd -f interface/stlink.cfg -f target/stm32f4x.cfg -c \"init; halt; reg pc; mdw 0x08008000 4; resume; exit\")",
+      "Bash(arm-none-eabi-nm build/app-a/app/upboard_A.elf)",
+      "Bash(openocd -f interface/stlink.cfg -f target/stm32f4x.cfg -c \"program build/app-a/app/upboard_A.hex verify reset; exit\")",
+      "Bash(openocd -f interface/stlink.cfg -f target/stm32f4x.cfg -f /tmp/mcf_disable.cfg)",
+      "Bash(openocd -f interface/stlink.cfg -f target/stm32f4x.cfg -f /tmp/mcf_force_disable.cfg)",
+      "Bash(arm-none-eabi-addr2line *)",
+      "Bash(openocd -f interface/stlink.cfg -f target/stm32f4x.cfg -f /tmp/stop.cfg)",
+      "Bash(openocd -f interface/stlink.cfg -f target/stm32f4x.cfg -f /tmp/i2c_unstick_and_stop.cfg)"
     ]
   }
 }

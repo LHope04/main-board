@@ -1,7 +1,10 @@
 # 硬件配置
 
-> 数据来源：网表确认（2026-03-25）+ CubeMX `upboard.ioc` + `Core/Src/gpio.c` 当前配置
-> 修改前必须对照原理图确认。
+> 数据来源 (按权威度排序):
+>   1. 原理图 `SCH_Schematic6_2026-04-21` (IO 未分配 page) — 最终事实
+>   2. `Core/Src/gpio.c` + `Core/Src/usart.c` + `Core/Src/stm32f4xx_hal_msp.c` — 已对齐 V6
+>   3. `app/Src/power_ctrl.c` + `app/Src/fan_ctrl.c` 等模块注释 — 已对齐 V6
+> 修改前必须对照原理图确认。**V3 旧引脚映射已全部移植,不要相信任何 PB5/PB3/PB9/PC6/PC7/PC8/PB13/PB14/PB15 跟风扇/水泵/压缩机相关的旧描述**。
 
 ## 芯片信息
 
@@ -16,67 +19,81 @@
 
 ## 引脚映射
 
-### 电源/使能
-| 信号 | 引脚 | 类型 | 备注 |
-|------|------|------|------|
-| EN_DVCC_5TO3V3 | PD11 | OUTPUT_PP | 上电即 HIGH（运放解锁，硬件强制） |
-| EN_AVCC_5TO3V3 | PD12 | OUTPUT_PP | 上电即 HIGH（运放解锁，硬件强制） |
-| EN_TPS43060 | PB13 | OUTPUT_PP | 12V→24V 升压使能（驱动板 U1） |
-| EN_24TO12 | PB14 | OUTPUT_PP | 24V→12V 降压使能（驱动板 U5，12V_VCC_FAN） |
-| CHARGE_EN | PB12 | OUTPUT_PP | 锂电池充电模块使能 |
-| PUMP_EN | PB15 | OUTPUT_PP | 水泵输出使能（FPC2.11 直通） |
+### 电源/使能 (V6 实际, 以 `app/Src/power_ctrl.c` 为准)
+| 信号 | 引脚 | 极性 | API | 备注 |
+|------|------|------|------|------|
+| EN_DVCC_5TO3V3 | PD11 | active HIGH | (硬件强制) | 上电即 HIGH（运放解锁） |
+| EN_AVCC_5TO3V3 | PD12 | active HIGH | (硬件强制) | 上电即 HIGH（运放解锁） |
+| BOOST (12V→24V) | PE6 | active LOW | `PowerCtrl_EnableBoost(en)` | DCDC 升压使能 |
+| LOAD (24V out) | PE5 | active HIGH | `PowerCtrl_EnableLoad(en)` | 24V 负载输出使能 |
+| CHARGE_NTC | PC15 | active LOW | `PowerCtrl_EnableChargeNtc(en)` | 充电器 NTC 使能 |
+| **FAN_VCC** | **PC10** | active HIGH | `PowerCtrl_EnableFanVcc(en)` | 12V 风扇 MOSFET Q10 |
+| **PUMP** | **PC11** | active HIGH | `PowerCtrl_EnablePump(en)` | 水泵输出使能 |
 
-上电时序：`PB13→500ms→PB14→200ms→PB12→50ms→PB15`
+启动时序 (`PowerCtrl_StartupSequence`):
+`100ms → BOOST=ON → 200ms → LOAD=ON → 100ms → CHARGE_NTC=ON → 50ms` (FAN/PUMP 由业务命令开启)
 
-### 风扇（fan_ctrl）
-| 信号 | 引脚 | 类型 | 备注 |
+SWD 现场切换 (GPIOC BSRR @ 0x40020818, 低 16 bit set, 高 16 bit reset):
+- `mww 0x40020818 0x00000400` 开 FAN_VCC (PC10 HIGH)
+- `mww 0x40020818 0x04000000` 关 FAN_VCC
+- `mww 0x40020818 0x00000800` 开 PUMP (PC11 HIGH)
+- `mww 0x40020818 0x08000000` 关 PUMP
+
+### 风扇（fan_ctrl）— V6 实际
+| 信号 | 引脚 | AF / TIM | 备注 |
 |------|------|------|------|
-| FAN_VCC_CTRL | PC6 | OUTPUT_PP | 12V 风扇电源开关（MOSFET Q10） |
-| FAN_PWM_CTRL | PC8 | TIM3_CH3 AF2 | 20kHz 调速 |
-| FAN_FB | PC7 | TIM8_CH2 AF3 | FG 反馈，开漏，内部上拉 ~40kΩ（建议外接 10kΩ） |
+| FAN_VCC_CTRL | **PC10** | OUTPUT_PP (active HIGH) | 12V 风扇供电 MOSFET, `PowerCtrl_EnableFanVcc()` |
+| FAN_PWM_CTRL | **PA15** | TIM2_CH1 AF1 | 20kHz 调速,`FanCtrl_SetDuty()` |
+| FAN_FB_OUT | **PB4** | TIM3_CH1 AF2 | FG 输入捕获,`FanCtrl_GetRPM()` (= freq × 20) |
 
 RPM = freq × 20（3 极对）
 
-### 压缩机 YSJ（compressor_ctrl）
+### 压缩机 — V6 实际 (MCF8329A 直接驱动,无外置 PWM/DIR GPIO 输出)
 | 信号 | 引脚 | 类型 | 备注 |
 |------|------|------|------|
-| YSJ_PWM | PB5 | TIM3_CH2 AF2 | 20kHz，PMOS 反相（`TIM_OCPOLARITY_LOW`） |
-| DIR_CTRL | PB3 | OUTPUT_PP | 0=正转 1=反转 |
-| BREAK_CTRL | PD7 | OUTPUT_PP | 1=释放刹车 0=刹死 |
-| SC_COUNT | PB4 | TIM3_CH1 AF2 | 转速脉冲输入 |
+| DRVOFF | PC12 | OUTPUT_PP | 1=断驱动,0=使能 |
+| SPEED_WAKE | PD0 | OUTPUT_PP | 1=唤醒 |
+| DIR | PD3 | OUTPUT_PP | 默认 0; **可能被 EEPROM PERI_CONFIG1 DIR_INPUT override 屏蔽** |
+| BREAK | PD4 | OUTPUT_PP | 1=刹车 |
+| nFAULT | PD5 | INPUT (外部 5.1kΩ 上拉) | LOW=故障 |
+| FG | PB9 | TIM4_CH4 AF2 | 压缩机转速反馈 (input capture) |
+| EXT_CLK | PA7 | TIM14_CH1 AF9 | 当前暂未使用 (R11=0Ω 跳到芯片) |
+| SOX | PC1 | ADC1_IN11 | 压缩机驱动通用 ADC,当前未读 |
+| I2C3 SCL | PA8 | AF4 | MCF8329A 控制 (I2C3),target addr 因 Motor Studio 配置可变,Init 自动扫描 |
+| I2C3 SDA | PC9 | AF4 | 同上 |
 
-RPM = freq × 10（6 极对）
+⚠ V3 旧 YSJ_PWM/DIR/BREAK 在 PB3/PB5/PD7 — **已废弃**,V6 PB3/PB5 释放, PB4 让给风扇 FG, PD7 不再用.
 
-### NTC 采集（ADC1 + DMA2 Stream0 循环）
-| 引脚 | ADC 通道 | adc_buf | 信号 |
-|------|----------|---------|------|
-| PA0 | IN0 | [0] | 2-NTC2_SG |
-| PA1 | IN1 | [1] | 2-NTC3_SG |
-| PA2 | IN2 | [2] | 2-NTC4_SG |
-| PA3 | IN3 | [3] | 2-NTC1_SG |
-| PA4 | IN4 | [4] | 1-NTC2_SG |
-| PA5 | IN5 | [5] | 1-NTC3_SG |
-| PA6 | IN6 | [6] | 1-NTC4_SG（早期 gpio.c 误配 OUTPUT_PP，已修复为 ANALOG） |
-| PA7 | IN7 | [7] | 1-NTC1_SG（同上） |
+### NTC 采集 — V6 实际
+ADC1 + DMA **当前未初始化** (`HAL_ADC_*` 未在固件中调用)。8 路 NTC 数据走外部综合采样板 → **USART3 (PD8/PD9)** 帧上来,`sensor_acq.c::SensorAcq_OnNtcFrame()` 处理。
+PA0-PA7 当前角色:
+- PA0 = SYS_WKUP (KEYWAKE 输入)
+- PA1 = 未分配
+- PA2/PA3 = USART2 (IOT BC260Y)
+- PA4/PA5/PA6 = 未分配
+- PA7 = TIM14_CH1 EXT_CLK (留作 MCF8329A 时钟,目前未启用)
 
-12 bit 分辨率，480 周期采样，软件触发连续转换。
+### INA226 功率监测 — V6 实际 (`Core/Src/main.c:251-253`)
+| sensors[] | I2C | SCL/SDA | HAL addr | 测量对象 |
+|---|---|---|---|---|
+| `sensors[0]` | I2C1 | PB6 / PB7 | 0x80 (A1=GND, A0=GND) | 24V_BAT_UIP 锂电池总输入 |
+| `sensors[1]` | I2C1 | PB6 / PB7 | 0x8A (A1=VS, A0=VS) | 24V_YSJ_SENSOR 压缩机功率 |
+| `sensors[2]` | I2C2 | PB10 / PB11 | 0x80 | 12V_VCC_UIP 电瓶输入 |
 
-### INA226 功率监测
-| I2C | SCL/SDA | HAL 地址 | 测量对象 | Rshunt | Current_LSB | cal_val |
-|-----|---------|----------|----------|--------|-------------|---------|
-| I2C1 | PB6 / PB7 | 0x88 | U13 水泵（24V_YSJ_SENSOR） | 100 mΩ | 0.1 mA | 0x0200 |
-| I2C2 | PB10 / PB11 | 0x88 | U11 24V 输入（12V_VCC_UIP） | 6 mΩ | 1.2 mA | 0x0355 |
-| I2C3 | PA8 / PC9 | 0x88 | U12 总输入（24V_BAT_UIP） | 6 mΩ | 1.2 mA | 0x0355 |
+cal_val/Current_LSB 见 main.c 初始化,**注意 sensors[0] 和 [1] 共享 I2C1 总线靠 A0/A1 strap 区分地址**。
 
-Config 0x4527 = 16 次平均 + 1.1 ms 转换 + 连续测量。
+### 串口 — V6 实际 (`Core/Src/usart.c:6-9`)
+| USART | TX/RX 引脚 | AF | 用途 | 模块 |
+|---|---|---|---|---|
+| USART1 | PA9 / PA10 | AF7 | 有线遥控 (stub) | `RemoteCtrl_*` |
+| USART2 | PA2 / PA3 | AF7 | BC260Y 物联网 (stub),经 R15/R18 100Ω | `IotCtrl_*` |
+| USART3 | PD8 / PD9 | AF7 | 综合采样板 (NTC 数据上行) | `SamplerComm_*` |
+| **USART6** | **PC6 / PC7** | AF8 | **ESP32-C3 BLE OTA + Gear/Status**, 经 R6/R8 100Ω | `EspComm_*` |
 
-### 串口
-| 信号 | 引脚 | 备注 |
-|------|------|------|
-| USART2_TX | PD5 | AF7，115200 8N1 |
-| USART2_RX | PD6 | AF7 |
+NVIC 优先级:USART3=1,0; USART6=1,1; USART2=2,0; USART1=2,1.
+BLE OTA 通路:Web Bluetooth → ESP32-C3 BLE↔UART → STM32 USART6 (帧协议 `0xAA | CMD | LEN | PAYLOAD | XOR`).
 
-⚠ USART2 归 ESP32 使用（auto-memory feedback）。Bootloader / 工具代码禁止打明文，状态用 LED 指示。BLE OTA 通路：网页 → Web Bluetooth → ESP32-C3 BLE↔UART0 透传 → STM32 USART2。
+⚠ 旧文档说 ESP32 在 USART2 PD5/PD6 — **V3 残留,已废弃**。
 
 ### 其他
 | 信号 | 引脚 | 备注 |

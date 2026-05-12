@@ -62,6 +62,8 @@
 /* === Bit masks for ALGO_DEBUG1 === */
 #define MCF_ADBG1_SPEED_OVERRIDE   (1U << 31)
 #define MCF_ADBG1_CLOSED_LOOP_DIS  (1U << 15)
+#define MCF_ADBG1_FORCE_ALIGN      (1U << 14)
+#define MCF_ADBG1_FORCE_SLOW_FIRST (1U << 13)
 #define MCF_ADBG1_DUTY_SHIFT       16
 #define MCF_ADBG1_DUTY_MASK        (0x7FFFU << MCF_ADBG1_DUTY_SHIFT)  /* 15-bit, full = 0x7FFF */
 

@@ -209,3 +209,100 @@
 - 想切回精确 FOC,在 main.c 启动序列里恢复一行 `LoadMinimumConfig()` 即可,函数代码留着
 - Motor Studio 调试若要重新接管,运行时 SWD 写 `g_mcf_i2c_disable = 1`(不再跨复位保留)
 
+---
+
+## 2026-05-11 — MCF8329A 电机方向控制位定位(仅记录,未改代码)
+
+**结论**:DIR 引脚(PD3)被屏蔽的真正位置是 **PERI_CONFIG1 (0xAA) bits[20:19] DIR_INPUT**,**不是** `main.c:86-89` 注释里说的 PIN_CONFIG (0xA4)。原注释定位错了寄存器,需要纠正。
+
+**Datasheet 出处**:SLLSFQ7(2023-11)§7.7.3.4 Table 7-39 PERI_CONFIG1 Register Field Descriptions。
+
+**DIR_INPUT[20:19] 枚举**:
+- `0h` = Hardware Pin DIR (用 PD3 引脚)
+- `1h` = Override 强制 CW,相序 OUTA→OUTB→OUTC
+- `2h` = Override 强制 CCW,相序 OUTA→OUTC→OUTB
+- `3h` = Hardware Pin DIR (与 0h 等价)
+
+**当前 EEPROM 值解码**(`mcf8329a.c:330` cfg 表):
+- `PERI_CONFIG1 = 0x8BB57988`
+- nibble 拆解:`8 B B 5 7 9 8 8` → bits[23:20]=B=`1011`, bits[19:16]=5=`0101`
+- bits[20:19] = `10b = 2h` → **CCW override**
+- 这与 `main.c:87-88` 观察一致("speed_fdbk 一直读出负值"、PD3 拉高低无效)
+
+**永久反转方向的最小改动**(留作未来执行):
+1. 把 `mcf8329a.c:330` 那行
+   ```c
+   { 0x0000AAU, 0x8BB57988U },   /* PERI_CONFIG1 */
+   ```
+   改成
+   ```c
+   { 0x0000AAU, 0x8BAD7988U },   /* PERI_CONFIG1 — DIR_INPUT: 2h CCW → 1h CW */
+   ```
+2. 推导:bit20 (1→0) 且 bit19 (0→1),两位翻转 → 偶校验不变,bit 31 PARITY 保持 `1` 无需重算
+3. 验证位运算:`(0x8BB57988 & ~(1U<<20)) | (1U<<19) = 0x8BAD7988`
+4. **前提**:`MCF8329A_LoadMinimumConfig()` 当前在 main.c 启动序列里没被调用(见上一条 2026-04-30 决策)。要让本改动生效,必须:
+   - 临时恢复一次 `LoadMinimumConfig()` 调用把 shadow 刷下去,**且** 写 `ALGO_CTRL1 ← 0x8A500000`(EEPROM_WRT 命令)commit 到 EEPROM(datasheet §7.6.1.1 step 18),完成后再删除调用
+   - 或者通过 Motor Studio 改 DIR_INPUT 字段后 Write to EEPROM
+5. 改完之后 `main.c:86-89` 的注释也要同步修正:寄存器名换成 PERI_CONFIG1,事实改成"DIR_INPUT 由 CCW override 切到 CW override,PD3 仍然不生效因为 DIR_INPUT 仍是 override 模式"
+
+**另两条路径**(本次未选,留档):
+- 把 DIR_INPUT 改成 `0h`,让 PD3 重新生效 → `g_mcf_dir_cw` / `MCF8329A_SetDir()` 可运行时切方向
+- 物理交换 U/V/W 中任意两相 → 不动固件
+
+**衍生约束**:
+- 任何改 EEPROM shadow 表的修改都要核对 bit 31 PARITY(偶校验);只翻偶数个 bit 时 PARITY 不变
+- 引用方向相关行为时,锁定 PERI_CONFIG1[20:19],不要再把锅扣到 PIN_CONFIG
+
+---
+
+## 2026-05-11 — 换压缩机启动失败:MPET 是 sensorless FOC 的强前提,暴力堆参数无效
+
+**结论**:换不同型号/不同负载的压缩机后,**必须用 Motor Studio 做一次 MPET 重新辨识 Rs/Ld/Lq/Ke**,然后 "Write to EEPROM" 把结果持久化。STM32 接管后不需要任何调参就能正常起转。**不要再试图通过 SWD 暴力堆 OL_ILIMIT / ALIGN_CURRENT / 关 LOCK 保护让它转 — 走不通,会浪费 1-2 小时**。
+
+**症状链(完整复现)**:
+1. 同型号压缩机有的能转有的不能 → 负载差异(气压/机械摩擦)
+2. 100% duty + 原 EEPROM 配置 → 卡在 `algo_state=7` (OPEN_LOOP) 不报错
+3. 降到 25% duty → 短暂到达 state 8 (CLOSED_LOOP) 然后 fault 掉,`last_ctrl=0x80500000` (`ABN_BEMF` bit22 + `MTR_LCK` bit20)
+4. 加 `CLOSED_LOOP_DIS` 强制纯开环 → state 锁 7 不再 fault,但转子还是不动,只有滋滋声
+5. 堆 `OL_ILIMIT=Fh(95%)` + `ALIGN_OR_SLOW_CURRENT=Fh(72%)` → 状态在 3↔0xE 循环,`last_ctrl=0x80080000` (`LOCK_LIMIT` bit19) — **电流上来了** 但保护打回
+6. 关 `LOCK_ILIMIT_MODE=9h` + `MTR_LCK_MODE=9h` + `FORCE_ALIGN` 模式 → 持续灌 DC 大电流无故障,只有"规律的卡卡卡卡"声,**还是不转**
+7. Motor Studio GUI 跑 MPET → 一次跑通,Write to EEPROM 持久化
+8. STM32 接管(用新 EEPROM 参数)→ 开机 ~2.5 秒 align/ramp 后进入 `state=0x00200009` (CLOSED_LOOP) **稳定运行**
+
+**根因 — 为什么暴力堆参数没用**:
+- MCF8329A 是 sensorless FOC,**强依赖 Rs / Ld / Lq / Ke**(在 INT_ALGO_1/2 等寄存器里)做 BEMF 估算定位转子
+- 旧 EEPROM 里的电机参数是旧压缩机辨识的,跟新负载完全不匹配
+- 新转子在某个位置,但芯片基于错参数估算转子在别处 → 把大电流灌进**错误相位**
+- 力矩 ∝ sin(电气角差),相位错就只有热效应(滋滋声),不产生有效转矩
+- 关掉所有 LOCK 保护只是不报错,不解决"灌错相位"这个根因
+- FORCE_ALIGN 是把转子拉到一个固定角度 DC 锁住,**不是用来转的** — 只能用来验证机械能不能动
+
+**正确处方(下次直接执行,不要重复探索)**:
+1. **暂时让出 I2C 总线给 Motor Studio**:SWD 写 `g_mcf_i2c_disable=1`,运行时 handler 自动把 BKP2R 写成 `0xD15AB1ED` + DeInit I2C3 + PA8/PC9 浮空。重启后 STM32 不抢总线
+2. **Motor Studio GUI 操作**(用户在 GUI 里):
+   - 连接 chip(独占 I2C 总线)
+   - 点 **MPET / Motor Parameter Identification**(辨识 Rs/L/Ke)
+   - 验证能起转 + 闭环稳定
+   - 点 **Write to EEPROM**(把当前 RAM shadow 永久存储,300ms 完成)
+   - 复位 chip 再次起转验证
+3. **STM32 接管**:SWD 写 `RTC->BKP2R=0` + reset → boot 读到 BKP2R=0 → `g_mcf_i2c_disable=0` → 正常 init I2C3 + chip + SpinDuty(100%)
+
+**关键代码(已就位)**:
+- `Core/Src/main.c` 启动时根据 `BKP2R==0xD15AB1ED` 设 `g_mcf_i2c_disable`,disable 状态下完全跳过所有 I2C 操作 + 立即 DeInit I2C3 释放 PA8/PC9 浮空
+- `g_mcf_cl4_boot_target=0` 默认(不再覆盖 EEPROM CL4,让 Motor Studio 的 MAX_SPEED 设置生效)
+- 残留的 SWD set 通道(`motor_su1_set/motor_su2_set/fault_cfg1_set`)和 `g_mcf_force_open_loop` 留作调试逃生口,默认全 0 不影响正常路径
+
+**衍生约束**:
+- 任何新压缩机/新电机型号上线 → 第一步必须 MPET 重新辨识,**不要**直接拿 STM32 跑
+- LoadMinimumConfig 表里的 EEPROM 镜像值仅供参考,**实际跑的是 chip EEPROM 里的值**(可能被 Motor Studio 改过) — 调试前先 SWD 读 readback 寄存器对照实际值
+- Motor Studio 写 EEPROM 时可能会顺便改 chip I2C target 地址(我们见过从 0x5A 改回 0x01) → `MCF8329A_Init` 的自动 I2C 扫描机制必须保留
+- 启动序列 ~2.5 秒到 CLOSED_LOOP 是正常的重负载 align/ramp 时间,不要误判为"启动失败"
+- BKP2R 持久化依赖 VBAT(主板没电池 / VBAT 没接的情况下,断电就丢)— 实测当前主板 VBAT 能保住
+
+**排除方案(走过的弯路,记下来别再走)**:
+- 不同 duty 扫描(12.5% / 25% / 50% / 75% / 100%)— 都不行,因为参数错了 duty 无关
+- 关 LOCK_ILIMIT_MODE / MTR_LCK_MODE — 只是让芯片不重启,不解决相位错误
+- FORCE_ALIGN + 拉大 ALIGN_CURRENT — 转子卡在某个角度,不会转
+- 改 MOTOR_STARTUP2 OL_ACC_A1 慢化 ramp — 当 BEMF 估算完全错时,慢/快 ramp 都不会让闭环 lock 上
+- 怀疑硬件电流上限 / CSA_GAIN — 不是问题,Motor Studio 用同样硬件能跑就证明硬件 OK
+

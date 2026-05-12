@@ -1,17 +1,20 @@
 /**
  * @file    app/Src/compressor_ctrl.c
- * @brief   Compressor control STUB (stage 1) — real impl in stage 6 with
- *          mcf8329a driver via I2C3.
+ * @brief   Compressor control — wired to MCF8329A via g_mcf_spin_duty
+ *          (which the main-loop 200ms tick re-sends as DIGITAL_SPEED_CTRL).
  *
- * Stage 1: keeps V3's CompressorCtrl_* API surface so main.c compiles.
- * Internally:
- *   - SetDuty(percent) is a no-op (legacy duty-style command, stage 6 maps
- *     to MCF8329A SetSpeed register write).
- *   - SetDirection(dir) writes PD3 GPIO directly.
- *   - SetBrake(en) writes PD4 GPIO directly.
- *   - FG input capture on TIM4_CH4 — algorithm copied from V3 fan_ctrl.
+ * - SetDuty(percent 0~100) → g_mcf_spin_duty 0~0x7FFF, takes effect next tick (<200ms).
+ *   ⚠ 实测当前压缩机 (Motor Studio MPET 后) 静态起转需要 ≥75%, 稳定运行后可下调到 ~50%.
+ *   ESP gear-cmd 映射在 main.c gear handler 里, 建议保留 75-100% 安全区间.
+ * - SetDirection(dir) writes PD3 GPIO. ⚠ Motor Studio 把 EEPROM PERI_CONFIG1
+ *   DIR_INPUT override 后, PD3 实测无效, 方向由 EEPROM 写定.
+ * - SetBrake(engage): PD4=HIGH 触发 MCF8329A 内置 brake (低端 FET 全开短接电机).
+ * - FG input capture on TIM4_CH4 — 当前未启用(CompressorCtrl_Init 未在 main.c 调用).
+ *   实时转速反馈走 MCF8329A 内部 FG_SPEED_FDBK 寄存器 (g_mcf_fg_speed) via I2C.
  */
 #include "compressor_ctrl.h"
+
+extern volatile uint16_t g_mcf_spin_duty;
 
 static TIM_HandleTypeDef *s_htim_fg;   /* TIM4 */
 
@@ -30,21 +33,23 @@ void CompressorCtrl_Init(TIM_HandleTypeDef *htim_fg)
 
 void CompressorCtrl_SetDuty(uint8_t percent)
 {
-    /* TODO(stage 6): map duty → MCF8329A SPEED register via I2C3.
-     * Stage 1: no-op. */
-    (void)percent;
+    if (percent > 100U) percent = 100U;
+    /* 0~100 → 0~0x7FFF DIGITAL_SPEED_CTRL */
+    g_mcf_spin_duty = (uint16_t)(((uint32_t)percent * 0x7FFFU) / 100U);
 }
 
 void CompressorCtrl_SetDirection(uint8_t dir)
 {
-    /* PD3 DIR: 0=CW (default), 1=reverse */
+    /* PD3 DIR pin: 0=CW, 1=reverse.
+     * ⚠ 若 EEPROM PERI_CONFIG1 DIR_INPUT 设为 override 模式, 此引脚被屏蔽 (实测). */
     HAL_GPIO_WritePin(GPIOD, GPIO_PIN_3, dir ? GPIO_PIN_SET : GPIO_PIN_RESET);
 }
 
-void CompressorCtrl_SetBrake(uint8_t en)
+void CompressorCtrl_SetBrake(uint8_t engage)
 {
-    /* PD4 BREAK: en=1 → PD4=HIGH → release brake; en=0 → engage */
-    HAL_GPIO_WritePin(GPIOD, GPIO_PIN_4, en ? GPIO_PIN_SET : GPIO_PIN_RESET);
+    /* PD4 BREAK: engage=1 → PD4=HIGH = MCF8329A 内置 brake (低端 FET 全开短接电机).
+     *            engage=0 → PD4=LOW  = 释放 (电机自由转动 / 正常运行). */
+    HAL_GPIO_WritePin(GPIOD, GPIO_PIN_4, engage ? GPIO_PIN_SET : GPIO_PIN_RESET);
 }
 
 float    CompressorCtrl_GetFreqHz(void) { return (float)s_freq_hz; }

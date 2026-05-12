@@ -211,22 +211,24 @@ void MCF8329A_PowerOff(MCF8329A_Device *dev)
 
 /* === High-level: spin via ALGO_DEBUG1 override === */
 
+/* Runtime flag (SWD-tunable, no rebuild):
+ *   0 = normal FOC
+ *   1 = pure open-loop  (CLOSED_LOOP_DIS + FORCE_SLOW_FIRST_CYCLE_EN)
+ *   2 = force align     (FORCE_ALIGN — DC current to fixed phase, max torque)
+ * For 模式 2 配合 MOTOR_STARTUP1 ALIGN_OR_SLOW_CURRENT=Fh + FAULT_CONFIG1
+ * LOCK_ILIMIT_MODE/MTR_LCK_MODE 关闭, 是芯片能给的最大启动推力. */
+volatile uint8_t g_mcf_force_open_loop = 0;
+
 HAL_StatusTypeDef MCF8329A_SpinDuty(MCF8329A_Device *dev, uint16_t duty_15b)
 {
-    /* Normal FOC spin command — let chip run its full state machine:
-     *   IDLE → ALIGN (MTR_STARTUP=Align in MOTOR_STARTUP1)
-     *        → OPEN_LOOP (forced commutation, square-wave era)
-     *        → CLOSED_LOOP (sinusoidal FOC with BEMF estimator, smooth)
-     *
-     * Only set:
-     *   bit 31 SPEED_OVER_RIDE = 1  (use I2C duty source)
-     *   bits 30:16 DIGITAL_SPEED_CTRL = duty
-     *
-     * Do NOT set CLOSED_LOOP_DIS or FORCE_ALIGN_EN — those lock the chip in
-     * open-loop / align states and prevent transition to FOC. */
     if (duty_15b > 0x7FFFU) duty_15b = 0x7FFFU;
     uint32_t v = MCF_ADBG1_SPEED_OVERRIDE
                | (((uint32_t)duty_15b) << MCF_ADBG1_DUTY_SHIFT);
+    if (g_mcf_force_open_loop == 1U) {
+        v |= MCF_ADBG1_CLOSED_LOOP_DIS | MCF_ADBG1_FORCE_SLOW_FIRST;
+    } else if (g_mcf_force_open_loop == 2U) {
+        v |= MCF_ADBG1_FORCE_ALIGN;       /* DC 灌入, 最大转矩 */
+    }
     return MCF8329A_Write32(dev, MCF_REG_ALGO_DEBUG1, v);
 }
 
