@@ -23,6 +23,7 @@ typedef enum {
     LED_MODE_BLINK_RED,
     LED_MODE_BLINK_GREEN,
     LED_MODE_BLINK_BLUE,
+    LED_MODE_BREATH,       /* 白色呼吸灯, 软件 PWM 由 LedRgb_PwmTick 驱动 */
 } LedMode;
 
 void    LedRgb_Init(void);
@@ -31,5 +32,6 @@ void    LedRgb_SetMode(LedMode m);
 LedMode LedRgb_GetMode(void);
 void    LedRgb_NextSolidColor(void);                   /* 短按: 切下一个颜色 */
 void    LedRgb_Tick(uint32_t now_ms);                  /* 主循环调; 内部按 mode 翻转 */
+void    LedRgb_PwmTick(void);                          /* TIM7 ISR @2kHz 调; BREATH 软 PWM */
 
 #endif /* __LED_RGB_H */

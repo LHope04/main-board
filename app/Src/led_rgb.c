@@ -62,6 +62,7 @@ void LedRgb_Tick(uint32_t now_ms)
     switch (s_mode) {
         case LED_MODE_OFF:
         case LED_MODE_SOLID:
+        case LED_MODE_BREATH:       /* PWM 全在 LedRgb_PwmTick (TIM7 ISR) 里跑 */
             return;
         case LED_MODE_CYCLE_RGB:    period = 333; break;
         default:                     period = 250; break;
@@ -82,5 +83,38 @@ void LedRgb_Tick(uint32_t now_ms)
         case LED_MODE_BLINK_BLUE:
             s_phase ^= 1U; led_write(0, 0, s_phase); break;
         default: break;
+    }
+}
+
+/* ===== 白色呼吸灯软 PWM =====
+ * LedRgb_PwmTick() 由 TIM7 ISR @2kHz 调用.
+ *   - PWM 周期 = 32 tick (2kHz/32 = 62.5Hz 刷新, 无可见闪烁)
+ *   - 每个 PWM 周期末尾把亮度 ±1, 在 0..31 之间三角波往返
+ *   - 一个完整呼吸 = 64 步 × 16ms ≈ 1s 亮 + 1s 暗 ≈ 2s/次
+ * 非 BREATH 模式时此函数直接返回, 不影响其它模式. */
+#define BREATH_PWM_PERIOD  32U
+#define BREATH_MAX_LEVEL   31U
+
+void LedRgb_PwmTick(void)
+{
+    static uint8_t pwm_cnt   = 0;
+    static uint8_t level     = 0;
+    static int8_t  dir       = 1;
+
+    if (s_mode != LED_MODE_BREATH) return;
+
+    /* PWM: level 决定一周期内点亮多少 tick */
+    led_write(pwm_cnt < level, pwm_cnt < level, pwm_cnt < level);
+
+    if (++pwm_cnt >= BREATH_PWM_PERIOD) {
+        pwm_cnt = 0;
+        /* 三角波亮度: 0→31→0 */
+        if (dir > 0) {
+            if (level >= BREATH_MAX_LEVEL) { level = BREATH_MAX_LEVEL; dir = -1; }
+            else level++;
+        } else {
+            if (level == 0) { dir = 1; }
+            else level--;
+        }
     }
 }

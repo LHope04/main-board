@@ -132,7 +132,9 @@
       "Bash(openocd -f interface/stlink.cfg -f target/stm32f4x.cfg -f /tmp/mcf_force_disable.cfg)",
       "Bash(arm-none-eabi-addr2line *)",
       "Bash(openocd -f interface/stlink.cfg -f target/stm32f4x.cfg -f /tmp/stop.cfg)",
-      "Bash(openocd -f interface/stlink.cfg -f target/stm32f4x.cfg -f /tmp/i2c_unstick_and_stop.cfg)"
+      "Bash(openocd -f interface/stlink.cfg -f target/stm32f4x.cfg -f /tmp/i2c_unstick_and_stop.cfg)",
+      "Bash(openocd -f interface/stlink.cfg -f target/stm32f4x.cfg -f /tmp/disable_v2.cfg)",
+      "Bash(openocd -f interface/stlink.cfg -f target/stm32f4x.cfg -f /tmp/boost_on.cfg)"
     ]
   }
 }

@@ -33,8 +33,7 @@ void PowerCtrl_StartupSequence(void)
     HAL_Delay(50);
     IWDG->KR = 0xAAAAU;
 
-    /* step4: 风扇开机自动开 (PC10 active HIGH). 水泵保持 OFF, 由业务命令开启. */
-    HAL_GPIO_WritePin(GPIOC, GPIO_PIN_10, GPIO_PIN_SET);
+    /* 风扇/水泵开机默认 OFF, 由业务命令开启 (gpio.c init 已设 PC10/PC11=LOW). */
 }
 
 void PowerCtrl_EnableBoost(uint8_t en)

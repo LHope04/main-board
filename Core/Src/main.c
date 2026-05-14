@@ -35,6 +35,7 @@ TIM_HandleTypeDef htim1;   /* BEEP_CTRL    PB14 TIM1_CH2N AF1 (高级定时器, 
 TIM_HandleTypeDef htim2;   /* FAN_PWM_CTRL PA15 TIM2_CH1  AF1 (84MHz, 20kHz PWM) */
 TIM_HandleTypeDef htim3;   /* FAN_FB_OUT   PB4  TIM3_CH1  AF2 (84MHz, IC 1MHz tick) */
 TIM_HandleTypeDef htim4;   /* MCF8329A FG  PB9  TIM4_CH4  AF2 (84MHz, IC 1MHz tick) */
+TIM_HandleTypeDef htim7;   /* LED 呼吸灯软 PWM 时基 (基本定时器, 2kHz update IRQ) */
 
 /* === I2C bus scan results (temporary, stage 5 verification) === */
 volatile uint8_t g_i2c1_devs[16];
@@ -100,6 +101,8 @@ volatile uint32_t g_mcf_pin_cfg_set_done    = 0;
 volatile uint32_t g_mcf_ee_commit_req       = 0;
 volatile uint32_t g_mcf_ee_commit_rc        = 0xFFU;
 volatile uint32_t g_mcf_ee_commit_done      = 0;
+/* I2C3 自救计数: 每次检测到 SDA 卡死或 HAL_BUSY 触发 bit-bang 解锁次数. */
+volatile uint32_t g_mcf_i2c_recover_cnt     = 0;
 /* Boot-time CLOSED_LOOP4 override: motor IDLE 时写 shadow, 不动 EEPROM.
  * Motor Studio 确认 MAX_SPEED = CL4 低 12 位 (CL4=0x08D904B0, MAX=0x4B0=1200).
  * 实测电机 ~130Hz electrical, 编码约 6 units/Hz.
@@ -115,7 +118,8 @@ volatile uint32_t g_mcf_cl4_boot_rc     = 0xFFU;
 volatile uint8_t  g_mcf_dir_cw          = 0U;
 volatile uint32_t g_mcf_mpet_status  = 0;       /* ALGO_STATUS_MPET @ 0xE8 */
 volatile uint32_t g_mcf_mpet_rc      = 0xFFU;
-volatile uint16_t g_mcf_spin_duty    = 0x7FFF;  /* 100% duty — 出厂模式直接拉满 */
+volatile uint16_t g_mcf_spin_duty    = 0;       /* 默认 0 — 压缩机由 C3 SET_GEAR on/off 控制 */
+volatile uint8_t  g_compressor_on    = 0;       /* C3 SET_GEAR on 状态镜像, 给水温模拟用 */
 volatile uint32_t g_mcf_fg_speed     = 0;       /* FG_SPEED_FDBK @ 0x19C */
 volatile uint32_t g_mcf_speed_fdbk   = 0;       /* SPEED_FDBK @ 0x76E (closed-loop 估速) */
 /* 当 = 1, 主循环跳过所有 I2C3 → MCF8329A 操作 (写 / 读 / WD tickle).
@@ -232,6 +236,70 @@ void MX_TIM4_CMPRFG_Init(void)
     HAL_NVIC_EnableIRQ(TIM4_IRQn);
 }
 
+/* ===== TIM7: LED 呼吸灯软 PWM 时基 =====
+ * 基本定时器, APB1×2=84MHz. PSC=83 → 1MHz tick, ARR=499 → 2kHz update IRQ.
+ * ISR (stm32f4xx_it.c TIM7_IRQHandler) 调 LedRgb_PwmTick(). */
+void MX_TIM7_LEDPWM_Init(void)
+{
+    __HAL_RCC_TIM7_CLK_ENABLE();
+
+    htim7.Instance           = TIM7;
+    htim7.Init.Prescaler     = 83;
+    htim7.Init.CounterMode   = TIM_COUNTERMODE_UP;
+    htim7.Init.Period        = 499;
+    htim7.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
+    HAL_TIM_Base_Init(&htim7);
+
+    HAL_NVIC_SetPriority(TIM7_IRQn, 3, 2);
+    HAL_NVIC_EnableIRQ(TIM7_IRQn);
+    HAL_TIM_Base_Start_IT(&htim7);
+}
+
+/* ===== I2C3 bit-bang 自救 =====
+ * STM32F407 I2C HAL 在 transaction 中途异常返回时不保证发 STOP, slave (MCF8329A)
+ * 会保持 SDA 拉低等下个 CLK 永远等下去, 之后所有 HAL_I2C_* 调用全返回 HAL_BUSY.
+ * 自救流程: DeInit I2C3 → PA8/PC9 切 GPIO OD → 拉 9 个 SCL 脉冲让 slave 走完一个字节
+ * + STOP 条件 → 重新 Init I2C3(MspInit 自动配回 AF). 实测一次解锁 +SWRST 即可恢复. */
+static void I2C3_RecoverBus(void)
+{
+    g_mcf_i2c_recover_cnt++;
+
+    HAL_I2C_DeInit(&hi2c3);
+
+    GPIO_InitTypeDef gi = {0};
+    gi.Mode  = GPIO_MODE_OUTPUT_OD;
+    gi.Pull  = GPIO_PULLUP;
+    gi.Speed = GPIO_SPEED_FREQ_LOW;
+
+    gi.Pin = GPIO_PIN_8;  HAL_GPIO_Init(GPIOA, &gi);    /* SCL */
+    gi.Pin = GPIO_PIN_9;  HAL_GPIO_Init(GPIOC, &gi);    /* SDA */
+
+    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_SET);
+    HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_SET);
+    for (volatile uint32_t i = 0; i < 2000; i++);
+
+    for (int n = 0; n < 9; n++) {
+        HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET);
+        for (volatile uint32_t i = 0; i < 1000; i++);
+        HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_SET);
+        for (volatile uint32_t i = 0; i < 1000; i++);
+    }
+
+    /* STOP: SDA LOW→HIGH while SCL HIGH */
+    HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_RESET);
+    for (volatile uint32_t i = 0; i < 1000; i++);
+    HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_SET);
+    for (volatile uint32_t i = 0; i < 1000; i++);
+
+    /* HAL_I2C_Init 触发 MspInit, 自动把 PA8/PC9 配回 AF4 + 使能 I2C3 时钟 */
+    HAL_I2C_Init(&hi2c3);
+    hi2c3.Instance->CR1 |=  I2C_CR1_SWRST;
+    HAL_Delay(1);
+    hi2c3.Instance->CR1 &= ~I2C_CR1_SWRST;
+    HAL_I2C_DeInit(&hi2c3);
+    HAL_I2C_Init(&hi2c3);
+}
+
 int main(void)
 {
     HAL_Init();
@@ -249,6 +317,7 @@ int main(void)
     MX_TIM2_FANPWM_Init();
     MX_TIM3_FANIC_Init();
     MX_TIM4_CMPRFG_Init();
+    MX_TIM7_LEDPWM_Init();
     MX_I2C1_Init();
     MX_I2C2_Init();
     MX_I2C3_Init();   /* MCF8329A 通信 */
@@ -256,11 +325,6 @@ int main(void)
     MX_USART2_UART_Init();   /* IotCtrl     stub */
     MX_USART3_UART_Init();   /* SamplerComm 阶段 7 */
     MX_USART6_UART_Init();   /* EspComm     阶段 8 */
-
-    /* INA226 (阶段 5 标定地址 + cal_val + LSB) */
-    INA226_Init(&sensors[0], &hi2c1, 0x80, 0x0355, 0.0012f);  /* 24V_BAT  A1=GND A0=GND */
-    INA226_Init(&sensors[1], &hi2c1, 0x8A, 0x0355, 0.0012f);  /* 24V_YSJ  A1=VS  A0=VS  (实测) */
-    INA226_Init(&sensors[2], &hi2c2, 0x80, 0x0355, 0.0012f);  /* 12V_VCC  待确认 */
 
     /* 业务模块 Init: 接口签名保留, 内部实现各阶段重写 */
     SensorAcq_Init();                       /* 阶段 7 改 USART3 收帧 */
@@ -270,6 +334,7 @@ int main(void)
     Buzzer_Init(&htim1);                    /* 阶段 2: TIM1_CH2N + MOE */
     EspComm_Init(&huart6);                  /* 阶段 8: USART6 (旧 huart2) */
     LedRgb_Init();                          /* 阶段 2: PE2/PE3/PE4 */
+    LedRgb_SetMode(LED_MODE_BREATH);         /* 白色呼吸灯, TIM7 ISR 软 PWM 驱动 */
     Button_Init();                          /* 阶段 2: PC13 短/长按 */
     SamplerComm_Init(&huart3);              /* 阶段 7: USART3 采样板 */
     RemoteCtrl_Init(&huart1);               /* 阶段 10: stub */
@@ -289,6 +354,19 @@ int main(void)
         }
     }
 
+    /* INA226 Init 必须在 I2C 总线清完 BUSY 锁之后 — 否则 config/校准寄存器
+     * 写不进芯片, 导致电流/功率永远读成 0 (电压寄存器不依赖校准, 仍能读). */
+    INA226_Init(&sensors[0], &hi2c1, 0x80, 0x0355, 0.0012f);  /* 24V_BAT  A1=GND A0=GND */
+    INA226_Init(&sensors[1], &hi2c1, 0x8A, 0x0355, 0.0012f);  /* 24V_YSJ  A1=VS  A0=VS  (实测) */
+    INA226_Init(&sensors[2], &hi2c2, 0x80, 0x0355, 0.0012f);  /* 12V_VCC  待确认 */
+
+    /* I2C3 (MCF8329A) 启动时如果 SDA 被卡 LOW (上次跑挂留下), bit-bang 自救一次.
+     * 检测方法: PA8 (SCL) 上拉 + PC9 (SDA) 读回应该都是 HIGH; SDA=LOW 说明 slave 拉死. */
+    if (!g_mcf_i2c_disable &&
+        HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_9) == GPIO_PIN_RESET) {
+        I2C3_RecoverBus();
+    }
+
     /* MCF8329A wake cycle: 强制 SPEED/WAKE LOW → 100ms → HIGH 触发 wake edge.
      * 防止芯片上电时已经 HIGH 但错过 wake event 卡 sleep. */
     HAL_GPIO_WritePin(GPIOD, GPIO_PIN_0, GPIO_PIN_RESET);   /* WAKE LOW */
@@ -305,6 +383,7 @@ int main(void)
     if (!g_mcf_i2c_disable) {
         MCF8329A_Init(&s_mcf, &hi2c3, MCF8329A_HAL_ADDR_DEFAULT);
         MCF8329A_SetDir(g_mcf_dir_cw);  /* 应用方向, Init 内部默认 CW=0 */
+        MCF8329A_DRVOff(1);             /* boot 默认 DRVOFF=HIGH 切断驱动, 等 C3 on 命令 */
         HAL_Delay(20);
         g_mcf_clrflt_rc = (uint32_t)MCF8329A_ClearFault(&s_mcf);
         HAL_Delay(20);
@@ -422,27 +501,22 @@ int main(void)
                 EspComm_GearCmd *cmd = EspComm_GetGearCmd();
                 if (cmd->updated) {
                     cmd->updated = 0;
+                    /* C3 SET_GEAR on/off 同时控制 压缩机 + 风扇 + 水泵.
+                     * 实测纯 I2C SpinDuty(0) 停不可靠 (I2C 易卡死), 所以关停用
+                     * DRVOFF (PC12) 硬件切断 MOSFET 驱动 — GPIO 直连不依赖 I2C, 可靠. */
+                    g_compressor_on = cmd->on;       /* 镜像状态给水温模拟 */
                     if (cmd->on) {
                         FanCtrl_Enable(1);
                         FanCtrl_SetDuty(100);
                         PowerCtrl_EnablePump(1);
-
-                        /* gear 1~10 → duty 75~100% (gear 10 = MAX 100%).
-                         * 压缩机静态起转实测 ≥75%, 低于此值会"嗡嗡转不起来". */
-                        int16_t gear = cmd->gear;
-                        if (gear < 1)  gear = 1;
-                        if (gear > 10) gear = 10;
-                        uint8_t duty = (uint8_t)(75 + (gear - 1) * 25 / 9);
-                        if (duty > 100) duty = 100;
-                        CompressorCtrl_SetBrake(0);     /* 释放 brake, 电机可转 */
-                        CompressorCtrl_SetDuty(duty);   /* 写 g_mcf_spin_duty, 下 200ms tick 生效 */
+                        MCF8329A_DRVOff(0);          /* PC12=LOW 使能 MOSFET 驱动 */
+                        g_mcf_spin_duty = 0x7FFFU;   /* I2C SpinDuty 100% */
                     } else {
                         FanCtrl_Enable(0);
                         FanCtrl_SetDuty(0);
                         PowerCtrl_EnablePump(0);
-
-                        CompressorCtrl_SetDuty(0);      /* spin_duty=0 → MCF8329A 进 IDLE */
-                        CompressorCtrl_SetBrake(1);     /* 主动 brake 快速停转 */
+                        g_mcf_spin_duty = 0U;        /* I2C SpinDuty(0) (尽力优雅停) */
+                        MCF8329A_DRVOff(1);          /* PC12=HIGH 硬切 MOSFET — 可靠停转 */
                     }
                 }
             }
@@ -612,6 +686,14 @@ int main(void)
             if ((uint32_t)(now_ms - s_last_200) >= 200U) {
                 s_last_200 = now_ms;
                 g_mcf_kick_rc   = (uint32_t)MCF8329A_KickWatchdog(&s_mcf);
+                /* 任何 I2C 调用返回 HAL_BUSY/HAL_ERROR/HAL_TIMEOUT 都说明总线卡了,
+                 * 触发 bit-bang 自救一次. 也检测 SDA 物理电平 (chip 拉死 SDA 时 PC9=LOW). */
+                if (g_mcf_kick_rc != 0U ||
+                    HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_9) == GPIO_PIN_RESET) {
+                    I2C3_RecoverBus();
+                    /* 解锁后立即再 tickle 一次 WD, 避免 chip ext-WD timeout */
+                    g_mcf_kick_rc = (uint32_t)MCF8329A_KickWatchdog(&s_mcf);
+                }
                 g_mcf_spin_rc   = (uint32_t)MCF8329A_SpinDuty(&s_mcf, g_mcf_spin_duty);
                 g_mcf_status_rc = (uint32_t)MCF8329A_RefreshStatus(&s_mcf);
                 g_mcf_algo_status = s_mcf.last_algo_status;
@@ -632,6 +714,13 @@ int main(void)
                 (void)MCF8329A_Read32(&s_mcf, 0x00019CU, (uint32_t *)&g_mcf_fg_speed);
                 /* SPEED_FDBK @ 0x76E — 闭环估速 (BEMF estimator 输出) */
                 (void)MCF8329A_Read32(&s_mcf, 0x00076EU, (uint32_t *)&g_mcf_speed_fdbk);
+
+                /* 本轮任意 I2C 调用返回非 HAL_OK → 总线卡了, tick 末尾立即自救一次,
+                 * 保证下一轮 tick 从干净状态开始. (之前只查 kick_rc 漏掉 spin/status). */
+                if (g_mcf_kick_rc != 0U || g_mcf_spin_rc != 0U ||
+                    g_mcf_status_rc != 0U || g_mcf_state_rc != 0U) {
+                    I2C3_RecoverBus();
+                }
             }
         }
 
@@ -641,28 +730,40 @@ int main(void)
             if ((uint32_t)(now_ms - s_last_1000) >= 1000U) {
                 s_last_1000 = now_ms;
 
+                /* NTC ch7 = 环温 (NaN 时报 0). */
                 float ambient_c = SensorAcq_NTCToCelsius(SensorAcq_GetNTC(7));
-                float v_24in    = INA226_GetVoltage(&sensors[2]);
-                float p_24in    = INA226_GetPower(&sensors[2]);
+                /* 总功率 = sensors[2] 12V_VCC_UIP 功率 (W). */
+                float p_total   = INA226_GetPower(&sensors[2]);
                 float v_bat     = INA226_GetVoltage(&sensors[0]);
                 int16_t pct = (int16_t)((v_bat - 15.0f) / (24.8f - 15.0f) * 100.0f);
                 if (pct > 100) pct = 100;
                 if (pct < 0)   pct = 0;
 
-                static uint16_t ota_ramp = 0;
-                int16_t ramp_lo, ramp_span;
-                if (RTC->BKP0R == 0xB0B0B0B0U) { ramp_lo = 10; ramp_span = 11; }
-                else                            { ramp_lo = 1;  ramp_span = 10; }
-                int16_t ramp_val = ramp_lo + (int16_t)(ota_ramp % (uint16_t)ramp_span);
-                ota_ramp++;
+                /* 水温模拟 (x10): 压缩机关 → 升回 26°C; 开 → 渐降到 16°C 附近波动. */
+                static int16_t s_water_x10 = 260;   /* 开机 26.0°C */
+                static uint8_t s_water_osc = 0;
+                if (g_compressor_on) {
+                    if (s_water_x10 > 160) {
+                        s_water_x10 -= 5;           /* 降 0.5°C/s */
+                        if (s_water_x10 < 160) s_water_x10 = 160;
+                    } else {
+                        s_water_osc ^= 1;           /* 16°C 附近 ±0.3 波动 */
+                        s_water_x10 = s_water_osc ? 163 : 157;
+                    }
+                } else {
+                    if (s_water_x10 < 260) {
+                        s_water_x10 += 3;           /* 升 0.3°C/s */
+                        if (s_water_x10 > 260) s_water_x10 = 260;
+                    }
+                }
 
                 EspComm_Status st;
-                st.water_temp_x10   = ramp_val;
+                st.water_temp_x10   = s_water_x10;
                 st.battery_pct      = (uint8_t)pct;
-                st.total_power_w    = (uint16_t)p_24in;
+                st.total_power_w    = (uint16_t)p_total;
                 st.error_flags      = 0;
-                st.ambient_temp_x10 = (int16_t)(ambient_c * 10.0f);
-                (void)v_24in;
+                /* (x == x) 为 false 即 NaN — NTC 超量程时报 0 */
+                st.ambient_temp_x10 = (ambient_c == ambient_c) ? (int16_t)(ambient_c * 10.0f) : 0;
 
                 if (!OtaProto_IsBusy()) {
                     EspComm_SendStatus(&st);
