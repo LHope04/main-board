@@ -306,3 +306,11 @@
 - 改 MOTOR_STARTUP2 OL_ACC_A1 慢化 ramp — 当 BEMF 估算完全错时,慢/快 ramp 都不会让闭环 lock 上
 - 怀疑硬件电流上限 / CSA_GAIN — 不是问题,Motor Studio 用同样硬件能跑就证明硬件 OK
 
+---
+
+## [2026-06-17] SamplerComm 兼容采样板 ASCII NTC 行
+
+**背景**：J-Link 运行态读取 USART3 raw ring 证实综合采样板当前发送 ASCII 行，例如 `ACC:0.00,0.00,0.00 GYR:0.0,0.0,0.0 T:0.0 GPS:no_fix NTC:1891,10,9,10,2538,2540,2537,2537\r\n`，而主控只解析 `0xAA | CMD | LEN | PAYLOAD | XOR` 二进制帧，导致 `g_sampler_isr_cnt` 增长但 `g_sampler_frames_rx=0`、`s_st.stale=1`。
+**决策**：主控 `SamplerComm` 保留原二进制帧解析，同时增加 ASCII 行兼容路径：USART3 ISR 仅缓存完整文本行，`SamplerComm_Poll()` 在主循环解析 `NTC:` 后 8 个十进制 raw 值，并转换成 16 字节小端 payload 调用 `SensorAcq_OnNtcFrame()`。
+**原因**：当前硬件链路已经通，改主控解析能最快让现有采样板数据进入上层状态；解析放主循环避免在中断里做字符串扫描和整数转换。
+**排除方案**：要求采样板立即改成 `AA 10 10 ... XOR` 二进制帧 — 协议更规整，但当前用户要求主控适配现有输出，先保留二进制兼容并新增 ASCII 兼容。
