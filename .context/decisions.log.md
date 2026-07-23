@@ -604,6 +604,18 @@
 
 ---
 
+## [2026-07-23] V7 压缩机 PWM 采用 10kHz，DIR/STOP 低有效
+
+**背景**：用户补充驱动接口要求：PWM 允许 1–10kHz 且高电平有效；PC9 低电平反转；结合已确认的 PA8 停转功能，PA8 低电平定义为停转。其他接口本轮暂不处理。
+
+**决策**：TIM2_CH1 配为 10kHz PWM1、高电平有效；PC9 HIGH=正转、LOW=反转；PA8 HIGH=运行、LOW=停转。App 与 bootloader 均在最早 GPIO 初始化阶段保持 PA8 LOW、PWM 0，启动顺序为 STOP → 设置方向/占空比 → PA8 HIGH；停机顺序为 PWM 0 → PA8 LOW。
+
+**原因**：10kHz 位于驱动允许范围上限，可降低可闻噪声；bootloader 同步断言 STOP，避免 OTA/槽位选择期间 PA8 浮空导致压缩机误转。
+
+**排除方案**：沿用原 20kHz 风扇 PWM — 超出驱动规定上限；只在 App 中配置 STOP — bootloader 运行阶段仍存在未定义窗口；保留 I2C3 — 会覆盖 PA8/PC9 GPIO。
+
+---
+
 ## [2026-07-22] 新版遥测前端采用独立 Vite 应用和可替换数据适配层
 
 **背景**：现有 MQTT 管理后台由 FastAPI 直接托管原生 HTML/CSS/JavaScript，已经部署并可用；本次需要按 Premium Telemetry Dashboard 规格实现 React、TypeScript、Vite、Tailwind CSS、shadcn/ui、ECharts、Leaflet、Zustand 和 React Query，同时先使用 Mock 数据。
@@ -673,3 +685,90 @@
 **原因**：数据库记录、运行容器配置和会话签名必须一致；旋转密钥可防止旧登录会话在密码变更后继续使用；文档只引用 `.env` 可避免凭据进入版本库。
 
 **排除方案**：只改 `.env` - 已有数据库密码不会更新；只改数据库 - 后续容器启动可能按旧环境重新创建管理员；保留旧会话直到自然过期 - 不符合凭据变更后的立即失效预期。
+## [2026-07-23] V7 压缩机采用非阻塞 5 秒线性 PWM 软启动
+
+**背景**：V7 压缩机改为 PA15 10kHz PWM 控速，启动时直接给 100% 占空比会产生较大的机械和电气冲击，用户要求 5 秒慢慢拉到最大。
+**决策**：`CompressorCtrl_Start()` 从 0% 占空比解除 PA8 STOP，`CompressorCtrl_Task()` 使用 `HAL_GetTick()` 在 5000ms 内线性递增到目标占空比；主循环每轮调用 Task，Stop 立即取消斜坡并将 PWM 清零。
+**原因**：非阻塞状态机不会暂停 IWDG、通信和其他周期任务；毫秒差值计算可处理 tick 回绕，且保留 `Start(target_percent)` 的通用目标接口。
+**排除方案**：不采用 `HAL_Delay(5000)` 阻塞递增，避免主循环和看门狗停顿；不使用定时器中断执行斜坡，避免为低速控制引入额外 ISR 共享状态。
+
+---
+
+## [2026-07-23] V7 压缩机 5 秒软启动烧录与 SWD 验证
+
+**背景**：非阻塞软启动完成编译后，需要确认当前硬件槽位、烧录完整性和实际运行中的斜坡状态。
+**决策**：读取 DBGMCU ID=`0x10076413`、BKP0R=`0xA0A0A0A0` 后，仅烧录 bootloader 与 App A，不改参数区；两个镜像均由 OpenOCD/J-Link 完成 program/verify 后复位运行。
+**原因**：烧录输出对两个镜像均明确显示 `Programming Finished` 与 `Verified OK`，命令退出码为 0；使用最新 App A ELF 重新解析符号后，SWD 读到 109ms/2%、2116ms/42%、5000ms/100%，证明软件斜坡单调并按期结束。最终 TIM2 CR1=`0x81`、ARR=`99`、CCR1=`100`，PA8/PC9 ODR 位均为 HIGH。
+**排除方案**：未执行 mass erase，避免清除 bootloader、参数区和另一槽；未重写 params，因为 BKP0R 已确认当前运行槽为 A；寄存器证据不能替代 PA15 实际波形，示波器验证继续保留为待办。
+
+---
+
+## [2026-07-23] V7 压缩机默认运行方向改为反转
+
+**背景**：用户要求将当前压缩机运行方向从正转改为反转；PC9 极性已确认 LOW=反转、HIGH=正转。
+**决策**：App GPIO 安全初始化和 `CompressorCtrl_Init()` 均在 PA8 STOP 有效时预选 PC9 LOW；开机自动启动与 SET_GEAR ON 两个运行入口统一调用 `CompressorCtrl_SetDirection(1U)`。
+**原因**：统一所有入口可避免开机反转但远程重启恢复正转；方向在停转状态下预选，不改变 PA8 停转和 5 秒 PWM 软启动时序。
+**排除方案**：不只修改单个开机调用点，因为远程启动仍会覆盖方向；不修改方向极性定义，继续遵循用户确认的 PC9 LOW=反转。
+
+---
+
+## [2026-07-23] V7 压缩机默认反转版本烧录验证
+
+**背景**：默认运行方向改为反转后，需要烧录当前 App A 并确认 PC9 实际输出寄存器与软件方向状态一致。
+**决策**：重新读取 DBGMCU ID=`0x10076413`、BKP0R=`0xA0A0A0A0` 后，仅烧录 App A，不修改 bootloader 和 params；烧录完成后等待开机与软启动结束，再按最新 ELF 分别解析每个诊断变量地址并读取。
+**原因**：App A 烧录明确显示 `Programming Finished`、`Verified OK` 且退出码为 0；运行态读到 `g_compressor_reverse=1`、duty=`100`、stop=`0`、elapsed=`5000ms`，GPIOC ODR bit9=0、GPIOA ODR bit8=1，证明控制输出为反转运行状态。
+**排除方案**：未沿用反转变量修改前的 BSS 连续地址假设；该变量初值改为 1 后被链接器移动到 DATA，已通过最新 `arm-none-eabi-nm` 单独重新取址。未以寄存器结果替代机械转向观察，现场方向确认仍保留为物理验收项。
+
+---
+
+## [2026-07-23] 诊断确认重复 SET_GEAR ON 会重启软启动且风扇未使能
+
+**背景**：用户观察风扇不转并询问压缩机 PWM 是否已拉满。
+**决策**：本轮仅诊断，不修改固件。现场首次读到 TIM2 ARR=99、CCR1=37；随后按最新 ELF 取址连续观察 4s，软启动从 elapsed=0/duty=0 开始，但 4s 后仅为 elapsed=1553ms/duty=31%，说明期间又收到 ON 并重启斜坡。GPIOC ODR 读值确认 PC10 始终为 LOW，且启动代码中 `s_iot_fan_on=0`、无 `PowerCtrl_EnableFanVcc(1)` 调用。
+**原因**：当前每个 `cmd->updated && cmd->on` 都无条件调用 `CompressorCtrl_Start(100U)`，没有判断压缩机是否已处于 ON；风扇控制则因 PA15 已转交压缩机而在 V7 命令路径中明确忽略。
+**排除方案**：不能笼统报告“PWM 已拉满”，因为当前现场 CCR1 并未稳定在 100；不能将风扇不转归咎于硬件，软件已明确保持 PC10 供电使能为 LOW。后续修复应将 ON 改为 OFF→ON 边沿触发，并在确认风扇新 PWM 接口前仅决定是否允许 PC10 全速供电。
+
+---
+
+## [2026-07-23] V7 风扇仅使用 PC10 供电使能控制
+
+**背景**：PA15 已作为压缩机 PWM，当前风扇因 PC10 未使能而不转；用户确认以后风扇不再需要 PWM，只依靠风扇电源使能。
+**决策**：开机时在压缩机启动前使能 PC10；SET_GEAR ON 同时将 PC10 拉高，SET_GEAR OFF 将 PC10 拉低；`s_iot_fan_on` 与该供电状态同步。风扇不再调用 `FanCtrl_SetDuty()`，PA15 继续专用于压缩机。
+**原因**：PC10 是已确认的 active-HIGH FAN_VCC 控制，可在不引入新 PWM 引脚的情况下恢复风扇运行，并避免与压缩机 PA15 冲突。
+**排除方案**：不恢复旧 PA15 风扇 PWM，因为该通道已被压缩机占用；不保持风扇永久上电，SET_GEAR OFF 仍需同时关闭制冷链路风扇供电。
+
+---
+
+## [2026-07-23] 暂时关闭压缩机软启动并立即输出 100% PWM
+
+**背景**：重复 SET_GEAR ON 会反复重启 5 秒斜坡，导致现场 PWM 无法稳定拉满；用户要求先保证开机立即满 PWM，软启动后续再修。
+**决策**：新增 `COMPRESSOR_SOFT_START_ENABLED=0` 编译开关；`CompressorCtrl_Start(100)` 在 STOP 状态下设置方向与目标后，直接写入 duty=100、解除 PA8 STOP，不进入 ramp active。斜坡 Task 和 5000ms 参数保留，后续修复命令去重后可重新启用。
+**原因**：能立即消除重复 ON 导致的占空比回落，同时保留软启动实现，减少后续恢复成本；风扇 PC10 供电使能改动继续保留。
+**排除方案**：不删除软启动代码，避免后续重新实现；本轮不同时修改 SET_GEAR 去重逻辑，按用户要求先解决 PWM 拉满和风扇供电。
+
+---
+
+## [2026-07-23] 风扇供电使能与压缩机立即满 PWM 版本烧录验证
+
+**背景**：恢复 PC10 风扇供电控制并暂时关闭压缩机软启动后，需要确认当前 App A 的实际输出状态。
+**决策**：确认 DBGMCU ID=`0x10076413`、BKP0R=`0xA0A0A0A0` 后仅烧录 App A，不改 bootloader/params；复位后等待开机流程完成，再按最新 ELF 单独解析并读取诊断变量。
+**原因**：烧录明确显示 `Programming Finished`、`Verified OK` 且退出码为 0；运行态 duty=`100`、ramp_active=`0`、reverse=`1`、stop=`0`，TIM2 ARR=`99`、CCR1=`100`。GPIOC ODR=`0xC00` 证明 PC10 风扇供电和 PC11 水泵均为 HIGH，PC9 为 LOW 反转；GPIOA ODR=`0x100` 证明 PA8 为 HIGH 运行。
+**排除方案**：未修改 bootloader、参数区或执行 mass erase；SWD 只能证明 MCU 输出状态，风扇实际旋转和压缩机机械方向仍需现场观察。
+
+---
+
+## [2026-07-23] 压缩机 PWM 频率从 10kHz 调低到 5kHz
+
+**背景**：用户要求降低压缩机 PWM 频率；驱动允许范围为 1–10kHz，高电平有效。
+**决策**：TIM2 继续使用 PSC=83 的 1MHz 计数时钟，将 ARR 从 99 改为 199，使 PA15 PWM 基频变为 1MHz/(199+1)=5kHz；占空比计算继续按 ARR+1 自动换算，100% 对应 CCR1=200。
+**原因**：只修改 ARR 即可精确获得 5kHz，不改变定时器时钟、输出极性、反转/停转控制、风扇 PC10 使能或立即满 PWM 策略。
+**排除方案**：不修改 PSC，避免改变占空比分辨率之外的时钟基准；不恢复软启动，本轮只调整 PWM 频率。
+
+---
+
+## [2026-07-23] 压缩机 5kHz PWM 版本烧录验证
+
+**背景**：TIM2 配置从 10kHz 改为 5kHz 后，需要确认当前 App A 的实际寄存器配置和其他控制输出未受影响。
+**决策**：确认 DBGMCU ID=`0x10076413`、BKP0R=`0xA0A0A0A0` 后仅烧录 App A；复位运行后按最新 ELF 读取诊断变量，并直接读取 TIM2/GPIO 寄存器。
+**原因**：烧录明确显示 `Programming Finished`、`Verified OK` 且退出码为 0；TIM2 CR1=`0x81`、PSC=`83`、ARR=`199`、CCR1=`200`，证明运行频率为 5kHz 且占空比 100%。同时 duty=`100`、ramp_active=`0`、reverse=`1`、stop=`0`，PC10 HIGH、PC9 LOW、PA8 HIGH。
+**排除方案**：未修改 bootloader/params 或执行 mass erase；寄存器配置证据不能替代 PA15 实际波形测量，示波器验证仍保留。

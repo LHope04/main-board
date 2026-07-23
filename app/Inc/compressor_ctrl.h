@@ -4,32 +4,39 @@
 #include "stm32f4xx_hal.h"
 
 /*
- * V6 compressor control: TI MCF8329A 三相 BLDC sensorless driver via I2C3.
- * Rewrites V3's PMOS+single-PWM model. STAGE 1 keeps the old function names
- * as STUBs so main.c still compiles; real implementation lands in 阶段 6.
+ * V7 compressor interface:
+ *   PA15 / TIM2_CH1 AF1 — 5kHz PWM, active HIGH
+ *   PC9  / NET14        — direction: HIGH=forward, LOW=reverse
+ *   PA8  / NET15        — stop: LOW=stop, HIGH=run
  *
- * Hardware signals (set by gpio.c, used by mcf8329a driver):
- *   PA8/PC9   I2C3 SCL/SDA  — register R/W
- *   PC12      DROFF         — hardware enable (LOW=disabled)
- *   PD0       SPEED_WAKE    — wake/sleep
- *   PD3       DIR           — direction (LOW=CW)
- *   PD4       BREAK         — brake (LOW=engaged)
- *   PD5       nFAULT        — input, LOW=fault
- *   PB9       FG (TIM4_CH4) — input capture for speed feedback
- *   PC1       SOX           — ADC1_IN11 current sense (stage 6, 待启用)
- *   PA7       EXT_CLK (TIM14_CH1) — optional external clock (stub)
- *
- * RPM formula unchanged: rpm = freq_hz * 10 (6 pole pairs).
+ * Safe state is PWM=0 and PA8 LOW. The bootloader and App GPIO init both
+ * assert this state before normal application control begins.
  */
 
-/* === 旧 API (STUB in stage 1, real impl in stage 6) === */
-void     CompressorCtrl_Init(TIM_HandleTypeDef *htim_fg);   /* TIM4 */
-void     CompressorCtrl_SetDuty(uint8_t percent);           /* legacy: stage 6 maps to SetSpeed */
-void     CompressorCtrl_SetDirection(uint8_t dir);          /* PD3 GPIO */
-void     CompressorCtrl_SetBrake(uint8_t en);               /* PD4 GPIO: 1=release, 0=engage */
+extern volatile uint8_t g_compressor_pwm_duty_pct;
+extern volatile uint8_t g_compressor_reverse;
+extern volatile uint8_t g_compressor_stop_asserted;
+extern volatile uint8_t g_compressor_ramp_active;
+extern volatile uint8_t g_compressor_ramp_target_pct;
+extern volatile uint32_t g_compressor_ramp_elapsed_ms;
+
+#define COMPRESSOR_SOFT_START_MS 5000U
+#define COMPRESSOR_SOFT_START_ENABLED 0U
+
+void CompressorCtrl_Init(TIM_HandleTypeDef *htim_pwm); /* TIM2_CH1 / PA15 */
+void CompressorCtrl_SetDuty(uint8_t percent);
+void CompressorCtrl_SetDirection(uint8_t reverse);
+void CompressorCtrl_SetStop(uint8_t stop);
+void CompressorCtrl_Start(uint8_t percent);
+void CompressorCtrl_Stop(void);
+void CompressorCtrl_Task(uint32_t now_ms);
+
+/* Compatibility API; V7 maps brake asserted to STOP asserted. */
+void CompressorCtrl_SetBrake(uint8_t engage);
+
+/* V7 currently has no speed feedback input assigned. */
 float    CompressorCtrl_GetFreqHz(void);
 uint32_t CompressorCtrl_GetRPM(void);
-
 void CompressorCtrl_CaptureCallback(TIM_HandleTypeDef *htim);
 void CompressorCtrl_OverflowCallback(TIM_HandleTypeDef *htim);
 

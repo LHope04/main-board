@@ -20,8 +20,8 @@ STM32F407VET6 摩托车液冷系统主控板：受控上电、风扇/压缩机 P
 | 模块 | 状态 | 验证方式 | 遗留问题 |
 |------|------|----------|----------|
 | 受控上电 power_ctrl | ✅ | 上板按时序拉高 PB13/PB14/PB12/PB15 | — |
-| 风扇控制 fan_ctrl | 🚧 | V6 曾验证 PA15 PWM + PB4 FG | V7 已把 PA15 改给压缩机，风扇新 PWM/使能接口待确认，旧 `fan_ctrl` 不可直接使用 |
-| 压缩机控制 compressor_ctrl | 🚧 | V6 MCF8329A I2C 方案已废弃；V7 拟用 PA15 PWM + PC9 DIR + PA8 STOP | 新版原理图、PWM 规格、DIR/STOP 极性待确认；现有固件与 V7 引脚冲突，禁止直接烧录 |
+| 风扇控制 fan_ctrl | 🚧 | V7 仅由 PC10 FAN_VCC 控制；最新 App A 已烧录，SWD 确认开机后 GPIOC ODR bit10=1，SET_GEAR ON/OFF 同步控制代码已恢复 | 需现场确认 PC10 HIGH 后风扇实际运行；旧 PA15 `fan_ctrl` PWM 不再使用 |
+| 压缩机控制 compressor_ctrl | 🚧 | V7 5kHz 版 App A 已烧录；SWD 确认 PSC=83、ARR=199、CCR1=200、duty=100%、PC9 LOW、PA8 HIGH、软启动关闭 | 后续修复 SET_GEAR 重复 ON 后再恢复软启动；尚需示波器确认 PA15 实际 5kHz 波形和机械转向 |
 | NTC 采集 sensor_acq | ✅ | ADC1+DMA2 8 通道循环扫描 | 仍为原始 ADC 值，未转温度（L3） |
 | 功率监测 INA226×3 | ✅ | I2C1/2/3 各一路，500ms 轮询 | cal_val 未实测校准（L4） |
 | 蜂鸣器 buzzer | ✅ | TIM2_CH1，开机大疆音 | — |
@@ -52,6 +52,11 @@ STM32F407VET6 摩托车液冷系统主控板：受控上电、风扇/压缩机 P
 | 当前 App（2026-07-11，MCF8329A TI 官方推荐参数） | 32.37 KB / 128 KB（Slot 容量，25.29%） | 6.01 KB / 128 KB（SRAM1，4.69%） | text=32900, data=236, bss=5924；App A 已烧录，shadow 读回 24/24 一致 |
 | 当前 App（2026-07-13，水泵 30% 软 PWM） | 33.11 KB / 128 KB（Slot 容量，25.86%） | 6.02 KB / 128 KB（SRAM1，4.70%） | text=33652, data=240, bss=5928；App A/B 构建通过，未烧录，待测 PC11 波形和实际转速 |
 | 当前 App（2026-07-23，水泵 30% 烧录验证） | 33.11 KB / 128 KB（Slot 容量，25.86%） | 6.02 KB / 128 KB（SRAM1，4.70%） | App A `Programming Finished` + `Verified OK`；运行态 duty=30、startup=0、TIM7 CEN/UIE=1，软件 PWM 输出状态发生切换 |
+| 当前 App（2026-07-23，V7 压缩机 PWM 接口） | 27.31 KB / 128 KB（Slot 容量，21.33%） | 5.63 KB / 128 KB（SRAM1，4.39%） | text=27788, data=168, bss=5600；App A/B 构建通过，旧 MCF8329A 运行代码未进入 ELF；尚未烧录 |
+| 当前 App（2026-07-23，V7 压缩机 5s 软启动） | 27.50 KB / 128 KB（Slot 容量，21.48%） | 5.63 KB / 128 KB（SRAM1，4.40%） | text=27984, data=168, bss=5608；bootloader + App A `Programming Finished`/`Verified OK`；SWD 实测斜坡 109ms=2%、2116ms=42%、5000ms=100% |
+| 当前 App（2026-07-23，V7 压缩机默认反转） | 27.50 KB / 128 KB（Slot 容量，21.48%） | 5.63 KB / 128 KB（SRAM1，4.40%） | text=27984, data=168, bss=5608；App A `Programming Finished`/`Verified OK`；SWD 验证 reverse=1、PC9 LOW、PA8 HIGH、5000ms/100% |
+| 当前 App（2026-07-23，风扇 PC10 使能 + 压缩机立即满 PWM） | 27.52 KB / 128 KB（Slot 容量，21.50%） | 5.63 KB / 128 KB（SRAM1，4.40%） | text=28000, data=168, bss=5608；App A `Programming Finished`/`Verified OK`；SWD 验证 PC10 HIGH、duty=100%、ramp_active=0 |
+| 当前 App（2026-07-23，压缩机 PWM 5kHz） | 27.52 KB / 128 KB（Slot 容量，21.50%） | 5.63 KB / 128 KB（SRAM1，4.40%） | text=28000, data=168, bss=5608；App A `Programming Finished`/`Verified OK`；SWD 验证 PSC=83、ARR=199、CCR1=200 |
 | 上限 | 128 KB / Slot | 192 KB | F407VE 总 Flash 512 KB，OTA 布局占前 384 KB（App Slot 各 128 KB） |
 
 Flash 布局：
@@ -69,7 +74,8 @@ Flash 布局：
 - [ ] 保护状态机 protection.c（依赖上一项）
 - [ ] 水泵 30% 调速上板验证：PC11 启动 1s HIGH，随后 100Hz、30%（3ms HIGH / 7ms LOW）；转速计确认实际转速且无堵转
 - [ ] THERMORIDE 生产 HTTPS/TLS：反向代理、Secure Cookie、证书续期与 MQTT TLS
-- [ ] V7 压缩机控制迁移：确认驱动器型号/原理图、PWM 频率与极性、PC9 DIR 和 PA8 STOP 有效电平、风扇新接口；随后移除 I2C3/MCF8329A 路径并重写控制模块
+- [ ] V7 压缩机物理波形验证：示波器测 PA15=5kHz active-HIGH、开机立即 100%；实测 PC9 HIGH正转/LOW反转、PA8 LOW停/HIGH运行；确认 3.3V 输入兼容性
+- [ ] V7 SET_GEAR 去重：重复收到 ON 时不得重新调用 `CompressorCtrl_Start(100)`，仅 OFF→ON 边沿启动一次 5s 斜坡
 
 ---
 
@@ -87,7 +93,8 @@ Flash 布局：
 | L9 | TI Table 8-1 通用参数空载仅勉强起转 | 说明控制链路可工作但电机模型/启动参数不匹配；带压缩机负载前需 MPET 获取本机 Rs/L/Ke，或回退已验证参数 |
 | L10 | 水泵仅有两线供电开关，30% 调速采用 PC11 供电软 PWM | 上板前确认水泵允许供电 PWM；示波器测 100Hz/30%，转速计和电流钳确认不堵转、不反复重启 |
 | L11（已解决 2026-07-23） | J-Link 曾可枚举但 SWD 报 `cannot read IDR` | 本次已读到 DPIDR=0x2BA01477、DBGMCU_ID=0x10076413，并完成 App A program/verify |
-| L12 | V7 将 PA15/PA8/PC9 改为压缩机 PWM/DIR/STOP，但当前固件仍按风扇 PWM + I2C3 使用 | 在完成 V7 固件迁移前禁止烧录到改版硬件；否则可能误发全速 PWM并覆盖 DIR/STOP GPIO |
+| L12（5kHz 已 SWD 验证，待示波器） | V7 将 PA15/PA8/PC9 改为压缩机 PWM/DIR/STOP | App A 已烧录；寄存器确认 TIM2 PSC=83、ARR=199、CCR1=200，PA8 HIGH、PC9 LOW、PC10 HIGH；仍需测实际引脚波形与机械转向 |
+| L13 | C3 重复发送 SET_GEAR ON 会反复重启压缩机软启动 | SWD 观察 4s 内 elapsed 从 0 仅增至 1553ms、duty=31%，证明中途再次调用 Start；需将主循环处理改为状态边沿触发 |
 
 OTA 相关坑（已解决，在 decisions.log.md）：
 - VTOR 不能用来判槽位 → 用 `RTC->BKP0R` 标记

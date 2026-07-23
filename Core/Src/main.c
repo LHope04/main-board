@@ -32,7 +32,7 @@
 
 /* ===== Peripheral handles ===== */
 TIM_HandleTypeDef htim1;   /* BEEP_CTRL    PB14 TIM1_CH2N AF1 (高级定时器, 168MHz, MOE 必启) */
-TIM_HandleTypeDef htim2;   /* FAN_PWM_CTRL PA15 TIM2_CH1  AF1 (84MHz, 20kHz PWM) */
+TIM_HandleTypeDef htim2;   /* V7 COMPRESSOR_PWM PA15 TIM2_CH1 AF1 (5kHz, active HIGH) */
 TIM_HandleTypeDef htim3;   /* FAN_FB_OUT   PB4  TIM3_CH1  AF2 (84MHz, IC 1MHz tick) */
 TIM_HandleTypeDef htim4;   /* MCF8329A FG  PB9  TIM4_CH4  AF2 (84MHz, IC 1MHz tick) */
 TIM_HandleTypeDef htim7;   /* LED 呼吸灯软 PWM 时基 (基本定时器, 2kHz update IRQ) */
@@ -52,8 +52,7 @@ volatile uint32_t g_i2c3_ping_sr2 = 0;
 volatile uint32_t g_i2c3_err_code = 0;
 volatile uint32_t g_i2c3_state    = 0;       /* HAL_I2C_StateTypeDef: READY=0x20 */
 
-/* MCF8329A spin diagnostics */
-static MCF8329A_Device s_mcf;
+/* Legacy MCF8329A diagnostics are retained for historical Watch layouts only. */
 volatile uint32_t g_mcf_spin_rc      = 0xFFU;   /* HAL_OK=0 等 */
 volatile uint32_t g_mcf_status_rc    = 0xFFU;
 volatile uint32_t g_mcf_algo_status  = 0;       /* ALGO_STATUS 0xE4 */
@@ -169,17 +168,17 @@ void MX_TIM1_BEEP_Init(void)
     HAL_TIM_PWM_ConfigChannel(&htim1, &oc, TIM_CHANNEL_2);
 }
 
-/* ===== TIM2: FAN_PWM_CTRL PA15 / TIM2_CH1 AF1 ===== */
-/* APB1=84MHz × 2 = 84MHz (TIMxCLK), PSC=83 → 1MHz tick, ARR=49 → 20kHz PWM.
- * Duty = CCR / (ARR+1) = CCR / 50 → percent → CCR = percent * 50 / 100. */
-void MX_TIM2_FANPWM_Init(void)
+/* ===== TIM2: V7 COMPRESSOR_PWM PA15 / TIM2_CH1 AF1 ===== */
+/* APB1 timer clock=84MHz, PSC=83 → 1MHz tick, ARR=199 → 5kHz PWM.
+ * Driver input is active HIGH; duty = CCR / 200. */
+void MX_TIM2_COMPRESSOR_PWM_Init(void)
 {
     __HAL_RCC_TIM2_CLK_ENABLE();
 
     htim2.Instance               = TIM2;
     htim2.Init.Prescaler         = 83;
     htim2.Init.CounterMode       = TIM_COUNTERMODE_UP;
-    htim2.Init.Period            = 49;
+    htim2.Init.Period            = 199;
     htim2.Init.ClockDivision     = TIM_CLOCKDIVISION_DIV1;
     htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
     HAL_TIM_PWM_Init(&htim2);
@@ -266,6 +265,7 @@ void MX_TIM7_LEDPWM_Init(void)
  * 会保持 SDA 拉低等下个 CLK 永远等下去, 之后所有 HAL_I2C_* 调用全返回 HAL_BUSY.
  * 自救流程: DeInit I2C3 → PA8/PC9 切 GPIO OD → 拉 9 个 SCL 脉冲让 slave 走完一个字节
  * + STOP 条件 → 重新 Init I2C3(MspInit 自动配回 AF). 实测一次解锁 +SWRST 即可恢复. */
+#if 0 /* V6-only helper; PA8/PC9 are V7 compressor GPIOs. */
 static void I2C3_RecoverBus(void)
 {
     g_mcf_i2c_recover_cnt++;
@@ -305,6 +305,7 @@ static void I2C3_RecoverBus(void)
     HAL_I2C_DeInit(&hi2c3);
     HAL_I2C_Init(&hi2c3);
 }
+#endif
 
 int main(void)
 {
@@ -320,13 +321,12 @@ int main(void)
 
     MX_GPIO_Init();
     MX_TIM1_BEEP_Init();
-    MX_TIM2_FANPWM_Init();
+    MX_TIM2_COMPRESSOR_PWM_Init();
     MX_TIM3_FANIC_Init();
     MX_TIM4_CMPRFG_Init();
     MX_TIM7_LEDPWM_Init();
     MX_I2C1_Init();
     MX_I2C2_Init();
-    MX_I2C3_Init();   /* MCF8329A 通信 */
     MX_USART1_UART_Init();   /* RemoteCtrl  stub */
     MX_USART2_UART_Init();   /* IotCtrl     stub */
     MX_USART3_UART_Init();   /* SamplerComm 阶段 7 */
@@ -334,9 +334,7 @@ int main(void)
 
     /* 业务模块 Init: 接口签名保留, 内部实现各阶段重写 */
     SensorAcq_Init();                       /* 阶段 7 改 USART3 收帧 */
-    FanCtrl_Init(&htim2, &htim3);           /* 阶段 4: PWM=TIM2_CH1, IC=TIM3_CH1 */
-    /* CompressorCtrl_Init() — 暂停: 用户外接调试器直连 MCF8329A,
-     * 主控不动 PD3/PD4/PB9 等控制信号. */
+    CompressorCtrl_Init(&htim2);             /* V7: PA15 PWM + PC9 DIR + PA8 STOP */
     Buzzer_Init(&htim1);                    /* 阶段 2: TIM1_CH2N + MOE */
     EspComm_Init(&huart6);                  /* 阶段 8: USART6 (旧 huart2) */
     LedRgb_Init();                          /* 阶段 2: PE2/PE3/PE4 */
@@ -348,10 +346,10 @@ int main(void)
 
     PowerCtrl_StartupSequence();            /* 阶段 3: 新引脚时序 */
 
-    /* 清 I2C1/I2C2/I2C3 总线 BUSY 锁. */
+    /* 清 INA226 使用的 I2C1/I2C2 总线 BUSY 锁。I2C3 已由 V7 废弃。 */
     {
-        I2C_HandleTypeDef *handles[3] = { &hi2c1, &hi2c2, &hi2c3 };
-        for (int i = 0; i < 3; i++) {
+        I2C_HandleTypeDef *handles[2] = { &hi2c1, &hi2c2 };
+        for (int i = 0; i < 2; i++) {
             handles[i]->Instance->CR1 |=  I2C_CR1_SWRST;
             HAL_Delay(1);
             handles[i]->Instance->CR1 &= ~I2C_CR1_SWRST;
@@ -366,13 +364,13 @@ int main(void)
     INA226_Init(&sensors[1], &hi2c1, 0x8A, 0x0355, 0.0012f);  /* 24V_YSJ  A1=VS  A0=VS  (实测) */
     INA226_Init(&sensors[2], &hi2c2, 0x80, 0x0355, 0.0012f);  /* 12V_VCC  待确认 */
 
+    #if 0 /* V6 MCF8329A/I2C3 startup path; disabled on V7. */
     /* I2C3 (MCF8329A) 启动时如果 SDA 被卡 LOW (上次跑挂留下), bit-bang 自救一次.
      * 检测方法: PA8 (SCL) 上拉 + PC9 (SDA) 读回应该都是 HIGH; SDA=LOW 说明 slave 拉死. */
     if (!g_mcf_i2c_disable &&
         HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_9) == GPIO_PIN_RESET) {
         I2C3_RecoverBus();
     }
-
     /* MCF8329A wake cycle: 强制 SPEED/WAKE LOW → 100ms → HIGH 触发 wake edge.
      * 防止芯片上电时已经 HIGH 但错过 wake event 卡 sleep. */
     HAL_GPIO_WritePin(GPIOD, GPIO_PIN_0, GPIO_PIN_RESET);   /* WAKE LOW */
@@ -454,41 +452,31 @@ int main(void)
         gi.Pin  = GPIO_PIN_8;  HAL_GPIO_Init(GPIOA, &gi);  /* SCL */
         gi.Pin  = GPIO_PIN_9;  HAL_GPIO_Init(GPIOC, &gi);  /* SDA */
     }
+    #endif
 
     Buzzer_PlayHajimi();                    /* 开机大疆音; 内部喂狗 */
 
     uint8_t s_iot_fan_on = 0U;
     uint8_t s_iot_pump_on = 0U;
 
-    /* 开机自动启动制冷链路。
-     * 放在阻塞式开机音之后，避免压缩机已启动但 MCF8329A watchdog 数秒无人 tickle。
-     * Motor Studio 独占模式仍保持关闭，不抢占外部 I2C 主机。 */
-    if (!g_mcf_i2c_disable) {
-        s_iot_fan_on = 1U;
-        s_iot_pump_on = 1U;
-        FanCtrl_Enable(1);
-        FanCtrl_SetDuty(100);
-        PowerCtrl_EnablePump(1);
-
-        /* 水泵/风扇先行，再清除上次锁存故障并发起压缩机启动。 */
-        HAL_Delay(500);
-        IWDG->KR = 0xAAAAU;
-        g_mcf_clrflt_rc = (uint32_t)MCF8329A_ClearFault(&s_mcf);
-        HAL_Delay(200);
-        IWDG->KR = 0xAAAAU;
-        g_mcf_kick_rc = (uint32_t)MCF8329A_KickWatchdog(&s_mcf);
-
-        MCF8329A_DRVOff(0);                 /* PC12=LOW，使能栅极驱动 */
-        g_mcf_spin_duty = 0x7FFFU;          /* 100% 启动指令 */
-        g_compressor_on = 1U;
-        g_mcf_spin_rc = (uint32_t)MCF8329A_SpinDuty(&s_mcf, g_mcf_spin_duty);
-    }
+    /* V7 开机自动启动：风扇仅由 PC10 供电使能控制；风扇/水泵先行
+     * 500ms，压缩机随后反转并立即输出 100% PWM。 */
+    s_iot_fan_on = 1U;
+    s_iot_pump_on = 1U;
+    PowerCtrl_EnableFanVcc(1);
+    PowerCtrl_EnablePump(1);
+    HAL_Delay(500);
+    IWDG->KR = 0xAAAAU;
+    CompressorCtrl_SetDirection(1U);        /* PC9 LOW = reverse */
+    CompressorCtrl_Start(100U);             /* PA8 HIGH + PA15 5kHz PWM 100% */
+    g_compressor_on = 1U;
 
     while (1) {
         /* IWDG 喂狗 — Bootloader 启了, App 必须续 */
         IWDG->KR = 0xAAAAU;
 
         uint32_t now_ms = HAL_GetTick();
+        CompressorCtrl_Task(now_ms);
 
         /* === 高频 (~10ms 节拍) === */
         LedRgb_Tick(now_ms);
@@ -503,6 +491,7 @@ int main(void)
                 break;
             default: break;
         }
+        #if 0 /* V6 I2C3 debug scan; PA8/PC9 are V7 GPIO outputs. */
         /* === I2C3 持续扫描 (debug, 500ms 一次, watch g_i2c3_count/devs/ping_*) === */
         {
             static uint32_t s_last_i2c3_scan = 0;
@@ -524,6 +513,7 @@ int main(void)
                 }
             }
         }
+        #endif
 
         EspComm_Poll();
         SamplerComm_Poll();
@@ -553,26 +543,22 @@ int main(void)
                 EspComm_GearCmd *cmd = EspComm_GetGearCmd();
                 if (cmd->updated) {
                     cmd->updated = 0;
-                    /* C3 SET_GEAR on/off 同时控制 压缩机 + 风扇 + 水泵.
-                     * 实测纯 I2C SpinDuty(0) 停不可靠 (I2C 易卡死), 所以关停用
-                     * DRVOFF (PC12) 硬件切断 MOSFET 驱动 — GPIO 直连不依赖 I2C, 可靠. */
+                    /* V7 C3 SET_GEAR on/off controls compressor, fan power and pump.
+                     * Fan has no PWM: PC10 HIGH=run, LOW=off. */
                     g_compressor_on = cmd->on;       /* 镜像状态给水温模拟 */
                     if (cmd->on) {
                         s_iot_fan_on = 1U;
                         s_iot_pump_on = 1U;
-                        FanCtrl_Enable(1);
-                        FanCtrl_SetDuty(100);
+                        PowerCtrl_EnableFanVcc(1);
                         PowerCtrl_EnablePump(1);
-                        MCF8329A_DRVOff(0);          /* PC12=LOW 使能 MOSFET 驱动 */
-                        g_mcf_spin_duty = 0x7FFFU;   /* I2C SpinDuty 100% */
+                        CompressorCtrl_SetDirection(1U); /* PC9 LOW = reverse */
+                        CompressorCtrl_Start(100U);
                     } else {
-                        FanCtrl_Enable(0);
-                        FanCtrl_SetDuty(0);
+                        CompressorCtrl_Stop();       /* PWM=0, then PA8 LOW */
+                        PowerCtrl_EnableFanVcc(0);
                         PowerCtrl_EnablePump(0);
                         s_iot_fan_on = 0U;
                         s_iot_pump_on = 0U;
-                        g_mcf_spin_duty = 0U;        /* I2C SpinDuty(0) (尽力优雅停) */
-                        MCF8329A_DRVOff(1);          /* PC12=HIGH 硬切 MOSFET — 可靠停转 */
                     }
                 }
             }
@@ -595,6 +581,7 @@ int main(void)
             }
         }
 
+        #if 0 /* Entire V6 MCF8329A runtime path is disabled on V7. */
         /* I2C3 释放 / 接管 — 监测 g_mcf_i2c_disable 跳变, 把 PA8 SCL / PC9 SDA
          * 切到 input no-pull (tri-state), 让 Motor Studio 独占 I2C 总线. */
         {
@@ -625,7 +612,6 @@ int main(void)
                 }
             }
         }
-
         /* === SWD-triggered shadow register override (CLOSED_LOOP1 MAX_SPEED) ===
          * 流程: spin=0 → 等 200ms 让芯片进 IDLE → 写 CL1 → 读回 → 恢复 spin_duty.
          * 一次性, 处理完清 g_mcf_cl1_set, 防止反复写。 */
@@ -779,6 +765,7 @@ int main(void)
                 }
             }
         }
+        #endif
 
         /* === 1s 分流: Status 帧 === */
         {

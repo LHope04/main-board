@@ -9,7 +9,7 @@
  *   - Outputs default to safe state (LOW for all enables/drivers)
  *   - Inputs: BUTTON / ACC / nFAULT / KEYWAKE
  *   - LEDs: PE2 (R) / PE3 (G) / PE4 (B)
- *   - MCF8329A control: PC12 DROFF / PD0 SPEED_WAKE / PD3 DIR / PD4 BREAK
+ *   - V7 compressor: PC9 DIR / PA8 active-low STOP; PA15 PWM is configured by TIM2 MSP
  *   - Power enables: PE5 LOAD / PE6 BOOST / PC10 FAN_VCC / PC11 PUMP / PC15 CHARGE_NTC
  */
 #include "gpio.h"
@@ -41,6 +41,10 @@ void MX_GPIO_Init(void)
     /* Fan VCC + Pump: PC10, PC11 */
     HAL_GPIO_WritePin(GPIOC, GPIO_PIN_10 | GPIO_PIN_11, GPIO_PIN_RESET);
 
+    /* V7 compressor safe state: reverse selected, STOP asserted. */
+    HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_RESET);  /* DIR: LOW=reverse */
+    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET);  /* STOP: LOW=stop */
+
     /* MCF8329A 主控 I2C 控制模式 (motor RUN 状态默认):
      *   PC12 DRVOFF      推挽输出 LOW  (driver enabled)
      *   PD0  SPEED_WAKE  推挽输出 HIGH (out of sleep)
@@ -61,6 +65,12 @@ void MX_GPIO_Init(void)
     /* PC10/11/12/15 = FAN_VCC, PUMP, DRVOFF, CHARGE_NTC */
     gi.Pin = GPIO_PIN_10 | GPIO_PIN_11 | GPIO_PIN_12 | GPIO_PIN_15;
     HAL_GPIO_Init(GPIOC, &gi);
+
+    gi.Pin = GPIO_PIN_9;
+    HAL_GPIO_Init(GPIOC, &gi);
+
+    gi.Pin = GPIO_PIN_8;
+    HAL_GPIO_Init(GPIOA, &gi);
 
     /* PD0/PD3/PD4 = SPEED_WAKE, DIR, BREAK */
     gi.Pin = GPIO_PIN_0 | GPIO_PIN_3 | GPIO_PIN_4;
@@ -87,6 +97,6 @@ void MX_GPIO_Init(void)
     gi.Pin  = GPIO_PIN_0;
     HAL_GPIO_Init(GPIOA, &gi);
 
-    /* AF pins (TIM1/2/3/4/14, I2C1/2/3, USART1/2/3/6) — configured by their
+    /* AF pins (TIM1/2/3/4/14, I2C1/2, USART1/2/3/6) — configured by their
      * own MspInit / MX init functions. Not initialized here. */
 }

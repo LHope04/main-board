@@ -10,16 +10,24 @@
 
 | 功能 | MCU 引脚 | 模式 | 当前确认状态 |
 |------|----------|------|--------------|
-| 压缩机速度 PWM | PA15 | TIM2_CH1 / AF1 | MCU 复用正确；PWM 频率、极性、占空比语义待驱动器规格确认 |
-| 压缩机正反转 NET14 | PC9 | GPIO output | 主控网表确认 U9.66 → R10 0Ω → FPC2.14；高低电平对应方向、驱动板上下拉待确认 |
-| 压缩机停转 NET15 | PA8 | GPIO output | 主控网表确认 U9.67 → R11 0Ω → FPC2.15；STOP 有效电平、上电安全默认态待确认 |
+| 压缩机速度 PWM | PA15 | TIM2_CH1 / AF1 | 5kHz PWM1，高电平有效；ARR=199、1MHz timer tick |
+| 压缩机正反转 NET14 | PC9 | GPIO output | HIGH=正转、LOW=反转；主控网表确认 U9.66 → R10 0Ω → FPC2.14 |
+| 压缩机停转 NET15 | PA8 | GPIO output | HIGH=运行、LOW=停转；主控网表确认 U9.67 → R11 0Ω → FPC2.15 |
 
-**必须处理的固件冲突**：
-- PA15 当前仍属于 `fan_ctrl`，`FanCtrl_SetDuty()` 会直接改变压缩机 PWM；旧固件不可用于 V7 硬件。
-- PA8/PC9 当前属于 I2C3 SCL/SDA，`MX_I2C3_Init()`、I2C3 总线恢复和 MCF8329A 周期任务都会覆盖 GPIO 配置；V7 必须停用整条 I2C3/MCF8329A 控制路径。
+**V7 固件处理状态**：
+- PA15 已从 `fan_ctrl` 移交 `compressor_ctrl`，配置 TIM2_CH1 5kHz active-HIGH PWM。
+- I2C3 初始化、扫描、恢复及 MCF8329A 启动/周期任务已停用，PA8/PC9 固定为推挽 GPIO。
+- App 和 bootloader 均先设置 PA8 LOW、PWM=0；App 默认 PC9 LOW 反转，bootloader 停转期间保持 PC9 HIGH。
+- App 启动压缩机时先选择 PC9 LOW 反转，再解除 PA8 STOP，并由主循环非阻塞地将 PA15 占空比在 5000ms 内从 0% 线性升至目标值；当前开机和 SET_GEAR ON 目标均为 100%。
+- 2026-07-23 已烧录 bootloader + App A；SWD 取样为 109ms/2%、2116ms/42%、5000ms/100%，最终 TIM2 CR1=0x81、ARR=99、CCR1=100，GPIOA ODR bit8=1、GPIOC ODR bit9=1。实际引脚波形仍待示波器确认。
+- 2026-07-23 已继续烧录默认反转版 App A；SWD 重新按最新 ELF 取址确认 `g_compressor_reverse=1`、`g_compressor_pwm_duty_pct=100`、`g_compressor_stop_asserted=0`、elapsed=5000ms，GPIOC ODR bit9=0（PC9 LOW 反转）、GPIOA ODR bit8=1（PA8 HIGH 运行）。
+- 2026-07-23 用户要求暂时关闭软启动：当前待烧录版本在风扇/水泵先行 500ms 后，压缩机 PC9 LOW 反转并立即输出 PA15 100% PWM；5s 斜坡代码保留但由编译开关关闭。
+- 2026-07-23 已烧录该版本 App A；SWD 读到 duty=100%、ramp_active=0、reverse=1、stop=0，TIM2 CR1=0x81、ARR=99、CCR1=100，GPIOA ODR=0x100（PA8 HIGH），GPIOC ODR=0xC00（PC10/PC11 HIGH、PC9 LOW）。
+- 2026-07-23 已烧录 5kHz 版本 App A；SWD 读到 TIM2 CR1=0x81、PSC=83、ARR=199、CCR1=200，对应 1MHz/(199+1)=5kHz 和 100%占空比；GPIOA ODR bit8=1、GPIOC ODR bit10=1/bit9=0。
 - PA15 不与当前蜂鸣器冲突：蜂鸣器实际使用 PB14 / TIM1_CH2N。
 - 风扇原 PWM 通道已被压缩机占用；风扇的新 PWM/使能方案尚未提供。
-- 当前 V6 主控板网表已确认 NET14/NET15 到 PC9/PA8 的排线通路；新版驱动板上这两个网络改接 DIR/STOP 的修订图尚未入库，因此有效电平、输入电压和外部上下拉仍未确认。
+- 2026-07-23 用户确认风扇后续不再使用 PWM，仅由 PC10 `FAN_VCC` 供电使能控制：HIGH=运行、LOW=停止；开机和 SET_GEAR ON 使能，SET_GEAR OFF 关闭。
+- 当前 V6 主控板网表已确认 NET14/NET15 到 PC9/PA8 的排线通路；新版驱动板修订图尚未入库，外部上下拉及 3.3V 输入兼容性仍待图纸确认。
 
 ## 芯片信息
 

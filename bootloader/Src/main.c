@@ -214,9 +214,23 @@ static void iwdg_refresh(void)
 
 static void GPIO_Init(void)
 {
+    __HAL_RCC_GPIOA_CLK_ENABLE();
+    __HAL_RCC_GPIOC_CLK_ENABLE();
     __HAL_RCC_GPIOE_CLK_ENABLE();
 
     GPIO_InitTypeDef gi = {0};
+
+    /* V7 compressor safe state throughout boot/OTA selection. */
+    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET); /* STOP active LOW */
+    HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_SET);   /* forward default */
+    gi.Pin   = GPIO_PIN_8;
+    gi.Mode  = GPIO_MODE_OUTPUT_PP;
+    gi.Pull  = GPIO_NOPULL;
+    gi.Speed = GPIO_SPEED_FREQ_LOW;
+    HAL_GPIO_Init(GPIOA, &gi);
+    gi.Pin = GPIO_PIN_9;
+    HAL_GPIO_Init(GPIOC, &gi);
+
     gi.Pin   = GPIO_PIN_2 | GPIO_PIN_3;
     gi.Mode  = GPIO_MODE_OUTPUT_PP;
     gi.Pull  = GPIO_NOPULL;
