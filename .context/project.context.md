@@ -30,7 +30,7 @@ STM32F407VET6 摩托车液冷系统主控板：受控上电、风扇/压缩机 P
 | Bootloader（OTA Phase 1~5） | ✅ | 0x08000000 独立工程，A/B 槽跳转 + LED 指示 | — |
 | OTA 协议（Phase 6） | ✅ | BLE→ESP32-C3→USART2 端到端通过（2026-04-18） | — |
 | OTA 回滚（Phase 7） | ✅ | 4 场景验证：正常/boot_count/CRC/稳态 | 双向 OTA 联调 + CI 待做 |
-| EC801E 物联网 iot_ctrl | ✅ | App A 固化自动初始化/重连/30s 周期上报；J-Link 读 `g_iot_state=40`、`mqtt_connected=1`、`pub_ok_count=4`、`pub_fail_count=0`；服务器入库 `UPB-0B506761 seq=1..5`；主控已解析采样板 `GPS:lat,lon,speedkt` 并写入 MQTT payload（host test + app-a/app-b build 通过） | GPS 实板有星定位待验证；普通用户绑定后续做 |
+| EC801E 物联网 iot_ctrl | ✅ | App A 固化自动初始化/重连/5s 周期上报；2026-07-23 App A 烧录校验后，SWD 在精确 16s 窗口读到 `pub_ok_count=18→21`、`pub_fail_count=0`、`g_iot_state=40`、`mqtt_connected=1`；服务器已验证入库；主控已解析采样板 `GPS:lat,lon,speedkt` 并写入 MQTT payload | GPS 实板有星定位待验证；普通用户绑定后续做 |
 | MQTT 管理后台 V1 | ✅ | `hk-newapi` Docker Compose：Mosquitto 1883 + PostgreSQL + FastAPI 18080；本地 MQTT publish 与 EC801E publish 均已入库，API latest 返回最新数据；前端已重做为深色工业控制台，并用 Leaflet + CARTO dark/OSM 数据显示 GPS marker + 轨迹 | 仅管理员查看全部设备；普通用户绑定、TLS/HTTPS、下行命令后续做 |
 | THERMORIDE Premium 遥测前端 | ✅ | `server/upboard_iot/frontend`：React 19 + TypeScript strict + Vite + Tailwind 4 + shadcn/ui 风格组件 + ECharts + Leaflet + Zustand + React Query；已接 Cookie 鉴权 REST 初始快照 + SSE 实时刷新，FastAPI 同源托管 Vite SPA；`npm run test/typecheck/build`、Python compile、Compose config、线上健康/登录/设备/latest/SSE/静态资源及 Playwright 真实设备切换均通过，浏览器 0 error 0 warning；System Health 已改为 124px 紧凑仪表盘 + 可收缩两列状态网格，并在 1280×720 离线设备场景截图确认无重叠、无文本截断；已部署 `hk-newapi:18080` | 生产暂为 HTTP，TLS/HTTPS 仍待配置；NTC 温度仍依赖硬件标定参数 |
 | THERMORIDE Figma 可编辑设计 | ✅ | Figwright 已连接 Figma 文件《THERMORIDE 实时遥测平台》并整理为 `01 Screens`、`02 Components`、`03 Foundations`：含登录页、Dashboard 首屏、地图/24V 历史滚动页、执行器/NTC 上半区、NTC 全八路下半滚动页、组件库及颜色/字体/间距/圆角/阴影规范；已按 1280×720 网页实测尺寸校正登录布局、地图控制、曲线坐标轴、执行器卡片、NTC 真实行高及 System Health 紧凑响应式布局，Dashboard 与 Component Library 两处均截图验证无叠层，全部文本为 Geist；登录按钮已配置原型跳转到 Dashboard | 当前文件为本地/草稿连接，`fileKey=null`；如需分享链接需在 Figma 中保存到云端 |
@@ -60,6 +60,7 @@ STM32F407VET6 摩托车液冷系统主控板：受控上电、风扇/压缩机 P
 | 当前 App（2026-07-23，S3独立三执行器控制） | 27.57 KB / 128 KB（Slot 容量，21.53%） | 5.63 KB / 128 KB（SRAM1，4.40%） | text=28044, data=168, bss=5608；App A/B 构建通过；开机全关，0x20压缩机档位/开关、0x21风扇开关、0x22水泵开关，尚未烧录 |
 | 当前 App（2026-07-23，S3独立控制 + 水泵30% PWM） | 27.71 KB / 128 KB（Slot 容量，21.65%） | 5.63 KB / 128 KB（SRAM1，4.40%） | text=28204, data=168, bss=5608；App A `Programming Finished`/`Verified OK`；SWD验证开机压缩机/风扇/水泵全关，水泵duty预设30%但未输出 |
 | 当前 App（2026-07-23，压缩机PWM迁移PA0） | 27.61 KB / 128 KB（Slot容量，21.57%） | 5.63 KB / 128 KB（SRAM1，4.40%） | text=28096, data=168, bss=5608；Bootloader/App A烧录Program+Verify通过；VTOR=0x08020000，PA0 AF1，PA15 analog，TIM2 PSC=83/ARR=199/CCR1=0 |
+| 当前 App（2026-07-23，EC801E 5s 上报） | 27.61 KB / 128 KB（Slot容量，21.57%） | 5.63 KB / 128 KB（SRAM1，4.40%） | text=28096, data=168, bss=5608；App A/B 构建通过，App A 烧录 Verified OK；16s 内成功上报 3 包、失败 0 包 |
 | 上限 | 128 KB / Slot | 192 KB | F407VE 总 Flash 512 KB，OTA 布局占前 384 KB（App Slot 各 128 KB） |
 
 Flash 布局：

@@ -240,8 +240,6 @@
 - 想切回精确 FOC,在 main.c 启动序列里恢复一行 `LoadMinimumConfig()` 即可,函数代码留着
 - Motor Studio 调试若要重新接管,运行时 SWD 写 `g_mcf_i2c_disable = 1`(不再跨复位保留)
 
----
-
 ## 2026-05-11 — MCF8329A 电机方向控制位定位(仅记录,未改代码)
 
 **结论**:DIR 引脚(PD3)被屏蔽的真正位置是 **PERI_CONFIG1 (0xAA) bits[20:19] DIR_INPUT**,**不是** `main.c:86-89` 注释里说的 PIN_CONFIG (0xA4)。原注释定位错了寄存器,需要纠正。
@@ -866,3 +864,13 @@
 **排除方案**：前两条关于PA15蜂鸣器/TIM5压缩机或整体关闭蜂鸣器的方案均未实施并由本条取代；后续不得因PA0/PA15调整改动蜂鸣器模块。
 
 **烧录验证**：读取BKP0R=`0xA0A0A0A0`确认App A后，使用J-Link依次烧录Bootloader与App A，两次均显示Flash `Verify`和`O.K.`；未写params、未烧App B。复位后VTOR=`0x08020000`，GPIOA MODER显示PA0为AF、PA15为analog，AFRL的PA0为AF1；TIM2 CR1=`0x81`、CCER=`1`、PSC=`83`、ARR=`199`、CCR1=`0`。按最新ELF取址读取stop=1、gear=0、on=0、duty=0，主循环计数非零；PB14仍配置TIM1 AF1，原蜂鸣器路径保留。
+
+---
+
+## [2026-07-23] EC801E MQTT telemetry 周期调整为 5 秒
+
+**背景**：设备原先每 30 秒向云端发布一次 telemetry，当前产品需要提高遥测刷新频率。
+**决策**：将 `IOT_PUB_INTERVAL_MS` 从 30000 ms 调整为 5000 ms；保持现有串行 MQTT 发布状态机、20 秒发布超时和 5~60 秒重连退避不变。
+**原因**：状态机仅在上一包发布成功并回到 `CONNECTED` 后开始下一周期，不会因 5 秒配置重入正在进行的发布；改动范围最小且保留异常网络保护。
+**验证**：App A/B 构建通过，App A 经 J-Link/OpenOCD 烧录并 `Verified OK`；按最新 ELF 符号地址读取，精确 16 秒运行窗口内 `g_iot_pub_ok_count` 从 18 增至 21，`g_iot_pub_fail_count=0`、`g_iot_state=40`、`g_iot_mqtt_connected=1`。
+**排除方案**：新增独立 5 秒定时器或中断触发发布——现有主循环状态机已有毫秒调度且必须串行等待 MQTT 结果，额外定时源会增加重入风险而无收益。

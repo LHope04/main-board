@@ -105,7 +105,7 @@ upboard/{sn}/event
 - GPS 长期保存到 SQL，可通过后台和 API 查询历史点
 - 原始 JSON 会完整保存在 `telemetry.raw_json`，后续字段扩展不需要立即改库表
 
-当前 STM32 固件已经自动使用芯片 UID 生成 SN，例如 `UPB-0B506761`，并默认每 30 秒上报一次 telemetry。
+当前 STM32 固件已经自动使用芯片 UID 生成 SN，例如 `UPB-0B506761`，并默认每 5 秒上报一次 telemetry。
 
 ## 4. EC801E 上报方式
 
