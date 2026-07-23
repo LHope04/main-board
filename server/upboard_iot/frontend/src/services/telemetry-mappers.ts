@@ -124,6 +124,11 @@ function deriveCoolingLoadPercent(row: ApiTelemetryRow | null) {
   return Math.round(clamp((powerW / COOLING_REFERENCE_POWER_W) * 100, 0, 100));
 }
 
+function mapPumpDutyPercent(row: ApiTelemetryRow | null) {
+  const value = row?.pump_duty_pct ?? nestedNumber(row?.raw_json ?? null, "outputs", "pump_duty_pct");
+  return value == null ? null : Math.round(clamp(value, 0, 100));
+}
+
 function hasRecentFault(events: ApiEventRow[]) {
   const cutoff = Date.now() - 24 * 60 * 60 * 1000;
   return events.some((event) => Date.parse(event.received_at) >= cutoff && ["error", "critical", "fault"].includes(event.level.toLowerCase()));
@@ -211,6 +216,7 @@ export function mapTelemetryBundle(
       busCurrentA: latest?.bat24_i ?? null,
       vehicleInputV: latest?.v12_v ?? null,
       vehicleCharging: latest?.v12_v == null ? null : latest.v12_v >= 13.2,
+      pumpDutyPercent: mapPumpDutyPercent(latest),
       gps: {
         latitude: lastValidGps?.latitude ?? null,
         longitude: lastValidGps?.longitude ?? null,

@@ -1,7 +1,7 @@
 /**
  * @file    app/Src/iot_ctrl.c
  *
- * Quectel EC801E MQTT uplink state machine.
+ * Quectel EC801E MQTT uplink/downlink state machine.
  */
 #include "iot_ctrl.h"
 
@@ -49,6 +49,7 @@ enum {
     IOT_ST_WAIT_QMTCLOSE,
     IOT_ST_WAIT_QMTOPEN,
     IOT_ST_WAIT_QMTCONN,
+    IOT_ST_WAIT_QMTSUB,
     IOT_ST_CONNECTED = 40,
     IOT_ST_WAIT_PUB_PROMPT,
     IOT_ST_WAIT_PUB_RESULT,
@@ -65,6 +66,7 @@ enum {
     IOT_ERR_QMTPUBEX = 6,
     IOT_ERR_PAYLOAD_TOO_LONG = 7,
     IOT_ERR_QMTSTAT = 8,
+    IOT_ERR_QMTSUB = 9,
 };
 
 static UART_HandleTypeDef *s_huart;
@@ -82,6 +84,7 @@ static uint32_t s_wait_error_seq;
 static uint32_t s_wait_prompt_seq;
 static uint32_t s_wait_qmtopen_seq;
 static uint32_t s_wait_qmtconn_seq;
+static uint32_t s_wait_qmtsub_seq;
 static uint32_t s_wait_qmtpub_seq;
 static uint32_t s_wait_qmtstat_seq;
 static uint32_t s_seen_ok_seq;
@@ -90,9 +93,12 @@ static uint32_t s_qmtopen_seq;
 static uint32_t s_qmtopen_result = 0xFFFFFFFFU;
 static uint32_t s_qmtconn_seq;
 static uint32_t s_qmtconn_result = 0xFFFFFFFFU;
+static uint32_t s_qmtsub_seq;
+static uint32_t s_qmtsub_result = 0xFFFFFFFFU;
 static uint32_t s_qmtpub_seq;
 static uint32_t s_qmtpub_result = 0xFFFFFFFFU;
 static uint32_t s_qmtstat_seq;
+static uint32_t s_taken_pump_cmd_seq;
 static IotCtrl_TelemetrySnapshot s_snapshot;
 
 volatile uint32_t g_iot_poll_cnt = 0;
@@ -123,6 +129,10 @@ volatile uint32_t g_iot_tx_bytes = 0;
 volatile uint32_t g_iot_line_count = 0;
 volatile uint32_t g_iot_at_ok = 0;
 volatile uint32_t g_iot_at_error = 0;
+volatile uint32_t g_iot_sub_ok_count = 0;
+volatile uint32_t g_iot_pump_cmd_seq = 0;
+volatile uint32_t g_iot_pump_cmd_invalid_count = 0;
+volatile uint8_t  g_iot_pump_cmd_duty_pct = 0;
 volatile char     g_iot_device_sn[24];
 volatile char     g_iot_last_line[IOT_LINE_SIZE];
 volatile char     g_iot_last_cmd[IOT_CMD_SIZE];
@@ -187,6 +197,55 @@ static uint32_t parse_first_uint_after(const volatile char *line, const char *pr
     return value;
 }
 
+static const volatile char *find_text(const volatile char *line, const char *needle)
+{
+    if (*needle == '\0') return line;
+    for (; *line != '\0'; line++) {
+        const volatile char *p = line;
+        const char *n = needle;
+        while (*p != '\0' && *n != '\0' && *p == *n) {
+            p++;
+            n++;
+        }
+        if (*n == '\0') return line;
+    }
+    return NULL;
+}
+
+static void parse_pump_command(const volatile char *line)
+{
+    const volatile char *field;
+    uint32_t duty = 0U;
+
+    if (!line_starts_with(line, "+QMTRECV:") ||
+        !line_contains(line, "/command/pump")) {
+        return;
+    }
+
+    field = find_text(line, "\"duty_pct\"");
+    if (!field) {
+        g_iot_pump_cmd_invalid_count++;
+        return;
+    }
+    field += sizeof("\"duty_pct\"") - 1U;
+    while (*field == ' ' || *field == ':' || *field == '\"') field++;
+    if (*field < '0' || *field > '9') {
+        g_iot_pump_cmd_invalid_count++;
+        return;
+    }
+    while (*field >= '0' && *field <= '9') {
+        duty = duty * 10U + (uint32_t)(*field - '0');
+        field++;
+    }
+    if (duty > 100U) {
+        g_iot_pump_cmd_invalid_count++;
+        return;
+    }
+
+    g_iot_pump_cmd_duty_pct = (uint8_t)duty;
+    g_iot_pump_cmd_seq++;
+}
+
 static void parse_qmt_result(const volatile char *line)
 {
     if (line_starts_with(line, "+QMTOPEN:")) {
@@ -195,6 +254,9 @@ static void parse_qmt_result(const volatile char *line)
     } else if (line_starts_with(line, "+QMTCONN:")) {
         s_qmtconn_result = line_contains(line, "0,0,0") ? 0U : 1U;
         s_qmtconn_seq++;
+    } else if (line_starts_with(line, "+QMTSUB:")) {
+        s_qmtsub_result = line_contains(line, "0,1,0,1") ? 0U : 1U;
+        s_qmtsub_seq++;
     } else if (line_starts_with(line, "+QMTPUBEX:")) {
         s_qmtpub_result = line_contains(line, "0,0,0") ? 0U : 1U;
         s_qmtpub_seq++;
@@ -231,6 +293,7 @@ static void commit_line(void)
         }
     }
     parse_qmt_result(g_iot_last_line);
+    parse_pump_command(g_iot_last_line);
 }
 
 static void push_rx_byte(uint8_t b)
@@ -315,6 +378,7 @@ static void arm_wait(uint32_t timeout_ms)
     s_wait_prompt_seq = g_iot_prompt_count;
     s_wait_qmtopen_seq = s_qmtopen_seq;
     s_wait_qmtconn_seq = s_qmtconn_seq;
+    s_wait_qmtsub_seq = s_qmtsub_seq;
     s_wait_qmtpub_seq = s_qmtpub_seq;
     s_wait_qmtstat_seq = s_qmtstat_seq;
 }
@@ -451,11 +515,12 @@ static int build_payload(void)
     append_fixed3(payload, sizeof(payload), &pos, snap.v12_mv);
     appendf(payload, sizeof(payload),
             &pos,
-            "},\"outputs\":{\"boost\":%s,\"load\":%s,\"fan\":%s,\"pump\":%s,\"compressor\":%s}}",
+            "},\"outputs\":{\"boost\":%s,\"load\":%s,\"fan\":%s,\"pump\":%s,\"pump_duty_pct\":%u,\"compressor\":%s}}",
             json_bool(snap.boost_on),
             json_bool(snap.load_on),
             json_bool(snap.fan_on),
             json_bool(snap.pump_on),
+            (unsigned)snap.pump_duty_pct,
             json_bool(snap.compressor_on));
 
     if (pos >= sizeof(payload)) {
@@ -550,6 +615,17 @@ void IotCtrl_SetTelemetrySnapshot(const IotCtrl_TelemetrySnapshot *snapshot)
 void IotCtrl_ForceReconnect(void)
 {
     g_iot_force_reconnect = 1U;
+}
+
+int IotCtrl_TakePumpCommand(uint8_t *duty_pct)
+{
+    uint32_t seq;
+    if (!duty_pct) return 0;
+    seq = g_iot_pump_cmd_seq;
+    if (seq == s_taken_pump_cmd_seq) return 0;
+    *duty_pct = g_iot_pump_cmd_duty_pct;
+    s_taken_pump_cmd_seq = seq;
+    return 1;
 }
 
 void IotCtrl_Poll(void)
@@ -689,6 +765,29 @@ void IotCtrl_Poll(void)
     case IOT_ST_WAIT_QMTCONN:
         if (s_qmtconn_seq != s_wait_qmtconn_seq) {
             if (s_qmtconn_result == 0U) {
+                char cmd[IOT_CMD_SIZE];
+                init_device_sn();
+                (void)snprintf(cmd, sizeof(cmd),
+                               "AT+QMTSUB=0,1,\"%s/%s/command/pump\",1\r\n",
+                               IOT_MQTT_TOPIC_PREFIX,
+                               (const char *)g_iot_device_sn);
+                if (send_text(cmd)) {
+                    arm_wait(IOT_CONN_TIMEOUT_MS);
+                    enter_state(IOT_ST_WAIT_QMTSUB);
+                } else {
+                    enter_backoff(IOT_ERR_UART_TX);
+                }
+            } else {
+                enter_backoff(IOT_ERR_QMTCONN);
+            }
+        } else if (timed_out()) {
+            enter_backoff(IOT_ERR_TIMEOUT);
+        }
+        break;
+    case IOT_ST_WAIT_QMTSUB:
+        if (s_qmtsub_seq != s_wait_qmtsub_seq) {
+            if (s_qmtsub_result == 0U) {
+                g_iot_sub_ok_count++;
                 g_iot_mqtt_connected = 1;
                 g_iot_last_error = IOT_ERR_NONE;
                 s_backoff_ms = IOT_BACKOFF_MIN_MS;
@@ -696,8 +795,10 @@ void IotCtrl_Poll(void)
                 s_last_pub_ms = now - IOT_PUB_INTERVAL_MS;
                 enter_state(IOT_ST_CONNECTED);
             } else {
-                enter_backoff(IOT_ERR_QMTCONN);
+                enter_backoff(IOT_ERR_QMTSUB);
             }
+        } else if (s_seen_error_seq != s_wait_error_seq) {
+            enter_backoff(IOT_ERR_QMTSUB);
         } else if (timed_out()) {
             enter_backoff(IOT_ERR_TIMEOUT);
         }

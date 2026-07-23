@@ -48,6 +48,20 @@ upboard/{sn}/status
 upboard/{sn}/event
 ```
 
+Devices subscribe:
+
+```text
+upboard/{sn}/command/pump
+```
+
+Pump command payload:
+
+```json
+{"duty_pct":60}
+```
+
+`0` stops the pump. `1..100` enables the pump and sets the 100 Hz software PWM duty cycle. Commands use QoS 1 and are not retained.
+
 The first version uses one MQTT device account for all boards:
 
 ```text
@@ -68,7 +82,7 @@ Each payload must include `sn`. If it is missing, the server uses the SN segment
   "gps": {"lat": 22.3, "lon": 114.1, "fix": true},
   "sampler": {"ntc_raw": [1, 2, 3, 4, 5, 6, 7, 8]},
   "power": {"bat24_v": 24.1, "bat24_i": 0.3, "v12_v": 12.4},
-  "outputs": {"boost": true, "load": true, "fan": false, "pump": false, "compressor": false}
+  "outputs": {"boost": true, "load": true, "fan": false, "pump": false, "pump_duty_pct": 0, "compressor": false}
 }
 ```
 

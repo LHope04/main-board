@@ -43,7 +43,7 @@ function Dashboard({ username, onLogout, logoutPending }: { username: string; on
     enabled: Boolean(selectedDevice),
     retry: 1,
     staleTime: 2_000,
-    refetchInterval: autoRefresh ? (isMockDataSource ? 4_000 : 30_000) : false,
+    refetchInterval: autoRefresh ? (isMockDataSource ? 4_000 : 5_000) : false,
   });
 
   return (

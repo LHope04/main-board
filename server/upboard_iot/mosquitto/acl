@@ -1,8 +1,9 @@
 user upboard_ingest
 topic read upboard/#
+topic write upboard/+/command/#
 
 user upboard_device
 topic write upboard/+/telemetry
 topic write upboard/+/status
 topic write upboard/+/event
-
+pattern read upboard/%c/command/#

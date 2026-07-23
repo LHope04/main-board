@@ -22,8 +22,10 @@ class MqttIngest:
         self._client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, client_id="upboard-iot-ingest")
         self._client.username_pw_set(settings.mqtt_username, settings.mqtt_password)
         self._client.on_connect = self._on_connect
+        self._client.on_disconnect = self._on_disconnect
         self._client.on_message = self._on_message
         self._started = threading.Event()
+        self._connected = threading.Event()
 
     def start(self) -> None:
         self._client.connect_async(self.settings.mqtt_host, self.settings.mqtt_port, keepalive=60)
@@ -38,9 +40,29 @@ class MqttIngest:
 
     def _on_connect(self, client, userdata, flags, reason_code, properties) -> None:
         LOGGER.info("MQTT connected: %s", reason_code)
+        if reason_code != 0:
+            self._connected.clear()
+            return
+        self._connected.set()
         client.subscribe("upboard/+/telemetry", qos=0)
         client.subscribe("upboard/+/status", qos=0)
         client.subscribe("upboard/+/event", qos=0)
+
+    def _on_disconnect(self, client, userdata, disconnect_flags, reason_code, properties) -> None:
+        self._connected.clear()
+        LOGGER.warning("MQTT disconnected: %s", reason_code)
+
+    def publish_json(self, topic: str, payload: dict[str, Any], qos: int = 1) -> int:
+        if not self._connected.wait(timeout=2.0):
+            raise RuntimeError("MQTT broker is not connected")
+        encoded = json.dumps(payload, separators=(",", ":"), ensure_ascii=True)
+        info = self._client.publish(topic, encoded, qos=qos, retain=False)
+        if info.rc != mqtt.MQTT_ERR_SUCCESS:
+            raise RuntimeError(f"MQTT publish failed with rc={info.rc}")
+        info.wait_for_publish(timeout=3.0)
+        if not info.is_published():
+            raise RuntimeError("MQTT publish acknowledgement timed out")
+        return int(info.mid)
 
     def _on_message(self, client, userdata, msg) -> None:
         topic = msg.topic
@@ -66,4 +88,3 @@ class MqttIngest:
             self.on_event(event)
         except Exception:
             LOGGER.exception("Failed to store MQTT message from %s", topic)
-

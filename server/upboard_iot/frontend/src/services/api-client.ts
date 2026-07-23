@@ -1,4 +1,4 @@
-import type { ApiLoginResponse, ApiSession } from "@/types/api";
+import type { ApiLoginResponse, ApiPumpControlResponse, ApiSession } from "@/types/api";
 
 export class ApiError extends Error {
   constructor(
@@ -48,4 +48,11 @@ export function login(username: string, password: string) {
 
 export function logout() {
   return requestJson<{ ok: boolean }>("/api/auth/logout", { method: "POST" });
+}
+
+export function setPumpDuty(deviceId: string, dutyPct: number) {
+  return requestJson<ApiPumpControlResponse>(`/api/devices/${encodeURIComponent(deviceId)}/controls/pump`, {
+    method: "POST",
+    body: JSON.stringify({ duty_pct: dutyPct }),
+  });
 }

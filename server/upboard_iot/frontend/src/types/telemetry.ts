@@ -48,6 +48,7 @@ export interface TelemetryData {
   busCurrentA: number | null;
   vehicleInputV: number | null;
   vehicleCharging: boolean | null;
+  pumpDutyPercent: number | null;
   gps: GpsData;
   outputs: ActuatorOutput[];
   ntcChannels: NtcChannel[];

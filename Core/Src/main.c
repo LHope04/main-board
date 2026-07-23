@@ -517,6 +517,15 @@ int main(void)
         RemoteCtrl_Poll();
         IotCtrl_Poll();
 
+        {
+            uint8_t pump_duty_pct;
+            if (IotCtrl_TakePumpCommand(&pump_duty_pct)) {
+                PowerCtrl_SetPumpDuty(pump_duty_pct);
+                PowerCtrl_EnablePump(pump_duty_pct > 0U);
+                s_iot_pump_on = (pump_duty_pct > 0U) ? 1U : 0U;
+            }
+        }
+
         if (EspComm_TakeOtaSelfTestRequest()) {
             Ota_SelfTest(32U * 1024U);
         }
@@ -552,7 +561,7 @@ int main(void)
                         s_iot_fan_on = 1U;
                         s_iot_pump_on = 1U;
                         PowerCtrl_EnableFanVcc(1U);
-                        PowerCtrl_EnablePump(1U); /* 100Hz / 30% software PWM */
+                        PowerCtrl_EnablePump(1U); /* 100Hz software PWM, current duty setting */
                         CompressorCtrl_SetDirection(1U); /* PC9 LOW = reverse */
                         if (g_compressor_on) {
                             CompressorCtrl_SetDuty(duty_pct);
@@ -833,6 +842,7 @@ int main(void)
                 iot.load_on = 1U;
                 iot.fan_on = s_iot_fan_on;
                 iot.pump_on = s_iot_pump_on;
+                iot.pump_duty_pct = s_iot_pump_on ? g_pump_duty_pct : 0U;
                 iot.compressor_on = g_compressor_on;
                 iot.sampler_stale = SensorAcq_IsStale();
                 SamplerComm_GpsSnapshot gps = {0};

@@ -25,14 +25,14 @@ STM32F407VET6 摩托车液冷系统主控板：受控上电、风扇/压缩机 P
 | NTC 采集 sensor_acq | ✅ | ADC1+DMA2 8 通道循环扫描 | 仍为原始 ADC 值，未转温度（L3） |
 | 功率监测 INA226×3 | ✅ | I2C1/2/3 各一路，500ms 轮询 | cal_val 未实测校准（L4） |
 | 蜂鸣器 buzzer | ✅ | 原有PB14/TIM1_CH2N代码保持不变，开机大疆音与按键提示音均保留 | — |
-| 充电/水泵控制 | 🚧 | 唯一 `SET_GEAR(0x20)` 的on位联动水泵PWM；on=1启用100Hz/30%，on=0 PC11 LOW，待构建/烧录 | 需联调S3开关并测量PC11波形与实际转速 |
+| 充电/水泵控制 | 🚧 | PC11 100Hz软件PWM支持0–100%；云端60%→0%闭环已实机验证，SWD确认duty/enable/ODR与命令一致，telemetry同步回传 | 仍需联调S3开关，并用示波器/流量计标定占空比与实际流量 |
 | 保护逻辑 protection | ⬜ | — | 待开发，依赖 NTC→℃ 转换 |
 | Bootloader（OTA Phase 1~5） | ✅ | 0x08000000 独立工程，A/B 槽跳转 + LED 指示 | — |
 | OTA 协议（Phase 6） | ✅ | BLE→ESP32-C3→USART2 端到端通过（2026-04-18） | — |
 | OTA 回滚（Phase 7） | ✅ | 4 场景验证：正常/boot_count/CRC/稳态 | 双向 OTA 联调 + CI 待做 |
-| EC801E 物联网 iot_ctrl | ✅ | App A 固化自动初始化/重连/5s 周期上报；2026-07-23 App A 烧录校验后，SWD 在精确 16s 窗口读到 `pub_ok_count=18→21`、`pub_fail_count=0`、`g_iot_state=40`、`mqtt_connected=1`；服务器已验证入库；主控已解析采样板 `GPS:lat,lon,speedkt` 并写入 MQTT payload | GPS 实板有星定位待验证；普通用户绑定后续做 |
-| MQTT 管理后台 V1 | ✅ | `hk-newapi` Docker Compose：Mosquitto 1883 + PostgreSQL + FastAPI 18080；本地 MQTT publish 与 EC801E publish 均已入库，API latest 返回最新数据；前端已重做为深色工业控制台，并用 Leaflet + CARTO dark/OSM 数据显示 GPS marker + 轨迹 | 仅管理员查看全部设备；普通用户绑定、TLS/HTTPS、下行命令后续做 |
-| THERMORIDE Premium 遥测前端 | ✅ | `server/upboard_iot/frontend`：React 19 + TypeScript strict + Vite + Tailwind 4 + shadcn/ui 风格组件 + ECharts + Leaflet + Zustand + React Query；已接 Cookie 鉴权 REST 初始快照 + SSE 实时刷新，FastAPI 同源托管 Vite SPA；`npm run test/typecheck/build`、Python compile、Compose config、线上健康/登录/设备/latest/SSE/静态资源及 Playwright 真实设备切换均通过，浏览器 0 error 0 warning；System Health 已改为 124px 紧凑仪表盘 + 可收缩两列状态网格，并在 1280×720 离线设备场景截图确认无重叠、无文本截断；已部署 `hk-newapi:18080` | 生产暂为 HTTP，TLS/HTTPS 仍待配置；NTC 温度仍依赖硬件标定参数 |
+| EC801E 物联网 iot_ctrl | ✅ | App A 固化自动初始化/重连/5s 周期上报；MQTT连接后订阅 `upboard/{sn}/command/pump`，UART ISR解析命令并由主循环执行；2026-07-23实机收到60%和0%命令，序号递增、非法计数0，telemetry均在5s周期内回传 | GPS 实板有星定位待验证；普通用户绑定后续做 |
+| MQTT 管理后台 V1 | ✅ | `hk-newapi` Docker Compose：Mosquitto 1883 + PostgreSQL + FastAPI 18080；遥测入库/latest API已验证；新增管理员水泵控制API，以QoS1向设备专属主题下发0–100% duty；生产API→MQTT→设备→telemetry闭环已验证 | 仅管理员查看全部设备；普通用户绑定、TLS/HTTPS后续做 |
+| THERMORIDE Premium 遥测前端 | ✅ | `server/upboard_iot/frontend`：React 19 + TypeScript strict + Vite + Tailwind 4 + shadcn/ui 风格组件 + ECharts + Leaflet + Zustand + React Query；底部新增水泵流量控制面板，支持滑杆/预设/停止及设备回传确认；线上60%与0%实机闭环、401/422、截图及浏览器0 error 0 warning已验证；已部署 `hk-newapi:18080` | 生产暂为 HTTP，TLS/HTTPS仍待配置；NTC温度和水泵实际流量仍依赖硬件标定 |
 | THERMORIDE Figma 可编辑设计 | ✅ | Figwright 已连接 Figma 文件《THERMORIDE 实时遥测平台》并整理为 `01 Screens`、`02 Components`、`03 Foundations`：含登录页、Dashboard 首屏、地图/24V 历史滚动页、执行器/NTC 上半区、NTC 全八路下半滚动页、组件库及颜色/字体/间距/圆角/阴影规范；已按 1280×720 网页实测尺寸校正登录布局、地图控制、曲线坐标轴、执行器卡片、NTC 真实行高及 System Health 紧凑响应式布局，Dashboard 与 Component Library 两处均截图验证无叠层，全部文本为 Geist；登录按钮已配置原型跳转到 Dashboard | 当前文件为本地/草稿连接，`fileKey=null`；如需分享链接需在 Figma 中保存到云端 |
 
 状态说明：⬜ 未开始 · 🚧 开发中 · ✅ 已验证
@@ -61,6 +61,7 @@ STM32F407VET6 摩托车液冷系统主控板：受控上电、风扇/压缩机 P
 | 当前 App（2026-07-23，S3独立控制 + 水泵30% PWM） | 27.71 KB / 128 KB（Slot 容量，21.65%） | 5.63 KB / 128 KB（SRAM1，4.40%） | text=28204, data=168, bss=5608；App A `Programming Finished`/`Verified OK`；SWD验证开机压缩机/风扇/水泵全关，水泵duty预设30%但未输出 |
 | 当前 App（2026-07-23，压缩机PWM迁移PA0） | 27.61 KB / 128 KB（Slot容量，21.57%） | 5.63 KB / 128 KB（SRAM1，4.40%） | text=28096, data=168, bss=5608；Bootloader/App A烧录Program+Verify通过；VTOR=0x08020000，PA0 AF1，PA15 analog，TIM2 PSC=83/ARR=199/CCR1=0 |
 | 当前 App（2026-07-23，EC801E 5s 上报） | 27.61 KB / 128 KB（Slot容量，21.57%） | 5.63 KB / 128 KB（SRAM1，4.40%） | text=28096, data=168, bss=5608；App A/B 构建通过，App A 烧录 Verified OK；16s 内成功上报 3 包、失败 0 包 |
+| 当前 App（2026-07-23，云端水泵调速） | 28.91 KB / 128 KB（Slot容量，22.05%） | 5.81 KB / 128 KB（SRAM1，4.43%） | text=28736, data=172, bss=5636；App A/B构建通过，App A烧录Verified OK；60%→0%云端闭环实机验证 |
 | 上限 | 128 KB / Slot | 192 KB | F407VE 总 Flash 512 KB，OTA 布局占前 384 KB（App Slot 各 128 KB） |
 
 Flash 布局：
@@ -95,7 +96,7 @@ Flash 布局：
 | L7 | EC801E POW/NET 指示灯未亮 | 串口已收到 `RDY` 和 `OK`，且已完成蜂窝 PDP + TCP 到 `38.76.206.42:22` 冒烟；灯不作为唯一上电/联网判断；若需定位灯，测 EC801E VDD_EXT/NETLIGHT/LED 供电路径 |
 | L8 | MCF8329A `GATE_DRIVER_FAULT_STATUS=0x82000000` | 已解码为 GVDD_UV；测 U21 pin8，正常 11.5~15.5V，检查 C88 10uF 与 C87 470nF |
 | L9 | TI Table 8-1 通用参数空载仅勉强起转 | 说明控制链路可工作但电机模型/启动参数不匹配；带压缩机负载前需 MPET 获取本机 Rs/L/Ke，或回退已验证参数 |
-| L10（默认状态已验证，待S3联调） | 水泵仅有两线供电开关，采用PC11供电软PWM调速 | App A已烧录；开机PC11 LOW、duty=30、startup=0；待验证0x22 ON时100Hz/30%（3ms HIGH/7ms LOW） |
+| L10（云端闭环已验证，待S3/流量标定） | 水泵仅有两线供电开关，采用PC11供电软PWM调速 | App A已烧录；云端60%与0%命令的duty/enable/ODR及telemetry均已验证；仍需S3联调，并用示波器测100Hz占空比、流量计建立duty→流量曲线 |
 | L11（已解决 2026-07-23） | J-Link 曾可枚举但 SWD 报 `cannot read IDR` | 本次已读到 DPIDR=0x2BA01477、DBGMCU_ID=0x10076413，并完成 App A program/verify |
 | L12（PA0迁移已烧录，待示波器） | V7压缩机接口现为PA0 PWM、PC9 DIR、PA8 STOP | Bootloader/App A已烧录；SWD确认PA0 AF1、TIM2 5kHz配置和默认CCR1=0，仍需示波器测实际引脚波形 |
 | L13（代码已烧录，待S3联调） | C3/S3重复发送SET_GEAR ON会反复重启压缩机 | 当前代码仅OFF→ON调用Start，运行中重复ON或换挡只调用SetDuty；待S3命令验证 |

@@ -39,6 +39,7 @@ function telemetryRow(overrides: Partial<ApiTelemetryRow> = {}): ApiTelemetryRow
     load_on: true,
     fan_on: false,
     pump_on: null,
+    pump_duty_pct: null,
     compressor_on: true,
     raw_json: { gps: { accuracy_m: 7 } },
     ...overrides,
@@ -66,6 +67,7 @@ describe("telemetry mappers", () => {
     expect(bundle.telemetry.coolingLoadPercent).toBeNull();
     expect(bundle.telemetry.vehicleCharging).toBeNull();
     expect(bundle.telemetry.outputs.find((output) => output.id === "pump")?.status).toBe("unknown");
+    expect(bundle.telemetry.pumpDutyPercent).toBeNull();
     expect(bundle.telemetry.gps.accuracyM).toBeNull();
     expect(bundle.telemetry.ntcChannels[0]?.temperatureC).toBeNull();
   });
@@ -97,5 +99,14 @@ describe("telemetry mappers", () => {
     expect(bundle.routeStats?.distanceKm).toBeGreaterThan(1);
     expect(bundle.routeStats?.durationMinutes).toBe(10);
     expect(deriveRouteStats(bundle.gpsTrack)?.averageSpeedKmh).toBeGreaterThan(0);
+  });
+
+  it("maps the reported pump duty from the database or raw telemetry", () => {
+    const device = mapDevice(deviceRow(4), now);
+    const databaseRow = telemetryRow({ pump_duty_pct: 65 });
+    expect(mapTelemetryBundle(device, databaseRow, [databaseRow], [], []).telemetry.pumpDutyPercent).toBe(65);
+
+    const rawRow = telemetryRow({ pump_duty_pct: null, raw_json: { outputs: { pump_duty_pct: 35 } } });
+    expect(mapTelemetryBundle(device, rawRow, [rawRow], [], []).telemetry.pumpDutyPercent).toBe(35);
   });
 });

@@ -25,4 +25,9 @@ void PowerCtrl_EnablePump(uint8_t en);        /* PC11: enable/disable 100Hz soft
 void PowerCtrl_SetPumpDuty(uint8_t duty_pct); /* 0..100%; default 30% */
 void PowerCtrl_PumpPwmTick2kHz(void);          /* call from TIM7 update ISR */
 
+extern volatile uint8_t  g_pump_duty_pct;
+extern volatile uint8_t  g_pump_pwm_phase;
+extern volatile uint8_t  g_pump_output_on;
+extern volatile uint16_t g_pump_startup_ticks;
+
 #endif /* __POWER_CTRL_H */

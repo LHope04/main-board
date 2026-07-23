@@ -108,6 +108,7 @@ export function createMockBundle(device: CoolingDevice): DeviceTelemetryBundle {
       busCurrentA: lastCurrent,
       vehicleInputV: Number((13.86 - seed * 0.02).toFixed(2)),
       vehicleCharging: device.status !== "offline",
+      pumpDutyPercent: device.status === "offline" ? 0 : 30,
       gps: {
         latitude: lastTrackPoint?.latitude ?? 34.0522,
         longitude: lastTrackPoint?.longitude ?? -118.2437,

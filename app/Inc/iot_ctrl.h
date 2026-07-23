@@ -4,9 +4,9 @@
 #include "stm32f4xx_hal.h"
 
 /*
- * EC801E MQTT uplink over USART2 PA2/PA3, 115200 8N1.
- * The module owns the AT session: PDP activation, MQTT open/connect, QMTPUBEX
- * telemetry publish, reconnect/backoff, and J-Link-readable diagnostics.
+ * EC801E MQTT link over USART2 PA2/PA3, 115200 8N1.
+ * The module owns the AT session: PDP activation, MQTT open/connect/subscribe,
+ * telemetry publish, pump-command receive, reconnect/backoff, and diagnostics.
  */
 
 typedef struct {
@@ -22,6 +22,7 @@ typedef struct {
     uint8_t  load_on;
     uint8_t  fan_on;
     uint8_t  pump_on;
+    uint8_t  pump_duty_pct;
     uint8_t  compressor_on;
     uint8_t  sampler_stale;
 } IotCtrl_TelemetrySnapshot;
@@ -31,6 +32,7 @@ void IotCtrl_RxISR(void);
 void IotCtrl_Poll(void);
 void IotCtrl_SetTelemetrySnapshot(const IotCtrl_TelemetrySnapshot *snapshot);
 void IotCtrl_ForceReconnect(void);
+int  IotCtrl_TakePumpCommand(uint8_t *duty_pct);
 
 extern volatile uint32_t g_iot_poll_cnt;
 extern volatile uint32_t g_iot_enable;
@@ -60,6 +62,10 @@ extern volatile uint32_t g_iot_tx_bytes;
 extern volatile uint32_t g_iot_line_count;
 extern volatile uint32_t g_iot_at_ok;
 extern volatile uint32_t g_iot_at_error;
+extern volatile uint32_t g_iot_sub_ok_count;
+extern volatile uint32_t g_iot_pump_cmd_seq;
+extern volatile uint32_t g_iot_pump_cmd_invalid_count;
+extern volatile uint8_t  g_iot_pump_cmd_duty_pct;
 extern volatile char     g_iot_device_sn[24];
 extern volatile char     g_iot_last_line[96];
 extern volatile char     g_iot_last_cmd[160];

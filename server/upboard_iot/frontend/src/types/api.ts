@@ -10,6 +10,14 @@ export interface ApiLoginResponse {
   role: string;
 }
 
+export interface ApiPumpControlResponse {
+  ok: boolean;
+  device: string;
+  topic: string;
+  duty_pct: number;
+  message_id: number;
+}
+
 export interface ApiDeviceRow {
   id: number | string;
   sn: string;
@@ -42,6 +50,7 @@ export interface ApiTelemetryRow {
   load_on: boolean | null;
   fan_on: boolean | null;
   pump_on: boolean | null;
+  pump_duty_pct: number | null;
   compressor_on: boolean | null;
   raw_json: Record<string, unknown> | null;
 }

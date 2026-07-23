@@ -1,6 +1,6 @@
 # Upboard IoT 管理后台使用说明
 
-本文档对应第一版管理员后台：管理员可查看所有设备的实时数据和历史数据；普通用户绑定、HTTPS/TLS、下行命令后续再做。
+本文档对应管理员后台：管理员可查看所有设备的实时数据和历史数据，并可对在线设备远程调节水泵占空比；普通用户绑定和 HTTPS/TLS 后续再做。
 
 ## 1. 访问后台
 
@@ -27,6 +27,7 @@ ADMIN_PASSWORD=<管理员密码>
 - 24V 电压历史
 - GPS 历史点地图（Leaflet + CARTO dark/OSM 数据，显示最新点和轨迹）
 - 最近事件
+- 页面底部水泵流速控制：0% 关闭，1-100% 设置 100Hz 软件 PWM 占空比
 
 在线判断规则：设备 `last_seen_at` 距当前时间小于 90 秒时显示在线。
 
@@ -75,6 +76,20 @@ upboard/{sn}/status
 upboard/{sn}/event
 ```
 
+设备订阅主题：
+
+```text
+upboard/{sn}/command/pump
+```
+
+水泵命令 payload：
+
+```json
+{"duty_pct": 60}
+```
+
+`duty_pct=0` 表示关闭水泵，`1..100` 表示启用水泵并设置占空比。命令不 retain，设备离线时不会在下次启动自动执行旧命令。
+
 第一版所有设备共用一个 MQTT 账号：
 
 ```text
@@ -94,7 +109,7 @@ upboard/{sn}/event
   "gps": {"lat": 22.300001, "lon": 114.100002, "fix": true},
   "sampler": {"ntc_raw": [1891, 10, 9, 10, 2538, 2540, 2537, 2537]},
   "power": {"bat24_v": 24.1, "bat24_i": 0.3, "v12_v": 12.4},
-  "outputs": {"boost": true, "load": true, "fan": false, "pump": false, "compressor": false}
+  "outputs": {"boost": true, "load": true, "fan": false, "pump": false, "pump_duty_pct": 0, "compressor": false}
 }
 ```
 
@@ -107,7 +122,20 @@ upboard/{sn}/event
 
 当前 STM32 固件已经自动使用芯片 UID 生成 SN，例如 `UPB-0B506761`，并默认每 5 秒上报一次 telemetry。
 
-## 4. EC801E 上报方式
+## 4. 水泵远程控制 API
+
+登录后调用：
+
+```text
+POST /api/devices/{sn}/controls/pump
+Content-Type: application/json
+
+{"duty_pct":60}
+```
+
+接口只允许管理员会话，范围为 `0..100`。成功返回 MQTT topic、目标占空比和 broker message id；实际执行结果以随后 telemetry 中的 `outputs.pump` 与 `outputs.pump_duty_pct` 为准。
+
+## 5. EC801E 上报方式
 
 EC801E 已验证使用 `QMTPUBEX` 长度模式，避免 `QMTPUB` + Ctrl-Z 的交互结束符不稳定。
 
@@ -145,7 +173,7 @@ print(len(p.encode("utf-8")))
 PY
 ```
 
-## 5. 手动模拟上报
+## 6. 手动模拟上报
 
 在服务器上发布一条测试 telemetry：
 
@@ -165,7 +193,7 @@ docker compose exec -T mqtt sh -lc \
 
 发布后刷新后台，或查询 API。
 
-## 6. API 查询
+## 7. API 查询
 
 登录并保存 cookie：
 
@@ -216,7 +244,7 @@ curl -N -b /tmp/upboard_cookie.txt \
   http://127.0.0.1:18080/api/stream
 ```
 
-## 7. 数据库查询
+## 8. 数据库查询
 
 进入 PostgreSQL 查询最近 telemetry：
 
@@ -239,7 +267,7 @@ docker compose exec -T postgres psql \
   -c "select received_at, latitude, longitude from telemetry where sn='UPB-DEMO-001' and latitude is not null and longitude is not null order by received_at desc limit 100;"
 ```
 
-## 8. 常见问题
+## 9. 常见问题
 
 ### 后台打不开
 

@@ -874,3 +874,22 @@
 **原因**：状态机仅在上一包发布成功并回到 `CONNECTED` 后开始下一周期，不会因 5 秒配置重入正在进行的发布；改动范围最小且保留异常网络保护。
 **验证**：App A/B 构建通过，App A 经 J-Link/OpenOCD 烧录并 `Verified OK`；按最新 ELF 符号地址读取，精确 16 秒运行窗口内 `g_iot_pub_ok_count` 从 18 增至 21，`g_iot_pub_fail_count=0`、`g_iot_state=40`、`g_iot_mqtt_connected=1`。
 **排除方案**：新增独立 5 秒定时器或中断触发发布——现有主循环状态机已有毫秒调度且必须串行等待 MQTT 结果，额外定时源会增加重入风险而无收益。
+
+---
+
+## [2026-07-23] 云端水泵调速采用设备专属 MQTT 下行主题
+
+**背景**：现有 EC801E 链路只向 `upboard/{sn}/telemetry` 上报，云端控制台无法向设备下发水泵流速；STM32 已具备 PC11 100Hz 软件 PWM 和 0-100% duty 设置能力。
+**决策**：新增认证接口 `POST /api/devices/{sn}/controls/pump`，服务器以 QoS 1 发布到 `upboard/{sn}/command/pump`，payload 为 `{"duty_pct":N}`；`N=0` 表示关闭，`1..100` 表示启用并设置占空比。EC801E MQTT 连接后订阅本机 SN 的专属主题，主循环通过 `IotCtrl_TakePumpCommand()` 取出命令并调用 `PowerCtrl_SetPumpDuty()` / `PowerCtrl_EnablePump()`。telemetry 同步上报实际 `pump_duty_pct` 形成闭环。
+**原因**：设备专属主题避免广播误控；单字段 payload 易于 EC801E URC 行解析；0 兼作关闭可保持 API 和固件状态机简单；执行动作留在主循环，避免 AT 模块直接依赖电源控制模块或在 UART 中断中操作 GPIO。
+**排除方案**：服务器直接复用 telemetry 主题下发会造成方向混淆；广播 `upboard/+/command` 有误控风险；在 USART2 ISR 内解析 JSON并改 PWM 会扩大中断时延和共享状态竞态；仅下发开关无法满足流速调节需求。
+
+---
+
+## [2026-07-23] 云端水泵调速端到端实机验证
+
+**轮次结果**：假设“控制面板下发的占空比可经FastAPI、Mosquitto和EC801E到达STM32，并在下一次5秒telemetry中形成闭环”成立；排除了“界面仅显示接受但设备未执行”和“设备执行但云端未回传”。
+**60%验证**：浏览器提交60%后，按最新App A ELF重新解析符号并通过J-Link SWD读取：`g_iot_pump_cmd_seq=2`、`g_iot_pump_cmd_duty_pct=60`、`g_iot_pump_cmd_invalid_count=0`、`s_pump_enabled=1`、`g_pump_duty_pct=60`。云端latest telemetry `seq=70`回传`pump=true`、`pump_duty_pct=60`，页面显示`Device confirmed 60% output`。
+**安全收尾验证**：浏览器提交0%后，同样重新解析符号再读取：命令序号增至3、命令/运行duty均为0、非法计数0、`s_pump_enabled=0`、PWM phase=0、GPIOC ODR=0（PC11 LOW）。云端latest telemetry `seq=93`回传`pump=false`、`pump_duty_pct=0`，页面显示`Device confirmed 0% output`；最终水泵保持停止。
+**接口与页面验证**：未登录控制请求返回401，`duty_pct=101`返回422；生产页面底部控制面板在60%和0%状态均截图，干净重载后浏览器控制台0 error、0 warning。
+**回归验证**：App A/B均可从当前工作树增量构建，text=28736、data=172、bss=5636；带`UNIT_TEST`的EC801E主机状态机测试通过；前端Vitest 6/6、TypeScript检查和生产构建通过；后端Python语法、Docker Compose配置及线上`/healthz`通过。

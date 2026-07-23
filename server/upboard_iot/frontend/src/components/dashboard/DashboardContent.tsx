@@ -16,6 +16,7 @@ import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { OfflineBanner } from "@/components/dashboard/DashboardStates";
 import { LiveIndicator } from "@/components/dashboard/LiveIndicator";
 import { NtcSensorPanel } from "@/components/dashboard/NtcSensorPanel";
+import { PumpControlPanel } from "@/components/dashboard/PumpControlPanel";
 import { SummaryCard } from "@/components/dashboard/SummaryCard";
 import { SystemHealthCard } from "@/components/dashboard/SystemHealthCard";
 import { TelemetryMetricCard } from "@/components/dashboard/TelemetryMetricCard";
@@ -50,6 +51,7 @@ export function DashboardContent({ device, bundle, refreshing, onRefresh, device
   const gpsCoordinates = telemetry.gps.latitude != null && telemetry.gps.longitude != null
     ? `${telemetry.gps.latitude.toFixed(4)}, ${telemetry.gps.longitude.toFixed(4)}`
     : "Unavailable";
+  const pumpOutput = telemetry.outputs.find((output) => output.id === "pump");
 
   return (
     <motion.div
@@ -104,6 +106,11 @@ export function DashboardContent({ device, bundle, refreshing, onRefresh, device
 
       <ActuatorStatusPanel outputs={telemetry.outputs} />
       <NtcSensorPanel channels={telemetry.ntcChannels} />
+      <PumpControlPanel
+        device={device}
+        reportedDutyPercent={telemetry.pumpDutyPercent}
+        pumpStatus={pumpOutput?.status ?? "unknown"}
+      />
     </motion.div>
   );
 }

@@ -11,6 +11,7 @@ from typing import Any
 from fastapi import Cookie, FastAPI, HTTPException, Request, Response
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel, Field
 
 from . import auth, db
 from .config import Settings, load_settings
@@ -27,6 +28,10 @@ WEB_ROOT = FRONTEND_DIST_DIR if (FRONTEND_DIST_DIR / "index.html").is_file() els
 SESSION_COOKIE = "upboard_iot_session"
 subscribers: set[asyncio.Queue[dict[str, Any]]] = set()
 ingest: MqttIngest | None = None
+
+
+class PumpControlRequest(BaseModel):
+    duty_pct: int = Field(ge=0, le=100)
 
 
 def publish_realtime(event: dict[str, Any]) -> None:
@@ -144,6 +149,34 @@ def gps(sn: str, limit: int = 500, _session=Cookie(default=None, alias=SESSION_C
 def events(sn: str, limit: int = 200, _session=Cookie(default=None, alias=SESSION_COOKIE)):
     require_session(_session)
     return {"device": sn, "events": db.events_history(SETTINGS.database_url, sn, limit)}
+
+
+@app.post("/api/devices/{sn}/controls/pump")
+def control_pump(
+    sn: str,
+    command: PumpControlRequest,
+    _session=Cookie(default=None, alias=SESSION_COOKIE),
+):
+    session = require_session(_session)
+    if session.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="admin role required")
+    if not db.get_device(SETTINGS.database_url, sn):
+        raise HTTPException(status_code=404, detail="device not found")
+    if ingest is None:
+        raise HTTPException(status_code=503, detail="MQTT service unavailable")
+
+    topic = f"upboard/{sn}/command/pump"
+    try:
+        message_id = ingest.publish_json(topic, {"duty_pct": command.duty_pct}, qos=1)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    return {
+        "ok": True,
+        "device": sn,
+        "topic": topic,
+        "duty_pct": command.duty_pct,
+        "message_id": message_id,
+    }
 
 
 @app.get("/api/stream")

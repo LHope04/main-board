@@ -58,6 +58,7 @@ CREATE TABLE IF NOT EXISTS telemetry (
     load_on BOOLEAN,
     fan_on BOOLEAN,
     pump_on BOOLEAN,
+    pump_duty_pct INTEGER,
     compressor_on BOOLEAN,
     topic TEXT NOT NULL,
     raw_json JSONB NOT NULL
@@ -67,6 +68,9 @@ CREATE INDEX IF NOT EXISTS idx_telemetry_device_received
     ON telemetry(device_id, received_at DESC);
 CREATE INDEX IF NOT EXISTS idx_telemetry_sn_received
     ON telemetry(sn, received_at DESC);
+
+ALTER TABLE telemetry
+    ADD COLUMN IF NOT EXISTS pump_duty_pct INTEGER;
 
 CREATE TABLE IF NOT EXISTS device_events (
     id BIGSERIAL PRIMARY KEY,
@@ -235,14 +239,14 @@ def insert_telemetry(database_url: str, topic: str, topic_sn: str, payload: dict
                     device_id, sn, seq, ts_device_ms, rssi, operator, ip,
                     latitude, longitude, gps_fix, ntc_raw,
                     bat24_v, bat24_i, v12_v,
-                    boost_on, load_on, fan_on, pump_on, compressor_on,
+                    boost_on, load_on, fan_on, pump_on, pump_duty_pct, compressor_on,
                     topic, raw_json
                 )
                 VALUES (
                     %s, %s, %s, %s, %s, %s, %s,
                     %s, %s, %s, %s,
                     %s, %s, %s,
-                    %s, %s, %s, %s, %s,
+                    %s, %s, %s, %s, %s, %s,
                     %s, %s
                 )
                 RETURNING *
@@ -266,6 +270,7 @@ def insert_telemetry(database_url: str, topic: str, topic_sn: str, payload: dict
                     _as_bool(outputs.get("load")),
                     _as_bool(outputs.get("fan")),
                     _as_bool(outputs.get("pump")),
+                    _as_int(outputs.get("pump_duty_pct")),
                     _as_bool(outputs.get("compressor")),
                     topic,
                     Jsonb(payload),
@@ -274,6 +279,13 @@ def insert_telemetry(database_url: str, topic: str, topic_sn: str, payload: dict
             row = cur.fetchone()
         conn.commit()
     return row_to_dict(row) or {}
+
+
+def get_device(database_url: str, sn: str) -> dict[str, Any] | None:
+    with connect(database_url) as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT * FROM devices WHERE sn = %s", (sn,))
+            return row_to_dict(cur.fetchone())
 
 
 def insert_event(database_url: str, topic: str, topic_sn: str, payload: dict[str, Any], default_type: str) -> dict[str, Any]:
@@ -394,4 +406,3 @@ def events_history(database_url: str, sn: str, limit: int = 200) -> list[dict[st
             )
             rows = [row_to_dict(row) for row in cur.fetchall()]
     return list(reversed(rows))
-

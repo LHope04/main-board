@@ -81,6 +81,8 @@ int main(void)
     snap.v12_mv = 12600;
     snap.boost_on = 1;
     snap.load_on = 1;
+    snap.pump_on = 1;
+    snap.pump_duty_pct = 45;
     snap.gps_fix = 1;
     snap.gps_lat_e6 = 22300001;
     snap.gps_lon_e6 = 114100002;
@@ -126,15 +128,30 @@ int main(void)
     expect_tx_contains("AT+QMTCONN=0,");
     feed_text("\r\nOK\r\n\r\n+QMTCONN: 0,0,0\r\n");
     poll_ms(10);
+    expect_tx_contains("AT+QMTSUB=0,1,\"upboard/UPB-TEST-001/command/pump\",1\r\n");
+    feed_text("\r\nOK\r\n\r\n+QMTSUB: 0,1,0,1\r\n");
+    poll_ms(10);
     assert(g_iot_mqtt_connected == 1U);
+    assert(g_iot_sub_ok_count == 1U);
 
-    poll_ms(30000);
+    feed_text("\r\n+QMTRECV: 0,0,\"upboard/UPB-TEST-001/command/pump\",{\"duty_pct\":65}\r\n");
+    uint8_t pump_duty = 0U;
+    assert(IotCtrl_TakePumpCommand(&pump_duty) == 1);
+    assert(pump_duty == 65U);
+    assert(IotCtrl_TakePumpCommand(&pump_duty) == 0);
+
+    feed_text("\r\n+QMTRECV: 0,0,\"upboard/UPB-TEST-001/command/pump\",{\"duty_pct\":101}\r\n");
+    assert(g_iot_pump_cmd_invalid_count == 1U);
+    assert(IotCtrl_TakePumpCommand(&pump_duty) == 0);
+
+    poll_ms(5000);
     expect_tx_contains("AT+QMTPUBEX=0,0,0,0,\"upboard/");
     expect_tx_contains("/telemetry\",");
     feed_text("\r\n> ");
     poll_ms(10);
     expect_tx_contains("\"gps\":{\"fix\":true,\"lat\":22.300001,\"lon\":114.100002,\"speed_kt\":0.300}");
     expect_tx_contains("\"sampler\":{\"stale\":false,\"ntc_raw\":[1800,1801,1802,1803,1804,1805,1806,1807]}");
+    expect_tx_contains("\"pump\":true,\"pump_duty_pct\":45");
     assert(strchr(tx_log, 0x1A) == NULL);
     feed_text("\r\n+QMTPUBEX: 0,0,0\r\n");
     poll_ms(10);
