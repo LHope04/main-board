@@ -32,7 +32,7 @@
 
 /* ===== Peripheral handles ===== */
 TIM_HandleTypeDef htim1;   /* BEEP_CTRL    PB14 TIM1_CH2N AF1 (高级定时器, 168MHz, MOE 必启) */
-TIM_HandleTypeDef htim2;   /* V7 COMPRESSOR_PWM PA15 TIM2_CH1 AF1 (5kHz, active HIGH) */
+TIM_HandleTypeDef htim2;   /* V7 COMPRESSOR_PWM PA0 TIM2_CH1 AF1 (5kHz, active HIGH) */
 TIM_HandleTypeDef htim3;   /* FAN_FB_OUT   PB4  TIM3_CH1  AF2 (84MHz, IC 1MHz tick) */
 TIM_HandleTypeDef htim4;   /* MCF8329A FG  PB9  TIM4_CH4  AF2 (84MHz, IC 1MHz tick) */
 TIM_HandleTypeDef htim7;   /* LED 呼吸灯软 PWM 时基 (基本定时器, 2kHz update IRQ) */
@@ -123,8 +123,9 @@ volatile uint32_t g_mcf_cl4_boot_rc     = 0xFFU;
 volatile uint8_t  g_mcf_dir_cw          = 0U;
 volatile uint32_t g_mcf_mpet_status  = 0;       /* ALGO_STATUS_MPET @ 0xE8 */
 volatile uint32_t g_mcf_mpet_rc      = 0xFFU;
-volatile uint16_t g_mcf_spin_duty    = 0;       /* 默认 0 — 压缩机由 C3 SET_GEAR on/off 控制 */
-volatile uint8_t  g_compressor_on    = 0;       /* C3 SET_GEAR on 状态镜像, 给水温模拟用 */
+volatile uint16_t g_mcf_spin_duty    = 0;       /* legacy Watch field */
+volatile uint8_t  g_compressor_on    = 0;       /* S3 SET_GEAR on 状态镜像 */
+volatile uint8_t  g_compressor_gear  = 0;       /* 0=off, 1..10 maps to 10..100% */
 volatile uint32_t g_mcf_fg_speed     = 0;       /* FG_SPEED_FDBK @ 0x19C */
 volatile uint32_t g_mcf_speed_fdbk   = 0;       /* SPEED_FDBK @ 0x76E (closed-loop 估速) */
 /* 当 = 1, 主循环跳过所有 I2C3 → MCF8329A 操作 (写 / 读 / WD tickle).
@@ -168,7 +169,7 @@ void MX_TIM1_BEEP_Init(void)
     HAL_TIM_PWM_ConfigChannel(&htim1, &oc, TIM_CHANNEL_2);
 }
 
-/* ===== TIM2: V7 COMPRESSOR_PWM PA15 / TIM2_CH1 AF1 ===== */
+/* ===== TIM2: V7 COMPRESSOR_PWM PA0 / TIM2_CH1 AF1 ===== */
 /* APB1 timer clock=84MHz, PSC=83 → 1MHz tick, ARR=199 → 5kHz PWM.
  * Driver input is active HIGH; duty = CCR / 200. */
 void MX_TIM2_COMPRESSOR_PWM_Init(void)
@@ -334,7 +335,7 @@ int main(void)
 
     /* 业务模块 Init: 接口签名保留, 内部实现各阶段重写 */
     SensorAcq_Init();                       /* 阶段 7 改 USART3 收帧 */
-    CompressorCtrl_Init(&htim2);             /* V7: PA15 PWM + PC9 DIR + PA8 STOP */
+    CompressorCtrl_Init(&htim2);             /* V7: PA0 PWM + PC9 DIR + PA8 STOP */
     Buzzer_Init(&htim1);                    /* 阶段 2: TIM1_CH2N + MOE */
     EspComm_Init(&huart6);                  /* 阶段 8: USART6 (旧 huart2) */
     LedRgb_Init();                          /* 阶段 2: PE2/PE3/PE4 */
@@ -459,17 +460,12 @@ int main(void)
     uint8_t s_iot_fan_on = 0U;
     uint8_t s_iot_pump_on = 0U;
 
-    /* V7 开机自动启动：风扇仅由 PC10 供电使能控制；风扇/水泵先行
-     * 500ms，压缩机随后反转并立即输出 100% PWM。 */
-    s_iot_fan_on = 1U;
-    s_iot_pump_on = 1U;
-    PowerCtrl_EnableFanVcc(1);
-    PowerCtrl_EnablePump(1);
-    HAL_Delay(500);
-    IWDG->KR = 0xAAAAU;
-    CompressorCtrl_SetDirection(1U);        /* PC9 LOW = reverse */
-    CompressorCtrl_Start(100U);             /* PA8 HIGH + PA15 5kHz PWM 100% */
-    g_compressor_on = 1U;
+    /* V7 default state: compressor, fan and pump all OFF until S3 commands. */
+    CompressorCtrl_Stop();
+    PowerCtrl_EnableFanVcc(0U);
+    PowerCtrl_EnablePump(0U);
+    g_compressor_on = 0U;
+    g_compressor_gear = 0U;
 
     while (1) {
         /* IWDG 喂狗 — Bootloader 启了, App 必须续 */
@@ -530,7 +526,7 @@ int main(void)
             NVIC_SystemReset();
         }
 
-        /* === 100ms 分流: INA226 / Gear cmd === */
+        /* === 100ms 分流: INA226 / independent S3 actuator commands === */
         {
             static uint32_t s_last_100 = 0;
             if ((uint32_t)(now_ms - s_last_100) >= 100U) {
@@ -542,23 +538,37 @@ int main(void)
 
                 EspComm_GearCmd *cmd = EspComm_GetGearCmd();
                 if (cmd->updated) {
+                    uint8_t gear;
+                    uint8_t duty_pct;
+
                     cmd->updated = 0;
-                    /* V7 C3 SET_GEAR on/off controls compressor, fan power and pump.
-                     * Fan has no PWM: PC10 HIGH=run, LOW=off. */
-                    g_compressor_on = cmd->on;       /* 镜像状态给水温模拟 */
                     if (cmd->on) {
+                        gear = (cmd->gear < 1) ? 1U :
+                               (cmd->gear > 10) ? 10U : (uint8_t)cmd->gear;
+                        duty_pct = (uint8_t)(gear * 10U);
+
+                        /* The single SET_GEAR on bit controls the whole cooling chain.
+                         * Gear changes only the compressor PWM. */
                         s_iot_fan_on = 1U;
                         s_iot_pump_on = 1U;
-                        PowerCtrl_EnableFanVcc(1);
-                        PowerCtrl_EnablePump(1);
+                        PowerCtrl_EnableFanVcc(1U);
+                        PowerCtrl_EnablePump(1U); /* 100Hz / 30% software PWM */
                         CompressorCtrl_SetDirection(1U); /* PC9 LOW = reverse */
-                        CompressorCtrl_Start(100U);
+                        if (g_compressor_on) {
+                            CompressorCtrl_SetDuty(duty_pct);
+                        } else {
+                            CompressorCtrl_Start(duty_pct);
+                        }
+                        g_compressor_gear = gear;
+                        g_compressor_on = 1U;
                     } else {
                         CompressorCtrl_Stop();       /* PWM=0, then PA8 LOW */
-                        PowerCtrl_EnableFanVcc(0);
-                        PowerCtrl_EnablePump(0);
+                        PowerCtrl_EnableFanVcc(0U);
+                        PowerCtrl_EnablePump(0U);
                         s_iot_fan_on = 0U;
                         s_iot_pump_on = 0U;
+                        g_compressor_on = 0U;
+                        g_compressor_gear = 0U;
                     }
                 }
             }

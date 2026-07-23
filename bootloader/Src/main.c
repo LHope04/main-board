@@ -221,15 +221,21 @@ static void GPIO_Init(void)
     GPIO_InitTypeDef gi = {0};
 
     /* V7 compressor safe state throughout boot/OTA selection. */
-    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET); /* STOP active LOW */
+    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_0 | GPIO_PIN_8, GPIO_PIN_RESET); /* PWM LOW, STOP LOW */
     HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_SET);   /* forward default */
-    gi.Pin   = GPIO_PIN_8;
+    gi.Pin   = GPIO_PIN_0 | GPIO_PIN_8;
     gi.Mode  = GPIO_MODE_OUTPUT_PP;
     gi.Pull  = GPIO_NOPULL;
     gi.Speed = GPIO_SPEED_FREQ_LOW;
     HAL_GPIO_Init(GPIOA, &gi);
     gi.Pin = GPIO_PIN_9;
     HAL_GPIO_Init(GPIOC, &gi);
+
+    /* Former compressor PWM pin: disconnected/high impedance. */
+    gi.Pin   = GPIO_PIN_15;
+    gi.Mode  = GPIO_MODE_ANALOG;
+    gi.Pull  = GPIO_NOPULL;
+    HAL_GPIO_Init(GPIOA, &gi);
 
     gi.Pin   = GPIO_PIN_2 | GPIO_PIN_3;
     gi.Mode  = GPIO_MODE_OUTPUT_PP;

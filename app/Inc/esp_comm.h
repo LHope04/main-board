@@ -15,7 +15,7 @@ extern "C" {
 
 /* Command codes */
 #define ESP_CMD_PING          0x01   /* C3 -> STM32 */
-#define ESP_CMD_SET_GEAR      0x20   /* C3 -> STM32 */
+#define ESP_CMD_SET_GEAR      0x20   /* S3 -> STM32: int16 gear + global uint8 on */
 #define ESP_CMD_OTA_SELFTEST  0xF0   /* C3 -> STM32, payload=0, triggers A→B self-copy+reset */
 #define ESP_CMD_OTA_START     0xF1   /* C3 -> STM32, payload: size(4B LE) + version(2B LE) */
 #define ESP_CMD_OTA_DATA      0xF2   /* C3 -> STM32, payload: offset(4B LE) + chunk[≤128B] */

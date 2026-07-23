@@ -9,7 +9,7 @@
  *
  * Pins handled here:
  *   TIM1_CH2N  PB14  AF1   buzzer (advanced timer)
- *   TIM2_CH1   PA15  AF1   V7 compressor PWM
+ *   TIM2_CH1   PA0   AF1   V7 compressor PWM
  *   TIM3_CH1   PB4   AF2   fan FG input capture
  *   TIM4_CH4   PB9   AF2   compressor FG input capture
  */
@@ -37,10 +37,10 @@ void HAL_TIM_PWM_MspInit(TIM_HandleTypeDef *htim)
         HAL_GPIO_Init(GPIOB, &gi);
     }
     else if (htim->Instance == TIM2) {
-        /* V7 COMPRESSOR_PWM: PA15 / TIM2_CH1 / AF1 */
+        /* V7 COMPRESSOR_PWM: PA0 / TIM2_CH1 / AF1 */
         __HAL_RCC_TIM2_CLK_ENABLE();
         __HAL_RCC_GPIOA_CLK_ENABLE();
-        gi.Pin       = GPIO_PIN_15;
+        gi.Pin       = GPIO_PIN_0;
         gi.Alternate = GPIO_AF1_TIM2;
         HAL_GPIO_Init(GPIOA, &gi);
     }

@@ -1,6 +1,7 @@
 /**
  * @file    app/Src/fan_ctrl.c
- * @brief   Fan PWM + FG input capture (V6: TIM2_CH1 PA15 + TIM3_CH1 PB4).
+ * @brief   Legacy fan PWM + FG input capture. Current fan uses PC10 power only;
+ *          TIM2_CH1 / PA0 belongs to compressor PWM.
  *
  * IC capture/overflow algorithm unchanged from V3 — only the timer/channel
  * bindings move. ARR for TIM3 IC is now 65535 (was 65535 for TIM8 too on V3),

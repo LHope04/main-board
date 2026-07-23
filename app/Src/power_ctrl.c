@@ -13,9 +13,8 @@
  */
 #include "power_ctrl.h"
 
-#define PUMP_PWM_PERIOD_TICKS   20U    /* TIM7 2kHz / 20 = 100Hz */
-#define PUMP_STARTUP_TICKS      2000U  /* 1s full-power startup */
-#define PUMP_DEFAULT_DUTY_PCT   30U
+#define PUMP_PWM_PERIOD_TICKS 20U   /* TIM7 2kHz / 20 = 100Hz */
+#define PUMP_DEFAULT_DUTY_PCT 30U
 
 volatile uint8_t  g_pump_duty_pct = PUMP_DEFAULT_DUTY_PCT;
 volatile uint8_t  g_pump_pwm_phase = 0U;
@@ -81,9 +80,9 @@ void PowerCtrl_EnablePump(uint8_t en)
 {
     if (en) {
         g_pump_pwm_phase = 0U;
-        g_pump_startup_ticks = PUMP_STARTUP_TICKS;
+        g_pump_startup_ticks = 0U; /* no full-speed startup */
         s_pump_enabled = 1U;
-        pump_write(1U);
+        pump_write(g_pump_duty_pct > 0U);
     } else {
         s_pump_enabled = 0U;
         g_pump_startup_ticks = 0U;
@@ -98,7 +97,7 @@ void PowerCtrl_SetPumpDuty(uint8_t duty_pct)
     g_pump_duty_pct = duty_pct;
 
     if (duty_pct == 0U) {
-        g_pump_startup_ticks = 0U;
+        g_pump_pwm_phase = 0U;
         pump_write(0U);
     }
 }
@@ -114,13 +113,6 @@ void PowerCtrl_PumpPwmTick2kHz(void)
     if (duty_pct == 0U) {
         g_pump_pwm_phase = 0U;
         pump_write(0U);
-        return;
-    }
-
-    if (g_pump_startup_ticks > 0U) {
-        pump_write(1U);
-        g_pump_startup_ticks--;
-        if (g_pump_startup_ticks == 0U) g_pump_pwm_phase = 0U;
         return;
     }
 

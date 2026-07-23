@@ -7,9 +7,9 @@
  *
  * Layout:
  *   - Outputs default to safe state (LOW for all enables/drivers)
- *   - Inputs: BUTTON / ACC / nFAULT / KEYWAKE
+ *   - Inputs: BUTTON / ACC / nFAULT
  *   - LEDs: PE2 (R) / PE3 (G) / PE4 (B)
- *   - V7 compressor: PC9 DIR / PA8 active-low STOP; PA15 PWM is configured by TIM2 MSP
+ *   - V7 compressor: PC9 DIR / PA8 active-low STOP; PA0 PWM is configured by TIM2 MSP
  *   - Power enables: PE5 LOAD / PE6 BOOST / PC10 FAN_VCC / PC11 PUMP / PC15 CHARGE_NTC
  */
 #include "gpio.h"
@@ -41,7 +41,8 @@ void MX_GPIO_Init(void)
     /* Fan VCC + Pump: PC10, PC11 */
     HAL_GPIO_WritePin(GPIOC, GPIO_PIN_10 | GPIO_PIN_11, GPIO_PIN_RESET);
 
-    /* V7 compressor safe state: reverse selected, STOP asserted. */
+    /* V7 compressor safe state: PWM LOW, reverse selected, STOP asserted. */
+    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_0, GPIO_PIN_RESET);  /* PWM: LOW before TIM2 AF */
     HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_RESET);  /* DIR: LOW=reverse */
     HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET);  /* STOP: LOW=stop */
 
@@ -69,7 +70,7 @@ void MX_GPIO_Init(void)
     gi.Pin = GPIO_PIN_9;
     HAL_GPIO_Init(GPIOC, &gi);
 
-    gi.Pin = GPIO_PIN_8;
+    gi.Pin = GPIO_PIN_0 | GPIO_PIN_8;
     HAL_GPIO_Init(GPIOA, &gi);
 
     /* PD0/PD3/PD4 = SPEED_WAKE, DIR, BREAK */
@@ -91,10 +92,10 @@ void MX_GPIO_Init(void)
     gi.Pin  = GPIO_PIN_5;
     HAL_GPIO_Init(GPIOD, &gi);
 
-    /* KEYWAKE (PA0/SYS_WKUP): no pull (WKUP hardware controls) */
-    gi.Mode = GPIO_MODE_INPUT;
+    /* PA15 is no longer connected to compressor PWM. Keep it high impedance. */
+    gi.Mode = GPIO_MODE_ANALOG;
     gi.Pull = GPIO_NOPULL;
-    gi.Pin  = GPIO_PIN_0;
+    gi.Pin  = GPIO_PIN_15;
     HAL_GPIO_Init(GPIOA, &gi);
 
     /* AF pins (TIM1/2/3/4/14, I2C1/2, USART1/2/3/6) — configured by their

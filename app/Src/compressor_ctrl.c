@@ -1,6 +1,6 @@
 /**
  * @file    app/Src/compressor_ctrl.c
- * @brief   V7 compressor control: PA15 PWM + PC9 DIR + PA8 active-low STOP.
+ * @brief   V7 compressor control: PA0 PWM + PC9 DIR + PA8 active-low STOP.
  */
 #include "compressor_ctrl.h"
 

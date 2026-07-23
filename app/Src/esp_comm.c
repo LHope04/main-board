@@ -37,7 +37,7 @@ static volatile uint8_t  s_frame_wr;   /* written by ISR */
 static volatile uint8_t  s_frame_rd;   /* read by Poll */
 
 /* Application data */
- EspComm_GearCmd s_gear_cmd;
+static EspComm_GearCmd s_gear_cmd;
 static volatile uint8_t s_ota_selftest_req;
 
 /* Debug: raw byte ring buffer — read with ST-LINK_CLI -r32 &s_dbg_raw or in GDB. */

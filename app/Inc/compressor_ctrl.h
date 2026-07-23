@@ -5,7 +5,7 @@
 
 /*
  * V7 compressor interface:
- *   PA15 / TIM2_CH1 AF1 — 5kHz PWM, active HIGH
+ *   PA0  / TIM2_CH1 AF1 — 5kHz PWM, active HIGH
  *   PC9  / NET14        — direction: HIGH=forward, LOW=reverse
  *   PA8  / NET15        — stop: LOW=stop, HIGH=run
  *
@@ -23,7 +23,7 @@ extern volatile uint32_t g_compressor_ramp_elapsed_ms;
 #define COMPRESSOR_SOFT_START_MS 5000U
 #define COMPRESSOR_SOFT_START_ENABLED 0U
 
-void CompressorCtrl_Init(TIM_HandleTypeDef *htim_pwm); /* TIM2_CH1 / PA15 */
+void CompressorCtrl_Init(TIM_HandleTypeDef *htim_pwm); /* TIM2_CH1 / PA0 */
 void CompressorCtrl_SetDuty(uint8_t percent);
 void CompressorCtrl_SetDirection(uint8_t reverse);
 void CompressorCtrl_SetStop(uint8_t stop);

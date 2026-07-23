@@ -10,21 +10,25 @@
 
 | 功能 | MCU 引脚 | 模式 | 当前确认状态 |
 |------|----------|------|--------------|
-| 压缩机速度 PWM | PA15 | TIM2_CH1 / AF1 | 5kHz PWM1，高电平有效；ARR=199、1MHz timer tick |
+| 压缩机速度 PWM | PA0 | TIM2_CH1 / AF1 | 5kHz PWM1，高电平有效；ARR=199、1MHz timer tick；PA0不再作KEYWAKE |
 | 压缩机正反转 NET14 | PC9 | GPIO output | HIGH=正转、LOW=反转；主控网表确认 U9.66 → R10 0Ω → FPC2.14 |
 | 压缩机停转 NET15 | PA8 | GPIO output | HIGH=运行、LOW=停转；主控网表确认 U9.67 → R11 0Ω → FPC2.15 |
 
 **V7 固件处理状态**：
-- PA15 已从 `fan_ctrl` 移交 `compressor_ctrl`，配置 TIM2_CH1 5kHz active-HIGH PWM。
+- 压缩机 PWM 已从 PA15 迁移到 PA0，继续由 `compressor_ctrl` 使用 TIM2_CH1 5kHz active-HIGH PWM；PA15保持无上下拉高阻。
 - I2C3 初始化、扫描、恢复及 MCF8329A 启动/周期任务已停用，PA8/PC9 固定为推挽 GPIO。
 - App 和 bootloader 均先设置 PA8 LOW、PWM=0；App 默认 PC9 LOW 反转，bootloader 停转期间保持 PC9 HIGH。
-- App 启动压缩机时先选择 PC9 LOW 反转，再解除 PA8 STOP，并由主循环非阻塞地将 PA15 占空比在 5000ms 内从 0% 线性升至目标值；当前开机和 SET_GEAR ON 目标均为 100%。
+- App 启动压缩机时先选择 PC9 LOW 反转，再解除 PA8 STOP；PA0输出目标占空比。5s非阻塞斜坡代码保留，但当前由编译开关关闭。
 - 2026-07-23 已烧录 bootloader + App A；SWD 取样为 109ms/2%、2116ms/42%、5000ms/100%，最终 TIM2 CR1=0x81、ARR=99、CCR1=100，GPIOA ODR bit8=1、GPIOC ODR bit9=1。实际引脚波形仍待示波器确认。
 - 2026-07-23 已继续烧录默认反转版 App A；SWD 重新按最新 ELF 取址确认 `g_compressor_reverse=1`、`g_compressor_pwm_duty_pct=100`、`g_compressor_stop_asserted=0`、elapsed=5000ms，GPIOC ODR bit9=0（PC9 LOW 反转）、GPIOA ODR bit8=1（PA8 HIGH 运行）。
 - 2026-07-23 用户要求暂时关闭软启动：当前待烧录版本在风扇/水泵先行 500ms 后，压缩机 PC9 LOW 反转并立即输出 PA15 100% PWM；5s 斜坡代码保留但由编译开关关闭。
 - 2026-07-23 已烧录该版本 App A；SWD 读到 duty=100%、ramp_active=0、reverse=1、stop=0，TIM2 CR1=0x81、ARR=99、CCR1=100，GPIOA ODR=0x100（PA8 HIGH），GPIOC ODR=0xC00（PC10/PC11 HIGH、PC9 LOW）。
 - 2026-07-23 已烧录 5kHz 版本 App A；SWD 读到 TIM2 CR1=0x81、PSC=83、ARR=199、CCR1=200，对应 1MHz/(199+1)=5kHz 和 100%占空比；GPIOA ODR bit8=1、GPIOC ODR bit10=1/bit9=0。
-- PA15 不与当前蜂鸣器冲突：蜂鸣器实际使用 PB14 / TIM1_CH2N。
+- 待烧录控制策略修正：S3只有 `SET_GEAR(0x20)`，payload为档位+全局on；gear仅映射压缩机1..10档=10%..100%，on同时控制压缩机、PC10风扇和PC11水泵PWM。on=0三者全关；on=1风扇供电HIGH、水泵100Hz/30%、压缩机按档位运行。
+- 2026-07-23 已烧录上述App A；复位1.5s时SWD验证 compressor_on=0、gear=0、duty=0、STOP=1、TIM2 CCR1=0，GPIOA/GPIOC ODR均为0；水泵预设duty=30%、output=0、startup_ticks=0。S3命令动作待联调。
+- **网表错误已由用户按实板纠正**：2026-04-28 网表把 U9.77=PA15 与 U9.53=PB14 同列在 `BEEP_CTRL`，但用户确认实际 PCB 二者没有连接，后续不得依据该错误网表认定硬短接。现场暂停 MCU 后将 PA15 设置为数字输入内部下拉，TIM2_CH1 CC1E=0、CCR1=0，GPIOA IDR bit15=0，证明 MCU 的 U9.77 焊盘侧当前为低电平；若其他测试点仍测到3.3V，必须用断电通断测量确认该点是否真的连接 U9.77。
+- 2026-07-23 用户确认实板已改线：PA0接替PA15作为压缩机PWM，PA0原KEYWAKE网络不再使用。Bootloader/App均先将PA0拉低，App随后切到TIM2_CH1 AF1；PA15设置为模拟高阻。
+- 2026-07-23 已烧录Bootloader与App A并完成SWD验证：VTOR=`0x08020000`、BKP0R=`0xA0A0A0A0`；GPIOA MODER确认PA0=AF、PA15=analog，AFRL确认PA0 AF1；TIM2 CR1=`0x81`、CCER=`1`、PSC=`83`、ARR=`199`、CCR1=`0`。默认stop=1、gear/on/duty=0，主循环计数持续增长。PB14仍为原TIM1_CH2N蜂鸣器AF1。
 - 风扇原 PWM 通道已被压缩机占用；风扇的新 PWM/使能方案尚未提供。
 - 2026-07-23 用户确认风扇后续不再使用 PWM，仅由 PC10 `FAN_VCC` 供电使能控制：HIGH=运行、LOW=停止；开机和 SET_GEAR ON 使能，SET_GEAR OFF 关闭。
 - 当前 V6 主控板网表已确认 NET14/NET15 到 PC9/PA8 的排线通路；新版驱动板修订图尚未入库，外部上下拉及 3.3V 输入兼容性仍待图纸确认。
@@ -66,7 +70,7 @@ SWD 现场切换 (GPIOC BSRR @ 0x40020818, 低 16 bit set, 高 16 bit reset):
 | 信号 | 引脚 | AF / TIM | 备注 |
 |------|------|------|------|
 | FAN_VCC_CTRL | **PC10** | OUTPUT_PP (active HIGH) | 12V 风扇供电 MOSFET, `PowerCtrl_EnableFanVcc()` |
-| FAN_PWM_CTRL | **PA15** | TIM2_CH1 AF1 | 20kHz 调速,`FanCtrl_SetDuty()` |
+| FAN_PWM_CTRL | — | — | 当前风扇仅使用PC10供电开关；旧PA15/TIM2_CH1风扇PWM已废弃 |
 | FAN_FB_OUT | **PB4** | TIM3_CH1 AF2 | FG 输入捕获,`FanCtrl_GetRPM()` (= freq × 20) |
 
 RPM = freq × 20（3 极对）
@@ -90,7 +94,7 @@ RPM = freq × 20（3 极对）
 ### NTC 采集 — V6 实际
 ADC1 + DMA **当前未初始化** (`HAL_ADC_*` 未在固件中调用)。8 路 NTC 数据走外部综合采样板 → **USART3 (PD8/PD9)** 帧上来,`sensor_acq.c::SensorAcq_OnNtcFrame()` 处理。
 PA0-PA7 当前角色:
-- PA0 = SYS_WKUP (KEYWAKE 输入)
+- PA0 = COMPRESSOR_PWM / TIM2_CH1 AF1（5kHz，不再作KEYWAKE）
 - PA1 = 未分配
 - PA2/PA3 = USART2 (IOT EC801E)
 - PA4/PA5/PA6 = 未分配
@@ -121,7 +125,7 @@ BLE OTA 通路:Web Bluetooth → ESP32-C3 BLE↔UART → STM32 USART6 (帧协议
 ### 其他
 | 信号 | 引脚 | 备注 |
 |------|------|------|
-| BEEP_CTRL | PA15 | TIM2_CH1 AF1，无源蜂鸣器 PWM |
+| BEEP_CTRL | PB14 | TIM1_CH2N AF1，无源蜂鸣器 PWM |
 | LED1 | PD13 | 板载 |
 | LED2 | PD14 | 板载（Bootloader 槽位指示：1=fallback / 2=A / 3=B） |
 | CHARGE_EN | PB12 | 锂电池充电模块使能（早期网表标 NETQ2/TP16，已确认实际为 CHARGE_EN） |
@@ -146,7 +150,7 @@ BLE OTA 通路:Web Bluetooth → ESP32-C3 BLE↔UART → STM32 USART6 (帧协议
 
 | 外设 | 模式 | 关键参数 | DMA | 中断 | 备注 |
 |------|------|----------|-----|------|------|
-| TIM2_CH1 | PWM 输出 | PSC=83→1MHz 计数，ARR 可变 | — | — | 蜂鸣器音调 |
+| TIM2_CH1 | PWM 输出 | PA0 AF1；PSC=83→1MHz，ARR=199→5kHz | — | — | 压缩机PWM，高电平有效 |
 | TIM3_CH1 | 输入捕获 | PSC=83→1MHz，ARR=49 | — | TIM3_IRQn 1-0 | 压缩机 SC_COUNT |
 | TIM3_CH2 | PWM 输出 | 同上，20kHz，极性 LOW | — | 同上 | 压缩机 YSJ_PWM（PMOS 反相） |
 | TIM3_CH3 | PWM 输出 | 同上，20kHz | — | 同上 | 风扇 FAN_PWM_CTRL |

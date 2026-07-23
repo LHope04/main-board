@@ -95,10 +95,3 @@ uint8_t Button_ReadAcc(void)
     /* PC14 ACC: assume same active-LOW convention as PC13 */
     return HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_14) == GPIO_PIN_RESET;
 }
-
-uint8_t Button_ReadKeywake(void)
-{
-    /* PA0 KEYWAKE: assume active HIGH (WKUP standard wiring). Adjust if
-     * board schematic says otherwise. */
-    return HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_0) == GPIO_PIN_SET;
-}
