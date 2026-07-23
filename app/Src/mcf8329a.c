@@ -287,7 +287,9 @@ HAL_StatusTypeDef MCF8329A_StartMPET(MCF8329A_Device *dev)
                             (1U << 5) | (1U << 2) | (1U << 1) | (1U << 0));
 }
 
-HAL_StatusTypeDef MCF8329A_LoadMinimumConfig(MCF8329A_Device *dev)
+HAL_StatusTypeDef MCF8329A_LoadCompressorProfile(MCF8329A_Device *dev,
+                                                uint32_t *mismatch_mask,
+                                                uint32_t *verified_count)
 {
     /* Full EEPROM shadow image from Motor Studio "BLDC_Pump_3A_200Hz_MCF8329A_v1".
      *
@@ -327,18 +329,139 @@ HAL_StatusTypeDef MCF8329A_LoadMinimumConfig(MCF8329A_Device *dev)
         { 0x0000A0U, 0xA433407DU },   /* INT_ALGO_1 */
         { 0x0000A2U, 0x000003E7U },   /* INT_ALGO_2 */
         { 0x0000A4U, 0x0200000AU },   /* PIN_CONFIG */
-        { 0x0000A6U, 0x00101462U },   /* DEVICE_CONFIG1 */
         { 0x0000A8U, 0x0000000EU },   /* DEVICE_CONFIG2 */
         { 0x0000AAU, 0x8BB57988U },   /* PERI_CONFIG1 */
         { 0x0000ACU, 0x9C450103U },   /* GD_CONFIG1 */
         { 0x0000AEU, 0x000000CCU },   /* GD_CONFIG2 */
+        /* Contains I2C target address; write last and re-probe below. */
+        { 0x0000A6U, 0x00101462U },   /* DEVICE_CONFIG1 */
     };
-    HAL_StatusTypeDef rc = HAL_OK;
+
+    if (!dev || !dev->hi2c) return HAL_ERROR;
+    if (mismatch_mask) *mismatch_mask = 0U;
+    if (verified_count) *verified_count = 0U;
+
+    const uint8_t old_addr = dev->addr;
     for (uint32_t i = 0; i < sizeof(cfg)/sizeof(cfg[0]); i++) {
-        rc = MCF8329A_Write32(dev, cfg[i].addr, cfg[i].val);
+        HAL_StatusTypeDef rc = MCF8329A_Write32(dev, cfg[i].addr, cfg[i].val);
         if (rc != HAL_OK) return rc;
         /* small gap so chip can latch each shadow write */
         HAL_Delay(2);
     }
-    return rc;
+
+    HAL_Delay(5);
+    if (HAL_I2C_IsDeviceReady(dev->hi2c, MCF8329A_HAL_ADDR_DEFAULT, 2, 10) == HAL_OK) {
+        dev->addr = MCF8329A_HAL_ADDR_DEFAULT;
+        g_mcf_scan_addr = dev->addr;
+    } else if (HAL_I2C_IsDeviceReady(dev->hi2c, old_addr, 2, 10) == HAL_OK) {
+        dev->addr = old_addr;
+        g_mcf_scan_addr = dev->addr;
+    } else {
+        g_mcf_scan_addr = 0U;
+        return HAL_ERROR;
+    }
+
+    uint32_t mismatches = 0U;
+    uint32_t matches = 0U;
+    for (uint32_t i = 0; i < sizeof(cfg)/sizeof(cfg[0]); i++) {
+        uint32_t readback = 0U;
+        HAL_StatusTypeDef rc = MCF8329A_Read32(dev, cfg[i].addr, &readback);
+        if (rc != HAL_OK) return rc;
+        if (readback == cfg[i].val) {
+            matches++;
+        } else {
+            mismatches |= (1UL << i);
+        }
+    }
+
+    if (mismatch_mask) *mismatch_mask = mismatches;
+    if (verified_count) *verified_count = matches;
+    return (mismatches == 0U) ? HAL_OK : HAL_ERROR;
+}
+
+HAL_StatusTypeDef MCF8329A_LoadMinimumConfig(MCF8329A_Device *dev)
+{
+    return MCF8329A_LoadCompressorProfile(dev, NULL, NULL);
+}
+
+HAL_StatusTypeDef MCF8329A_LoadRecommendedDefaults(MCF8329A_Device *dev,
+                                                   uint32_t *mismatch_mask,
+                                                   uint32_t *verified_count)
+{
+    /* TI MCF8329A datasheet SLLSFQ7 (November 2023), Table 8-1:
+     * "Recommended Default Values". These are the documented default EEPROM
+     * settings chosen by TI for reliable startup and closed-loop operation.
+     *
+     * DEVICE_CONFIG1 is intentionally written last because it contains the
+     * I2C target address. The official value selects target 0x01; depending on
+     * silicon state, that address may become active immediately. */
+    static const struct { uint32_t addr; uint32_t val; } cfg[] = {
+        { 0x000080U, 0x64A2D4A1U },   /* ISD_CONFIG */
+        { 0x000082U, 0x48300000U },   /* REV_DRIVE_CONFIG */
+        { 0x000084U, 0x10A64CC0U },   /* MOTOR_STARTUP1 */
+        { 0x000086U, 0x2D81C007U },   /* MOTOR_STARTUP2 */
+        { 0x000088U, 0x1D7181B8U },   /* CLOSED_LOOP1 */
+        { 0x00008AU, 0x0AAD0000U },   /* CLOSED_LOOP2 */
+        { 0x00008CU, 0x00000000U },   /* CLOSED_LOOP3 */
+        { 0x00008EU, 0x000004B0U },   /* CLOSED_LOOP4 */
+        { 0x000090U, 0x465A31A6U },   /* FAULT_CONFIG1 */
+        { 0x000092U, 0x71422888U },   /* FAULT_CONFIG2 */
+        { 0x000094U, 0x00000000U },   /* REF_PROFILES1 */
+        { 0x000096U, 0x00000000U },   /* REF_PROFILES2 */
+        { 0x000098U, 0x00000004U },   /* REF_PROFILES3 */
+        { 0x00009AU, 0x00000000U },   /* REF_PROFILES4 */
+        { 0x00009CU, 0x00000000U },   /* REF_PROFILES5 */
+        { 0x00009EU, 0x00000000U },   /* REF_PROFILES6 */
+        { 0x0000A0U, 0x0946027DU },   /* INT_ALGO_1 */
+        { 0x0000A2U, 0x020082E3U },   /* INT_ALGO_2 */
+        { 0x0000A4U, 0x40032309U },   /* PIN_CONFIG */
+        { 0x0000A8U, 0x03E8C00CU },   /* DEVICE_CONFIG2 */
+        { 0x0000AAU, 0x69845CC0U },   /* PERI_CONFIG1 */
+        { 0x0000ACU, 0x0000807BU },   /* GD_CONFIG1 */
+        { 0x0000AEU, 0x00000400U },   /* GD_CONFIG2 */
+        { 0x0000A6U, 0x00100002U },   /* DEVICE_CONFIG1 — address field, last */
+    };
+
+    if (!dev || !dev->hi2c) return HAL_ERROR;
+    if (mismatch_mask) *mismatch_mask = 0U;
+    if (verified_count) *verified_count = 0U;
+
+    const uint8_t old_addr = dev->addr;
+    for (uint32_t i = 0; i < sizeof(cfg) / sizeof(cfg[0]); i++) {
+        HAL_StatusTypeDef rc = MCF8329A_Write32(dev, cfg[i].addr, cfg[i].val);
+        if (rc != HAL_OK) return rc;
+        HAL_Delay(2);
+    }
+
+    /* DEVICE_CONFIG1 may move the live target to the official address 0x01.
+     * Prefer it if present; otherwise retain the address that accepted the
+     * configuration write. */
+    HAL_Delay(5);
+    if (HAL_I2C_IsDeviceReady(dev->hi2c, MCF8329A_HAL_ADDR_DEFAULT, 2, 10) == HAL_OK) {
+        dev->addr = MCF8329A_HAL_ADDR_DEFAULT;
+        g_mcf_scan_addr = dev->addr;
+    } else if (HAL_I2C_IsDeviceReady(dev->hi2c, old_addr, 2, 10) == HAL_OK) {
+        dev->addr = old_addr;
+        g_mcf_scan_addr = dev->addr;
+    } else {
+        g_mcf_scan_addr = 0U;
+        return HAL_ERROR;
+    }
+
+    uint32_t mismatches = 0U;
+    uint32_t matches = 0U;
+    for (uint32_t i = 0; i < sizeof(cfg) / sizeof(cfg[0]); i++) {
+        uint32_t readback = 0U;
+        HAL_StatusTypeDef rc = MCF8329A_Read32(dev, cfg[i].addr, &readback);
+        if (rc != HAL_OK) return rc;
+        if (readback == cfg[i].val) {
+            matches++;
+        } else {
+            mismatches |= (1UL << i);
+        }
+    }
+
+    if (mismatch_mask) *mismatch_mask = mismatches;
+    if (verified_count) *verified_count = matches;
+    return (mismatches == 0U) ? HAL_OK : HAL_ERROR;
 }

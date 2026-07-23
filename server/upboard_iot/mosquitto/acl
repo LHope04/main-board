@@ -1,0 +1,8 @@
+user upboard_ingest
+topic read upboard/#
+
+user upboard_device
+topic write upboard/+/telemetry
+topic write upboard/+/status
+topic write upboard/+/event
+

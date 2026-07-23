@@ -1,0 +1,402 @@
+- generic [ref=f1e11]:
+  - complementary [ref=f1e12]:
+    - generic [ref=f1e13]: TR
+    - navigation "Section navigation" [ref=f1e15]:
+      - button "Overview" [ref=f1e16] [cursor=pointer]
+      - button "Devices" [ref=f1e22] [cursor=pointer]
+      - button "Map" [ref=f1e26] [cursor=pointer]
+      - button "Alerts" [ref=f1e29] [cursor=pointer]
+      - button "Reports" [ref=f1e33] [cursor=pointer]
+      - button "Settings" [ref=f1e37] [cursor=pointer]
+    - generic [ref=f1e41]:
+      - button "Help" [ref=f1e42] [cursor=pointer]
+      - button "Settings" [ref=f1e46] [cursor=pointer]
+  - banner [ref=f1e50]:
+    - generic [ref=f1e55]:
+      - generic [ref=f1e56]: THERMORIDE
+      - generic [ref=f1e57]: Motorcycle Cooling Intelligence
+    - generic [ref=f1e58]:
+      - generic [ref=f1e59]: SSE Live
+      - button "Auto Refresh On" [ref=f1e64] [cursor=pointer]
+      - button "Notifications" [ref=f1e70] [cursor=pointer]
+      - button "Account menu for admin" [ref=f1e76] [cursor=pointer]:
+        - generic [ref=f1e77]: A
+  - complementary [ref=f1e80]:
+    - generic [ref=f1e81]:
+      - generic [ref=f1e82]:
+        - heading "Devices" [level=2] [ref=f1e83]
+        - paragraph [ref=f1e84]: 2 registered units
+      - generic [ref=f1e85]: "2"
+    - generic [ref=f1e86]:
+      - generic [ref=f1e87]: Search SN or device
+      - textbox "Search SN or device" [ref=f1e91]
+    - generic [ref=f1e92]:
+      - button "all" [ref=f1e93] [cursor=pointer]
+      - button "online" [ref=f1e94] [cursor=pointer]
+      - button "offline" [ref=f1e95] [cursor=pointer]
+    - generic [ref=f1e96]:
+      - button "UPB-0B506761 UPB-0B506761 Offline 9 days ago" [ref=f1e97] [cursor=pointer]:
+        - generic [ref=f1e101]:
+          - generic [ref=f1e102]: UPB-0B506761
+          - generic [ref=f1e103]: UPB-0B506761
+          - generic [ref=f1e104]:
+            - generic [ref=f1e105]: Offline
+            - generic [ref=f1e107]: 9 days ago
+      - button "UPB-DEMO-001 UPB-DEMO-001 Offline 35 days ago" [active] [pressed] [ref=f1e110] [cursor=pointer]:
+        - generic [ref=f1e113]:
+          - generic [ref=f1e114]: UPB-DEMO-001
+          - generic [ref=f1e115]: UPB-DEMO-001
+          - generic [ref=f1e116]:
+            - generic [ref=f1e117]: Offline
+            - generic [ref=f1e119]: 35 days ago
+    - generic [ref=f1e123]:
+      - generic [ref=f1e124]: Fleet availability
+      - strong [ref=f1e125]: 0.0%
+  - main "Cooling system dashboard" [ref=f1e127]:
+    - generic [ref=f1e754]:
+      - generic [ref=f1e755]:
+        - generic [ref=f1e756]:
+          - heading "Cooling System Overview" [level=1] [ref=f1e757]
+          - paragraph [ref=f1e758]: Real-time telemetry and vehicle cooling system status
+        - generic [ref=f1e759]:
+          - button "Last 24 hours" [ref=f1e760] [cursor=pointer]
+          - generic [ref=f1e763]:
+            - generic [ref=f1e764]: Last updated
+            - generic [ref=f1e765]: Today, 12:51:42
+          - button "Refresh telemetry" [ref=f1e766] [cursor=pointer]
+      - generic [ref=f1e781]:
+        - generic [ref=f1e782]: Device offline
+        - generic [ref=f1e783]: Showing last known telemetry. Last report 35 days ago.
+      - region "Fleet summary" [ref=f1e784]:
+        - article [ref=f1e785]:
+          - generic [ref=f1e786]:
+            - generic [ref=f1e787]: Total Devices
+            - generic [ref=f1e802]: "2"
+            - generic [ref=f1e803]: Registered cooling units
+        - article [ref=f1e805]:
+          - generic [ref=f1e806]:
+            - generic [ref=f1e807]: Online Devices
+            - generic [ref=f1e816]: "0"
+            - generic [ref=f1e817]: 0.0% availability
+        - article [ref=f1e820]:
+          - generic [ref=f1e821]:
+            - generic [ref=f1e822]: Selected Device
+            - generic [ref=f1e828]: UPB-DEMO-001
+            - generic [ref=f1e829]: UPB-DEMO-001
+        - article [ref=f1e831]:
+          - generic [ref=f1e832]:
+            - generic [ref=f1e833]: Last Report
+            - generic [ref=f1e839]: 12:51:42
+            - generic [ref=f1e840]: 35 days ago
+      - region "Realtime system telemetry" [ref=f1e842]:
+        - article [ref=f1e844]:
+          - generic [ref=f1e845]:
+            - generic [ref=f1e846]:
+              - generic [ref=f1e847]:
+                - generic [ref=f1e848]: System Health
+                - heading "Live health unavailable" [level=2] [ref=f1e852]
+                - paragraph [ref=f1e853]: The unit is offline. Values below are the last known telemetry.
+              - generic [ref=f1e854]: Offline
+            - generic [ref=f1e857]:
+              - generic [ref=f1e861]:
+                - generic [ref=f1e862]: 40%
+                - generic [ref=f1e863]: OFFLINE
+              - generic [ref=f1e864]:
+                - generic [ref=f1e865]:
+                  - generic [ref=f1e870]: Cooling Load
+                  - generic [ref=f1e871]: Unavailable
+                - generic [ref=f1e872]:
+                  - generic [ref=f1e877]: Power
+                  - generic [ref=f1e878]: Stable
+                - generic [ref=f1e879]:
+                  - generic [ref=f1e887]: Network
+                  - generic [ref=f1e888]: Good
+                - generic [ref=f1e889]:
+                  - generic [ref=f1e895]: GPS
+                  - generic [ref=f1e896]: Valid
+        - generic [ref=f1e897]:
+          - article [ref=f1e898]:
+            - generic [ref=f1e900]:
+              - generic [ref=f1e901]: RSSI
+              - generic [ref=f1e902]: "-67 dBm"
+            - generic [ref=f1e905]:
+              - generic [ref=f1e906]:
+                - generic [ref=f1e907]: Good
+                - generic [ref=f1e908]: Cellular signal
+              - img "Recent trend" [ref=f1e910]
+          - article [ref=f1e912]:
+            - generic [ref=f1e914]:
+              - generic [ref=f1e915]: Last Valid GPS
+              - generic [ref=f1e916]: 22.3000, 114.1000
+            - generic [ref=f1e923]:
+              - generic [ref=f1e924]: Accuracy unavailable
+              - generic [ref=f1e925]: Updated 35 days ago
+          - article [ref=f1e926]:
+            - generic [ref=f1e928]:
+              - generic [ref=f1e929]: 24V Bus Voltage
+              - generic [ref=f1e930]: 24.30 V
+            - generic [ref=f1e934]:
+              - generic [ref=f1e935]:
+                - generic [ref=f1e936]: Stable
+                - generic [ref=f1e937]: Normal range 24.0-24.9 V
+              - img "Recent trend" [ref=f1e939]
+          - article [ref=f1e941]:
+            - generic [ref=f1e943]:
+              - generic [ref=f1e944]: 24V Bus Current
+              - generic [ref=f1e945]: Unavailable
+            - generic [ref=f1e952]:
+              - generic [ref=f1e953]: Unavailable
+              - generic [ref=f1e954]: Calculated load
+          - article [ref=f1e955]:
+            - generic [ref=f1e957]:
+              - generic [ref=f1e958]: Vehicle Input
+              - generic [ref=f1e959]: 12.60 V
+            - generic [ref=f1e965]:
+              - generic [ref=f1e966]: Not charging
+              - generic [ref=f1e967]: 12V vehicle supply
+      - region "Location and voltage history" [ref=f1e968]:
+        - article [ref=f1e970]:
+          - generic [ref=f1e971]:
+            - generic [ref=f1e972]:
+              - generic [ref=f1e973]:
+                - heading "Vehicle Location" [level=2] [ref=f1e974]
+                - generic [ref=f1e975]: Live
+              - paragraph [ref=f1e977]: Live GPS and recent route
+            - generic [ref=f1e978]:
+              - button "Live" [ref=f1e979] [cursor=pointer]
+              - button "1H" [ref=f1e980] [cursor=pointer]
+              - button "6H" [ref=f1e981] [cursor=pointer]
+              - button "24H" [ref=f1e982] [cursor=pointer]
+              - button "Custom" [ref=f1e983] [cursor=pointer]
+          - generic [ref=f1e984]:
+            - generic [ref=f1e985]:
+              - generic:
+                - generic:
+                  - button [ref=f1e986] [cursor=pointer]
+                  - button [ref=f1e988] [cursor=pointer]
+                  - button [ref=f1e990] [cursor=pointer]
+              - generic [ref=f1e992]:
+                - link "Leaflet" [ref=f1e993] [cursor=pointer]:
+                  - /url: https://leafletjs.com
+                - text: "| ©"
+                - link "OpenStreetMap" [ref=f1e998] [cursor=pointer]:
+                  - /url: https://www.openstreetmap.org/copyright
+                - text: © CARTO
+            - generic [ref=f1e999]:
+              - button "Center map on device" [ref=f1e1000] [cursor=pointer]
+              - button "Toggle map layer" [ref=f1e1007] [cursor=pointer]
+              - button "Fullscreen map" [ref=f1e1012] [cursor=pointer]
+            - button "Replay route" [ref=f1e1018] [cursor=pointer]
+          - generic [ref=f1e1022]:
+            - generic [ref=f1e1023]:
+              - generic [ref=f1e1024]: Distance
+              - generic [ref=f1e1025]: 0.0 km
+            - generic [ref=f1e1026]:
+              - generic [ref=f1e1027]: Duration
+              - generic [ref=f1e1028]: 22 min
+            - generic [ref=f1e1029]:
+              - generic [ref=f1e1030]: Average Speed
+              - generic [ref=f1e1031]: 0.0 km/h
+            - generic [ref=f1e1032]:
+              - generic [ref=f1e1033]: GPS Accuracy
+              - generic [ref=f1e1034]: Unavailable
+        - article [ref=f1e1036]:
+          - generic [ref=f1e1037]:
+            - generic [ref=f1e1038]:
+              - heading "24V Bus History" [level=2] [ref=f1e1039]
+              - paragraph [ref=f1e1040]: Voltage stability and alarm thresholds
+            - generic [ref=f1e1041]:
+              - button "5 min" [ref=f1e1042] [cursor=pointer]
+              - button "30 min" [ref=f1e1043] [cursor=pointer]
+              - button "1 h" [ref=f1e1044] [cursor=pointer]
+              - button "6 h" [ref=f1e1045] [cursor=pointer]
+              - button "24 h" [ref=f1e1046] [cursor=pointer]
+          - generic [ref=f1e1047]:
+            - generic [ref=f1e1048]:
+              - generic [ref=f1e1049]: Current
+              - generic [ref=f1e1050]: 24.30 V
+            - generic [ref=f1e1051]:
+              - generic [ref=f1e1052]: Average
+              - generic [ref=f1e1053]: 24.20 V
+            - generic [ref=f1e1054]:
+              - generic [ref=f1e1055]: Minimum
+              - generic [ref=f1e1056]: 24.10 V
+            - generic [ref=f1e1057]:
+              - generic [ref=f1e1058]: Maximum
+              - generic [ref=f1e1059]: 24.30 V
+          - img "24 volt bus history chart" [ref=f1e1060]
+      - article [ref=f1e1063]:
+        - generic [ref=f1e1065]:
+          - heading "Actuator Status" [level=2] [ref=f1e1066]
+          - paragraph [ref=f1e1067]: Read-only operating states from the selected unit
+        - generic [ref=f1e1071]:
+          - generic [ref=f1e1072]:
+            - generic [ref=f1e1077]:
+              - generic [ref=f1e1078]: BOOST CONVERTER
+              - generic [ref=f1e1079]: State unavailable
+            - generic [ref=f1e1080]: Unknown
+          - generic [ref=f1e1082]:
+            - generic [ref=f1e1086]:
+              - generic [ref=f1e1087]: LOAD OUTPUT
+              - generic [ref=f1e1088]: State unavailable
+            - generic [ref=f1e1089]: Unknown
+          - generic [ref=f1e1091]:
+            - generic [ref=f1e1095]:
+              - generic [ref=f1e1096]: CONDENSER FAN
+              - generic [ref=f1e1097]: State unavailable
+            - generic [ref=f1e1098]: Unknown
+          - generic [ref=f1e1100]:
+            - generic [ref=f1e1106]:
+              - generic [ref=f1e1107]: COOLANT PUMP
+              - generic [ref=f1e1108]: State unavailable
+            - generic [ref=f1e1109]: Unknown
+          - generic [ref=f1e1111]:
+            - generic [ref=f1e1116]:
+              - generic [ref=f1e1117]: COMPRESSOR
+              - generic [ref=f1e1118]: State unavailable
+            - generic [ref=f1e1119]: Unknown
+      - article [ref=f1e1121]:
+        - generic [ref=f1e1122]:
+          - generic [ref=f1e1123]:
+            - heading "NTC Sensor Channels" [level=2] [ref=f1e1124]
+            - paragraph [ref=f1e1125]: Eight-channel sampler input with raw and calibrated views
+          - tablist [ref=f1e1130]:
+            - tab "Raw ADC" [selected] [ref=f1e1131] [cursor=pointer]
+            - tab "Temperature" [ref=f1e1132] [cursor=pointer]
+        - generic [ref=f1e1133]:
+          - button "NTC 1 Coolant Outlet Raw ADC 1891 Reserved °C Not calibrated 0 4095 Normal 35 days ago" [ref=f1e1134] [cursor=pointer]:
+            - generic [ref=f1e1135]:
+              - generic [ref=f1e1139]:
+                - generic [ref=f1e1140]: NTC 1
+                - generic [ref=f1e1141]: Coolant Outlet
+              - generic [ref=f1e1142]:
+                - generic [ref=f1e1143]: Raw ADC
+                - generic [ref=f1e1144]: "1891"
+              - generic [ref=f1e1145]:
+                - generic [ref=f1e1146]: Reserved °C
+                - generic [ref=f1e1147]: Not calibrated
+              - generic [ref=f1e1152]:
+                - generic [ref=f1e1153]: "0"
+                - generic [ref=f1e1154]: "4095"
+              - generic [ref=f1e1155]:
+                - generic [ref=f1e1156]: Normal
+                - generic [ref=f1e1158]: 35 days ago
+          - button "NTC 2 Coolant Return Raw ADC 10 Reserved °C Not calibrated 0 4095 Normal 35 days ago" [ref=f1e1161] [cursor=pointer]:
+            - generic [ref=f1e1162]:
+              - generic [ref=f1e1166]:
+                - generic [ref=f1e1167]: NTC 2
+                - generic [ref=f1e1168]: Coolant Return
+              - generic [ref=f1e1169]:
+                - generic [ref=f1e1170]: Raw ADC
+                - generic [ref=f1e1171]: "10"
+              - generic [ref=f1e1172]:
+                - generic [ref=f1e1173]: Reserved °C
+                - generic [ref=f1e1174]: Not calibrated
+              - generic [ref=f1e1179]:
+                - generic [ref=f1e1180]: "0"
+                - generic [ref=f1e1181]: "4095"
+              - generic [ref=f1e1182]:
+                - generic [ref=f1e1183]: Normal
+                - generic [ref=f1e1185]: 35 days ago
+          - button "NTC 3 Compressor Shell Raw ADC 9 Reserved °C Not calibrated 0 4095 Normal 35 days ago" [ref=f1e1188] [cursor=pointer]:
+            - generic [ref=f1e1189]:
+              - generic [ref=f1e1193]:
+                - generic [ref=f1e1194]: NTC 3
+                - generic [ref=f1e1195]: Compressor Shell
+              - generic [ref=f1e1196]:
+                - generic [ref=f1e1197]: Raw ADC
+                - generic [ref=f1e1198]: "9"
+              - generic [ref=f1e1199]:
+                - generic [ref=f1e1200]: Reserved °C
+                - generic [ref=f1e1201]: Not calibrated
+              - generic [ref=f1e1206]:
+                - generic [ref=f1e1207]: "0"
+                - generic [ref=f1e1208]: "4095"
+              - generic [ref=f1e1209]:
+                - generic [ref=f1e1210]: Normal
+                - generic [ref=f1e1212]: 35 days ago
+          - button "NTC 4 Evaporator Raw ADC 10 Reserved °C Not calibrated 0 4095 Normal 35 days ago" [ref=f1e1215] [cursor=pointer]:
+            - generic [ref=f1e1216]:
+              - generic [ref=f1e1220]:
+                - generic [ref=f1e1221]: NTC 4
+                - generic [ref=f1e1222]: Evaporator
+              - generic [ref=f1e1223]:
+                - generic [ref=f1e1224]: Raw ADC
+                - generic [ref=f1e1225]: "10"
+              - generic [ref=f1e1226]:
+                - generic [ref=f1e1227]: Reserved °C
+                - generic [ref=f1e1228]: Not calibrated
+              - generic [ref=f1e1233]:
+                - generic [ref=f1e1234]: "0"
+                - generic [ref=f1e1235]: "4095"
+              - generic [ref=f1e1236]:
+                - generic [ref=f1e1237]: Normal
+                - generic [ref=f1e1239]: 35 days ago
+          - button "NTC 5 Condenser Raw ADC 2538 Reserved °C Not calibrated 0 4095 Normal 35 days ago" [ref=f1e1242] [cursor=pointer]:
+            - generic [ref=f1e1243]:
+              - generic [ref=f1e1247]:
+                - generic [ref=f1e1248]: NTC 5
+                - generic [ref=f1e1249]: Condenser
+              - generic [ref=f1e1250]:
+                - generic [ref=f1e1251]: Raw ADC
+                - generic [ref=f1e1252]: "2538"
+              - generic [ref=f1e1253]:
+                - generic [ref=f1e1254]: Reserved °C
+                - generic [ref=f1e1255]: Not calibrated
+              - generic [ref=f1e1260]:
+                - generic [ref=f1e1261]: "0"
+                - generic [ref=f1e1262]: "4095"
+              - generic [ref=f1e1263]:
+                - generic [ref=f1e1264]: Normal
+                - generic [ref=f1e1266]: 35 days ago
+          - button "NTC 6 Battery Raw ADC 2540 Reserved °C Not calibrated 0 4095 Normal 35 days ago" [ref=f1e1269] [cursor=pointer]:
+            - generic [ref=f1e1270]:
+              - generic [ref=f1e1274]:
+                - generic [ref=f1e1275]: NTC 6
+                - generic [ref=f1e1276]: Battery
+              - generic [ref=f1e1277]:
+                - generic [ref=f1e1278]: Raw ADC
+                - generic [ref=f1e1279]: "2540"
+              - generic [ref=f1e1280]:
+                - generic [ref=f1e1281]: Reserved °C
+                - generic [ref=f1e1282]: Not calibrated
+              - generic [ref=f1e1287]:
+                - generic [ref=f1e1288]: "0"
+                - generic [ref=f1e1289]: "4095"
+              - generic [ref=f1e1290]:
+                - generic [ref=f1e1291]: Normal
+                - generic [ref=f1e1293]: 35 days ago
+          - button "NTC 7 Power Board Raw ADC 2537 Reserved °C Not calibrated 0 4095 Normal 35 days ago" [ref=f1e1296] [cursor=pointer]:
+            - generic [ref=f1e1297]:
+              - generic [ref=f1e1301]:
+                - generic [ref=f1e1302]: NTC 7
+                - generic [ref=f1e1303]: Power Board
+              - generic [ref=f1e1304]:
+                - generic [ref=f1e1305]: Raw ADC
+                - generic [ref=f1e1306]: "2537"
+              - generic [ref=f1e1307]:
+                - generic [ref=f1e1308]: Reserved °C
+                - generic [ref=f1e1309]: Not calibrated
+              - generic [ref=f1e1314]:
+                - generic [ref=f1e1315]: "0"
+                - generic [ref=f1e1316]: "4095"
+              - generic [ref=f1e1317]:
+                - generic [ref=f1e1318]: Normal
+                - generic [ref=f1e1320]: 35 days ago
+          - button "NTC 8 Ambient Raw ADC 2537 Reserved °C Not calibrated 0 4095 Normal 35 days ago" [ref=f1e1323] [cursor=pointer]:
+            - generic [ref=f1e1324]:
+              - generic [ref=f1e1328]:
+                - generic [ref=f1e1329]: NTC 8
+                - generic [ref=f1e1330]: Ambient
+              - generic [ref=f1e1331]:
+                - generic [ref=f1e1332]: Raw ADC
+                - generic [ref=f1e1333]: "2537"
+              - generic [ref=f1e1334]:
+                - generic [ref=f1e1335]: Reserved °C
+                - generic [ref=f1e1336]: Not calibrated
+              - generic [ref=f1e1341]:
+                - generic [ref=f1e1342]: "0"
+                - generic [ref=f1e1343]: "4095"
+              - generic [ref=f1e1344]:
+                - generic [ref=f1e1345]: Normal
+                - generic [ref=f1e1347]: 35 days ago

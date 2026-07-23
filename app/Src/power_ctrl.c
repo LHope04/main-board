@@ -13,6 +13,25 @@
  */
 #include "power_ctrl.h"
 
+#define PUMP_PWM_PERIOD_TICKS   20U    /* TIM7 2kHz / 20 = 100Hz */
+#define PUMP_STARTUP_TICKS      2000U  /* 1s full-power startup */
+#define PUMP_DEFAULT_DUTY_PCT   30U
+
+volatile uint8_t  g_pump_duty_pct = PUMP_DEFAULT_DUTY_PCT;
+volatile uint8_t  g_pump_pwm_phase = 0U;
+volatile uint8_t  g_pump_output_on = 0U;
+volatile uint16_t g_pump_startup_ticks = 0U;
+
+static volatile uint8_t s_pump_enabled = 0U;
+
+static inline void pump_write(uint8_t on)
+{
+    /* Direct BSRR write keeps the 2kHz ISR short and changes only PC11. */
+    GPIOC->BSRR = on ? (uint32_t)GPIO_PIN_11
+                     : ((uint32_t)GPIO_PIN_11 << 16U);
+    g_pump_output_on = on ? 1U : 0U;
+}
+
 void PowerCtrl_StartupSequence(void)
 {
     HAL_Delay(100);
@@ -60,5 +79,68 @@ void PowerCtrl_EnableFanVcc(uint8_t en)
 
 void PowerCtrl_EnablePump(uint8_t en)
 {
-    HAL_GPIO_WritePin(GPIOC, GPIO_PIN_11, en ? GPIO_PIN_SET : GPIO_PIN_RESET);
+    if (en) {
+        g_pump_pwm_phase = 0U;
+        g_pump_startup_ticks = PUMP_STARTUP_TICKS;
+        s_pump_enabled = 1U;
+        pump_write(1U);
+    } else {
+        s_pump_enabled = 0U;
+        g_pump_startup_ticks = 0U;
+        g_pump_pwm_phase = 0U;
+        pump_write(0U);
+    }
+}
+
+void PowerCtrl_SetPumpDuty(uint8_t duty_pct)
+{
+    if (duty_pct > 100U) duty_pct = 100U;
+    g_pump_duty_pct = duty_pct;
+
+    if (duty_pct == 0U) {
+        g_pump_startup_ticks = 0U;
+        pump_write(0U);
+    }
+}
+
+void PowerCtrl_PumpPwmTick2kHz(void)
+{
+    uint8_t duty_pct;
+    uint8_t on_ticks;
+
+    if (!s_pump_enabled) return;
+
+    duty_pct = g_pump_duty_pct;
+    if (duty_pct == 0U) {
+        g_pump_pwm_phase = 0U;
+        pump_write(0U);
+        return;
+    }
+
+    if (g_pump_startup_ticks > 0U) {
+        pump_write(1U);
+        g_pump_startup_ticks--;
+        if (g_pump_startup_ticks == 0U) g_pump_pwm_phase = 0U;
+        return;
+    }
+
+    if (duty_pct >= 100U) {
+        g_pump_pwm_phase = 0U;
+        pump_write(1U);
+        return;
+    }
+
+    on_ticks = (uint8_t)(((uint16_t)duty_pct * PUMP_PWM_PERIOD_TICKS + 50U) / 100U);
+    if (on_ticks == 0U) on_ticks = 1U;
+
+    if (g_pump_pwm_phase == 0U) {
+        pump_write(1U);
+    } else if (g_pump_pwm_phase == on_ticks) {
+        pump_write(0U);
+    }
+
+    g_pump_pwm_phase++;
+    if (g_pump_pwm_phase >= PUMP_PWM_PERIOD_TICKS) {
+        g_pump_pwm_phase = 0U;
+    }
 }

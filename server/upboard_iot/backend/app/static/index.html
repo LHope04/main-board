@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Upboard IoT Console</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <section id="loginView" class="login-view">
+        <div class="login-panel">
+          <div class="brand-lockup">
+            <span class="brand-mark">U</span>
+            <div>
+              <p>UPBOARD</p>
+              <strong>IoT Console</strong>
+            </div>
+          </div>
+          <form id="loginForm" class="login-form">
+            <label>
+              <span>管理员</span>
+              <input id="username" name="username" autocomplete="username" value="admin" />
+            </label>
+            <label>
+              <span>密码</span>
+              <input id="password" name="password" type="password" autocomplete="current-password" />
+            </label>
+            <button type="submit">登录</button>
+            <p id="loginError" class="error-line"></p>
+          </form>
+        </div>
+      </section>
+
+      <section id="appView" class="app-view hidden">
+        <aside class="rail">
+          <div class="brand-lockup compact">
+            <span class="brand-mark">U</span>
+            <div>
+              <p>UPBOARD</p>
+              <strong>IoT Console</strong>
+            </div>
+          </div>
+
+          <div class="rail-head">
+            <h2>设备</h2>
+            <span id="deviceCount">0</span>
+          </div>
+          <div id="devicesTable" class="devices-table"></div>
+
+          <div class="rail-footer">
+            <span id="sessionLine">admin</span>
+            <button id="logoutBtn" class="ghost-button" type="button">退出</button>
+          </div>
+        </aside>
+
+        <section class="workspace">
+          <header class="topbar">
+            <div>
+              <span class="page-kicker">Telemetry</span>
+              <h1>设备实时数据</h1>
+            </div>
+            <div class="top-actions">
+              <span id="streamState" class="pill">SSE 未连接</span>
+              <button id="refreshBtn" type="button">刷新</button>
+            </div>
+          </header>
+
+          <section class="summary-grid">
+            <div class="metric">
+              <span>设备总数</span>
+              <strong id="totalDevices">0</strong>
+            </div>
+            <div class="metric">
+              <span>在线设备</span>
+              <strong id="onlineDevices">0</strong>
+            </div>
+            <div class="metric wide">
+              <span>当前设备</span>
+              <strong id="selectedSn">-</strong>
+            </div>
+            <div class="metric">
+              <span>最后上报</span>
+              <strong id="lastSeen">-</strong>
+            </div>
+          </section>
+
+          <section class="status-panel">
+            <div class="detail-title">
+              <div>
+                <span>Selected device</span>
+                <h2 id="detailTitle">未选择设备</h2>
+              </div>
+              <span id="detailStatus" class="pill">离线</span>
+            </div>
+
+            <div class="detail-grid">
+              <div class="info-box">
+                <span>RSSI / CSQ</span>
+                <strong id="rssiValue">-</strong>
+                <small id="rssiMeta">信号</small>
+              </div>
+              <div class="info-box gps-info">
+                <span>最近有效 GPS</span>
+                <strong id="gpsValue">-</strong>
+                <small id="gpsMeta">等待定位</small>
+              </div>
+              <div class="info-box">
+                <span>24V 输入</span>
+                <strong id="bat24Value">-</strong>
+                <small id="bat24Meta">电池侧</small>
+              </div>
+              <div class="info-box">
+                <span>12V 输入</span>
+                <strong id="v12Value">-</strong>
+                <small id="v12Meta">低压侧</small>
+              </div>
+            </div>
+          </section>
+
+          <section class="main-grid">
+            <article class="panel map-panel">
+              <div class="panel-head">
+                <div>
+                  <span>GPS</span>
+                  <h2>定位轨迹</h2>
+                </div>
+              </div>
+              <div id="gpsMap" class="gps-map"></div>
+              <div id="gpsList" class="gps-list"></div>
+            </article>
+
+            <div class="side-stack">
+              <article class="panel chart-panel">
+                <div class="panel-head">
+                  <div>
+                    <span>Power</span>
+                    <h2>24V 电压历史</h2>
+                  </div>
+                </div>
+                <canvas id="voltageChart" width="720" height="320"></canvas>
+              </article>
+
+              <article class="panel signal-panel">
+                <div class="panel-head">
+                  <div>
+                    <span>Outputs</span>
+                    <h2>输出状态</h2>
+                  </div>
+                </div>
+                <div id="outputs" class="outputs"></div>
+                <div class="subhead">
+                  <span>NTC Raw</span>
+                </div>
+                <div id="ntcGrid" class="ntc-grid"></div>
+              </article>
+            </div>
+          </section>
+
+          <section class="bottom-grid">
+            <article class="panel">
+              <div class="panel-head">
+                <div>
+                  <span>Events</span>
+                  <h2>最近事件</h2>
+                </div>
+              </div>
+              <div id="eventsList" class="events-list"></div>
+            </article>
+
+            <article class="panel raw-panel">
+              <div class="panel-head">
+                <div>
+                  <span>Payload</span>
+                  <h2>原始数据</h2>
+                </div>
+              </div>
+              <pre id="rawPayload" class="raw-payload">{}</pre>
+            </article>
+          </section>
+        </section>
+      </section>
+    </main>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="/static/app.js"></script>
+  </body>
+</html>

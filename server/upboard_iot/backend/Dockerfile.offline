@@ -1,0 +1,7 @@
+ARG BASE_IMAGE=upboard-iot-web:legacy
+FROM ${BASE_IMAGE}
+
+COPY backend/app /app/app
+COPY frontend/dist /app/frontend_dist
+
+ENV FRONTEND_DIST_DIR=/app/frontend_dist

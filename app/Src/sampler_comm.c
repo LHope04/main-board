@@ -40,6 +40,13 @@ volatile uint8_t  g_sampler_raw_ring[RAW_RING_SIZE];
 volatile uint32_t g_sampler_ascii_lines_rx    = 0;   /* complete ASCII lines */
 volatile uint32_t g_sampler_ascii_ntc_rx      = 0;   /* parsed NTC lines */
 volatile uint32_t g_sampler_ascii_parse_errors = 0;  /* malformed NTC lines */
+volatile uint32_t g_sampler_ascii_gps_rx      = 0;   /* parsed GPS fields */
+volatile uint32_t g_sampler_gps_fix           = 0;   /* current GPS fix */
+volatile int32_t  g_sampler_gps_lat_e6        = 0;   /* current latitude * 1e6 */
+volatile int32_t  g_sampler_gps_lon_e6        = 0;   /* current longitude * 1e6 */
+volatile int32_t  g_sampler_gps_speed_mkt     = 0;   /* speed knots * 1000 */
+
+static SamplerComm_GpsSnapshot s_gps_snapshot;
 
 /* ISR-side scratch (single in-flight frame) */
 static volatile rx_state_t s_rx_state  = RX_WAIT_HEADER;
@@ -217,6 +224,105 @@ static uint8_t ascii_parse_uint16(const char **pp, uint16_t *out)
     return 1;
 }
 
+static uint8_t ascii_parse_fixed(const char **pp, uint32_t scale, uint8_t decimals,
+                                 int32_t *out)
+{
+    const char *p = *pp;
+    int sign = 1;
+    uint32_t whole = 0;
+    uint32_t frac = 0;
+    uint8_t whole_digits = 0;
+    uint8_t frac_digits = 0;
+
+    while (*p == ' ' || *p == '\t') p++;
+    if (*p == '-') {
+        sign = -1;
+        p++;
+    } else if (*p == '+') {
+        p++;
+    }
+
+    while (*p >= '0' && *p <= '9') {
+        whole = (whole * 10U) + (uint32_t)(*p - '0');
+        if (whole > (2147483647UL / scale)) return 0;
+        p++;
+        whole_digits++;
+    }
+
+    if (*p == '.') {
+        p++;
+        while (*p >= '0' && *p <= '9') {
+            if (frac_digits < decimals) {
+                frac = (frac * 10U) + (uint32_t)(*p - '0');
+                frac_digits++;
+            }
+            p++;
+        }
+    }
+
+    if (whole_digits == 0U && frac_digits == 0U) return 0;
+    while (frac_digits < decimals) {
+        frac *= 10U;
+        frac_digits++;
+    }
+
+    uint32_t value = (whole * scale) + frac;
+    if (value > 2147483647UL) return 0;
+    *out = (sign < 0) ? -(int32_t)value : (int32_t)value;
+    *pp = p;
+    return 1;
+}
+
+static uint8_t ascii_expect_comma(const char **pp)
+{
+    const char *p = *pp;
+    while (*p == ' ' || *p == '\t') p++;
+    if (*p != ',') return 0;
+    *pp = p + 1;
+    return 1;
+}
+
+static uint8_t ascii_dispatch_gps_line(const char *line)
+{
+    const char *p = strstr(line, "GPS:");
+    int32_t lat_e6 = 0;
+    int32_t lon_e6 = 0;
+    int32_t speed_mkt = 0;
+
+    if (!p) return 0;
+    p += 4;
+    while (*p == ' ' || *p == '\t') p++;
+
+    if (strncmp(p, "no_fix", 6) == 0) {
+        s_gps_snapshot.fix = 0;
+        s_gps_snapshot.last_update_ms = HAL_GetTick();
+        g_sampler_gps_fix = 0;
+        g_sampler_ascii_gps_rx++;
+        return 1;
+    }
+
+    if (!ascii_parse_fixed(&p, 1000000U, 6U, &lat_e6) ||
+        !ascii_expect_comma(&p) ||
+        !ascii_parse_fixed(&p, 1000000U, 6U, &lon_e6) ||
+        !ascii_expect_comma(&p) ||
+        !ascii_parse_fixed(&p, 1000U, 3U, &speed_mkt)) {
+        g_sampler_ascii_parse_errors++;
+        return 1;
+    }
+
+    s_gps_snapshot.fix = 1;
+    s_gps_snapshot.lat_e6 = lat_e6;
+    s_gps_snapshot.lon_e6 = lon_e6;
+    s_gps_snapshot.speed_milli_knots = speed_mkt;
+    s_gps_snapshot.last_update_ms = HAL_GetTick();
+    g_sampler_gps_fix = 1;
+    g_sampler_gps_lat_e6 = lat_e6;
+    g_sampler_gps_lon_e6 = lon_e6;
+    g_sampler_gps_speed_mkt = speed_mkt;
+    g_sampler_ascii_gps_rx++;
+    return 1;
+}
+
 static uint8_t ascii_dispatch_ntc_line(const char *line)
 {
     const char *p = strstr(line, "NTC:");
@@ -281,6 +387,7 @@ void SamplerComm_Poll(void)
             line[i] = s_ascii_line[slot][i];
         }
         line[len] = '\0';
+        (void)ascii_dispatch_gps_line(line);
         (void)ascii_dispatch_ntc_line(line);
         s_ascii_rd++;
     }
@@ -298,4 +405,10 @@ void SamplerComm_SendHeartbeat(uint8_t seq)
     };
     (void)HAL_UART_Transmit(s_huart, f, sizeof(f), 20);
     g_sampler_hb_tx_cnt++;
+}
+
+void SamplerComm_GetGpsSnapshot(SamplerComm_GpsSnapshot *out)
+{
+    if (!out) return;
+    *out = s_gps_snapshot;
 }

@@ -1,0 +1,53 @@
+[  168453ms] [ERROR] Failed to load resource: the server responded with a status of 502 (Bad Gateway) @ http://38.76.206.42:18080/api/devices/UPB-0B506761/latest:0
+[  168464ms] [ERROR] Failed to load resource: the server responded with a status of 502 (Bad Gateway) @ http://38.76.206.42:18080/api/devices/UPB-0B506761/telemetry?limit=500:0
+[  168475ms] [ERROR] Failed to load resource: the server responded with a status of 502 (Bad Gateway) @ http://38.76.206.42:18080/api/devices/UPB-0B506761/gps?limit=500:0
+[  168475ms] [ERROR] Failed to load resource: the server responded with a status of 502 (Bad Gateway) @ http://38.76.206.42:18080/api/devices/UPB-0B506761/events?limit=200:0
+[  171867ms] [ERROR] Failed to load resource: the server responded with a status of 502 (Bad Gateway) @ http://38.76.206.42:18080/api/devices/UPB-0B506761/telemetry?limit=500:0
+[  171876ms] [ERROR] Failed to load resource: the server responded with a status of 502 (Bad Gateway) @ http://38.76.206.42:18080/api/devices/UPB-0B506761/gps?limit=500:0
+[  171877ms] [ERROR] Failed to load resource: the server responded with a status of 502 (Bad Gateway) @ http://38.76.206.42:18080/api/devices/UPB-0B506761/latest:0
+[  171926ms] [ERROR] Failed to load resource: the server responded with a status of 502 (Bad Gateway) @ http://38.76.206.42:18080/api/devices/UPB-0B506761/events?limit=200:0
+[  171990ms] [ERROR] Failed to load resource: net::ERR_INCOMPLETE_CHUNKED_ENCODING @ http://38.76.206.42:18080/api/stream:0
+[  745180ms] [ERROR] Failed to load resource: net::ERR_INCOMPLETE_CHUNKED_ENCODING @ http://38.76.206.42:18080/api/stream:0
+[ 1196442ms] [ERROR] Failed to load resource: net::ERR_INCOMPLETE_CHUNKED_ENCODING @ http://38.76.206.42:18080/api/stream:0
+[ 2275244ms] [ERROR] Failed to load resource: net::ERR_INCOMPLETE_CHUNKED_ENCODING @ http://38.76.206.42:18080/api/stream:0
+[ 2469982ms] [ERROR] Failed to load resource: net::ERR_INCOMPLETE_CHUNKED_ENCODING @ http://38.76.206.42:18080/api/stream:0
+[ 2473951ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://38.76.206.42:18080/api/stream:0
+[ 2478170ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://38.76.206.42:18080/api/devices/UPB-0B506761/latest:0
+[ 2478777ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://38.76.206.42:18080/api/devices/UPB-0B506761/events?limit=200:0
+[ 2478802ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://38.76.206.42:18080/api/devices/UPB-0B506761/telemetry?limit=500:0
+[ 2478802ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://38.76.206.42:18080/api/devices/UPB-0B506761/gps?limit=500:0
+[19320191ms] [ERROR] Failed to load resource: the server responded with a status of 502 (Bad Gateway) @ http://38.76.206.42:18080/api/devices/UPB-0B506761/events?limit=200:0
+[19326209ms] [ERROR] Failed to load resource: the server responded with a status of 502 (Bad Gateway) @ http://38.76.206.42:18080/api/devices/UPB-0B506761/latest:0
+[19330325ms] [ERROR] Failed to load resource: the server responded with a status of 502 (Bad Gateway) @ http://38.76.206.42:18080/api/devices/UPB-0B506761/telemetry?limit=500:0
+[24782901ms] [ERROR] Failed to load resource: the server responded with a status of 502 (Bad Gateway) @ http://38.76.206.42:18080/api/devices/UPB-0B506761/telemetry?limit=500:0
+[24782902ms] [ERROR] Failed to load resource: the server responded with a status of 502 (Bad Gateway) @ http://38.76.206.42:18080/api/devices/UPB-0B506761/latest:0
+[24782902ms] [ERROR] Failed to load resource: the server responded with a status of 502 (Bad Gateway) @ http://38.76.206.42:18080/api/devices/UPB-0B506761/gps?limit=500:0
+[24782903ms] [ERROR] Failed to load resource: the server responded with a status of 502 (Bad Gateway) @ http://38.76.206.42:18080/api/devices/UPB-0B506761/events?limit=200:0
+[24788913ms] [ERROR] Failed to load resource: the server responded with a status of 502 (Bad Gateway) @ http://38.76.206.42:18080/api/devices/UPB-0B506761/gps?limit=500:0
+[24788919ms] [ERROR] Failed to load resource: the server responded with a status of 502 (Bad Gateway) @ http://38.76.206.42:18080/api/devices/UPB-0B506761/telemetry?limit=500:0
+[24788919ms] [ERROR] Failed to load resource: the server responded with a status of 502 (Bad Gateway) @ http://38.76.206.42:18080/api/devices/UPB-0B506761/events?limit=200:0
+[24788919ms] [ERROR] Failed to load resource: the server responded with a status of 502 (Bad Gateway) @ http://38.76.206.42:18080/api/devices/UPB-0B506761/latest:0
+[24823923ms] [ERROR] Failed to load resource: the server responded with a status of 502 (Bad Gateway) @ http://38.76.206.42:18080/api/devices/UPB-0B506761/telemetry?limit=500:0
+[24823924ms] [ERROR] Failed to load resource: the server responded with a status of 502 (Bad Gateway) @ http://38.76.206.42:18080/api/devices/UPB-0B506761/latest:0
+[24823924ms] [ERROR] Failed to load resource: the server responded with a status of 502 (Bad Gateway) @ http://38.76.206.42:18080/api/devices/UPB-0B506761/events?limit=200:0
+[24823927ms] [ERROR] Failed to load resource: the server responded with a status of 502 (Bad Gateway) @ http://38.76.206.42:18080/api/devices/UPB-0B506761/gps?limit=500:0
+[24829932ms] [ERROR] Failed to load resource: the server responded with a status of 502 (Bad Gateway) @ http://38.76.206.42:18080/api/devices/UPB-0B506761/latest:0
+[24829937ms] [ERROR] Failed to load resource: the server responded with a status of 502 (Bad Gateway) @ http://38.76.206.42:18080/api/devices/UPB-0B506761/gps?limit=500:0
+[24829938ms] [ERROR] Failed to load resource: the server responded with a status of 502 (Bad Gateway) @ http://38.76.206.42:18080/api/devices/UPB-0B506761/telemetry?limit=500:0
+[24829941ms] [ERROR] Failed to load resource: the server responded with a status of 502 (Bad Gateway) @ http://38.76.206.42:18080/api/devices/UPB-0B506761/events?limit=200:0
+[28056557ms] [ERROR] Failed to load resource: the server responded with a status of 502 (Bad Gateway) @ http://38.76.206.42:18080/api/devices/UPB-0B506761/telemetry?limit=500:0
+[28056558ms] [ERROR] Failed to load resource: the server responded with a status of 502 (Bad Gateway) @ http://38.76.206.42:18080/api/devices/UPB-0B506761/latest:0
+[28056558ms] [ERROR] Failed to load resource: the server responded with a status of 502 (Bad Gateway) @ http://38.76.206.42:18080/api/devices/UPB-0B506761/events?limit=200:0
+[28056558ms] [ERROR] Failed to load resource: the server responded with a status of 502 (Bad Gateway) @ http://38.76.206.42:18080/api/devices/UPB-0B506761/gps?limit=500:0
+[28062569ms] [ERROR] Failed to load resource: the server responded with a status of 502 (Bad Gateway) @ http://38.76.206.42:18080/api/devices/UPB-0B506761/events?limit=200:0
+[28062575ms] [ERROR] Failed to load resource: the server responded with a status of 502 (Bad Gateway) @ http://38.76.206.42:18080/api/devices/UPB-0B506761/telemetry?limit=500:0
+[28062575ms] [ERROR] Failed to load resource: the server responded with a status of 502 (Bad Gateway) @ http://38.76.206.42:18080/api/devices/UPB-0B506761/latest:0
+[28062576ms] [ERROR] Failed to load resource: the server responded with a status of 502 (Bad Gateway) @ http://38.76.206.42:18080/api/devices/UPB-0B506761/gps?limit=500:0
+[28576215ms] [ERROR] Failed to load resource: net::ERR_INCOMPLETE_CHUNKED_ENCODING @ http://38.76.206.42:18080/api/stream:0
+[33994566ms] [ERROR] Failed to load resource: the server responded with a status of 502 (Bad Gateway) @ http://38.76.206.42:18080/api/devices/UPB-0B506761/latest:0
+[34489879ms] [ERROR] Failed to load resource: the server responded with a status of 502 (Bad Gateway) @ http://38.76.206.42:18080/api/devices/UPB-0B506761/telemetry?limit=500:0
+[34489881ms] [ERROR] Failed to load resource: the server responded with a status of 502 (Bad Gateway) @ http://38.76.206.42:18080/api/devices/UPB-0B506761/events?limit=200:0
+[34489881ms] [ERROR] Failed to load resource: the server responded with a status of 502 (Bad Gateway) @ http://38.76.206.42:18080/api/devices/UPB-0B506761/gps?limit=500:0
+[34489881ms] [ERROR] Failed to load resource: the server responded with a status of 502 (Bad Gateway) @ http://38.76.206.42:18080/api/devices/UPB-0B506761/latest:0
+[38246686ms] [ERROR] Failed to load resource: the server responded with a status of 502 (Bad Gateway) @ http://38.76.206.42:18080/api/devices/UPB-0B506761/events?limit=200:0
+[38255881ms] [ERROR] Failed to load resource: the server responded with a status of 502 (Bad Gateway) @ http://38.76.206.42:18080/api/devices/UPB-0B506761/telemetry?limit=500:0

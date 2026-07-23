@@ -1,0 +1,104 @@
+- generic [ref=e3]:
+  - complementary [ref=e4]:
+    - generic [ref=e5]: TR
+    - navigation "Section navigation" [ref=e7]:
+      - button "Overview" [ref=e8] [cursor=pointer]
+      - button "Devices" [ref=e14] [cursor=pointer]
+      - button "Map" [ref=e18] [cursor=pointer]
+      - button "Alerts" [ref=e21] [cursor=pointer]
+      - button "Reports" [ref=e25] [cursor=pointer]
+      - button "Settings" [ref=e29] [cursor=pointer]
+    - generic [ref=e33]:
+      - button "Help" [ref=e34] [cursor=pointer]
+      - button "Settings" [ref=e38] [cursor=pointer]
+  - banner [ref=e42]:
+    - generic [ref=e47]:
+      - generic [ref=e48]: THERMORIDE
+      - generic [ref=e49]: Motorcycle Cooling Intelligence
+    - navigation "Primary navigation" [ref=e50]:
+      - button "Overview" [ref=e51] [cursor=pointer]
+      - button "Telemetry" [ref=e52] [cursor=pointer]
+      - button "Map & Trips" [ref=e53] [cursor=pointer]
+      - button "Alerts" [ref=e54] [cursor=pointer]
+      - button "Devices" [ref=e55] [cursor=pointer]
+      - button "Settings" [ref=e56] [cursor=pointer]
+    - generic [ref=e57]:
+      - generic [ref=e58]: WebSocket Live
+      - button "Auto Refresh On" [ref=e63] [cursor=pointer]
+      - button "Notifications" [ref=e69] [cursor=pointer]
+      - button "AK" [ref=e74] [cursor=pointer]
+  - complementary [ref=e78]:
+    - generic [ref=e79]:
+      - generic [ref=e80]:
+        - heading "Devices" [level=2] [ref=e81]
+        - paragraph [ref=e82]: 18 registered units
+      - generic [ref=e83]: "18"
+    - generic [ref=e84]:
+      - generic [ref=e85]: Search SN or device
+      - textbox "Search SN or device" [ref=e89]
+    - generic [ref=e90]:
+      - button "all" [ref=e91] [cursor=pointer]
+      - button "online" [ref=e92] [cursor=pointer]
+      - button "offline" [ref=e93] [cursor=pointer]
+    - generic [ref=e94]:
+      - button "TRC-240721-001 Cooling Unit Gen 3 Online 4 sec ago" [pressed] [ref=e95] [cursor=pointer]:
+        - generic [ref=e99]:
+          - generic [ref=e100]: TRC-240721-001
+          - generic [ref=e101]: Cooling Unit Gen 3
+          - generic [ref=e102]:
+            - generic [ref=e103]: Online
+            - generic [ref=e105]: 4 sec ago
+      - button "TRC-240721-002 Cooling Unit Gen 3 Online 7 sec ago" [ref=e108] [cursor=pointer]:
+        - generic [ref=e111]:
+          - generic [ref=e112]: TRC-240721-002
+          - generic [ref=e113]: Cooling Unit Gen 3
+          - generic [ref=e114]:
+            - generic [ref=e115]: Online
+            - generic [ref=e117]: 7 sec ago
+      - button "TRC-240720-018 Road Test Mule A Delayed 36 sec ago" [ref=e120] [cursor=pointer]:
+        - generic [ref=e123]:
+          - generic [ref=e124]: TRC-240720-018
+          - generic [ref=e125]: Road Test Mule A
+          - generic [ref=e126]:
+            - generic [ref=e127]: Delayed
+            - generic [ref=e129]: 36 sec ago
+      - button "TRC-240718-011 Cooling Unit Gen 2 Offline 7 min ago" [ref=e132] [cursor=pointer]:
+        - generic [ref=e135]:
+          - generic [ref=e136]: TRC-240718-011
+          - generic [ref=e137]: Cooling Unit Gen 2
+          - generic [ref=e138]:
+            - generic [ref=e139]: Offline
+            - generic [ref=e141]: 7 min ago
+      - button "TRC-240716-007 Validation Rig B Fault 8 sec ago" [ref=e144] [cursor=pointer]:
+        - generic [ref=e147]:
+          - generic [ref=e148]: TRC-240716-007
+          - generic [ref=e149]: Validation Rig B
+          - generic [ref=e150]:
+            - generic [ref=e151]: Fault
+            - generic [ref=e153]: 8 sec ago
+      - button "TRC-240714-003 Cooling Unit Gen 2 Online 5 sec ago" [ref=e156] [cursor=pointer]:
+        - generic [ref=e159]:
+          - generic [ref=e160]: TRC-240714-003
+          - generic [ref=e161]: Cooling Unit Gen 2
+          - generic [ref=e162]:
+            - generic [ref=e163]: Online
+            - generic [ref=e165]: 5 sec ago
+      - button "TRC-240710-016 Desert Test Vehicle Online 9 sec ago" [ref=e168] [cursor=pointer]:
+        - generic [ref=e171]:
+          - generic [ref=e172]: TRC-240710-016
+          - generic [ref=e173]: Desert Test Vehicle
+          - generic [ref=e174]:
+            - generic [ref=e175]: Online
+            - generic [ref=e177]: 9 sec ago
+      - button "TRC-240706-021 Cooling Unit Gen 2 Offline 30 min ago" [ref=e180] [cursor=pointer]:
+        - generic [ref=e183]:
+          - generic [ref=e184]: TRC-240706-021
+          - generic [ref=e185]: Cooling Unit Gen 2
+          - generic [ref=e186]:
+            - generic [ref=e187]: Offline
+            - generic [ref=e189]: 30 min ago
+    - generic [ref=e193]:
+      - generic [ref=e194]: Fleet availability
+      - strong [ref=e195]: 72.2%
+  - main "Cooling system dashboard" [ref=e198]:
+    - generic "Loading dashboard" [ref=e199]

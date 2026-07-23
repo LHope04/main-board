@@ -109,6 +109,24 @@ HAL_StatusTypeDef MCF8329A_ReadAlgoState(MCF8329A_Device *dev, uint32_t *state);
  * while spinning). Returns first non-OK rc. */
 HAL_StatusTypeDef MCF8329A_LoadMinimumConfig(MCF8329A_Device *dev);
 
+/* Load the compiled ZW50 / 3A / 200Hz compressor profile into runtime shadow
+ * and verify it. Like the TI-default loader, this never commits EEPROM. */
+HAL_StatusTypeDef MCF8329A_LoadCompressorProfile(MCF8329A_Device *dev,
+                                                uint32_t *mismatch_mask,
+                                                uint32_t *verified_count);
+
+/* Load TI datasheet SLLSFQ7 Table 8-1 "Recommended Default Values" into
+ * runtime shadow registers and verify every value by read-back.
+ *
+ * This deliberately does NOT issue EEPROM_WRT, so an existing Motor Studio
+ * EEPROM image remains intact but is not used for the current powered session.
+ * Must be called with DRVOFF asserted and the motor in IDLE.
+ * mismatch_mask bit N corresponds to entry N in the driver's TI default table;
+ * verified_count reports the number of exact read-back matches. */
+HAL_StatusTypeDef MCF8329A_LoadRecommendedDefaults(MCF8329A_Device *dev,
+                                                   uint32_t *mismatch_mask,
+                                                   uint32_t *verified_count);
+
 /* Trigger MPET (Motor Parameter Estimation Tool). The chip will:
  *   - Briefly spin the motor at low duty to measure phase resistance,
  *     phase inductance (Ld/Lq) and BEMF constant Ke

@@ -1,0 +1,444 @@
+- generic [ref=e3]:
+  - complementary [ref=e4]:
+    - generic [ref=e5]: TR
+    - navigation "Section navigation" [ref=e7]:
+      - button "Overview" [ref=e8] [cursor=pointer]
+      - button "Devices" [ref=e14] [cursor=pointer]
+      - button "Map" [ref=e18] [cursor=pointer]
+      - button "Alerts" [ref=e21] [cursor=pointer]
+      - button "Reports" [ref=e25] [cursor=pointer]
+      - button "Settings" [ref=e29] [cursor=pointer]
+    - generic [ref=e33]:
+      - button "Help" [ref=e34] [cursor=pointer]
+      - button "Settings" [ref=e38] [cursor=pointer]
+  - banner [ref=e42]:
+    - generic [ref=e47]:
+      - generic [ref=e48]: THERMORIDE
+      - generic [ref=e49]: Motorcycle Cooling Intelligence
+    - generic [ref=e57]:
+      - generic [ref=e58]: WebSocket Live
+      - button "Auto Refresh On" [ref=e63] [cursor=pointer]
+      - button "Notifications" [ref=e69] [cursor=pointer]
+      - button "AK" [ref=e74] [cursor=pointer]
+  - complementary [ref=e78]:
+    - generic [ref=e79]:
+      - generic [ref=e80]:
+        - heading "Devices" [level=2] [ref=e81]
+        - paragraph [ref=e82]: 18 registered units
+      - generic [ref=e83]: "18"
+    - generic [ref=e84]:
+      - generic [ref=e85]: Search SN or device
+      - textbox "Search SN or device" [ref=e89]
+    - generic [ref=e90]:
+      - button "all" [ref=e91] [cursor=pointer]
+      - button "online" [ref=e92] [cursor=pointer]
+      - button "offline" [ref=e93] [cursor=pointer]
+    - generic [ref=e94]:
+      - button "TRC-240721-001 Cooling Unit Gen 3 Online 4 sec ago" [ref=e130] [cursor=pointer]:
+        - generic [ref=e134]:
+          - generic [ref=e135]: TRC-240721-001
+          - generic [ref=e136]: Cooling Unit Gen 3
+          - generic [ref=e137]:
+            - generic [ref=e138]: Online
+            - generic [ref=e140]: 4 sec ago
+      - button "TRC-240721-002 Cooling Unit Gen 3 Online 7 sec ago" [ref=e143] [cursor=pointer]:
+        - generic [ref=e146]:
+          - generic [ref=e147]: TRC-240721-002
+          - generic [ref=e148]: Cooling Unit Gen 3
+          - generic [ref=e149]:
+            - generic [ref=e150]: Online
+            - generic [ref=e152]: 7 sec ago
+      - button "TRC-240720-018 Road Test Mule A Delayed 36 sec ago" [ref=e155] [cursor=pointer]:
+        - generic [ref=e158]:
+          - generic [ref=e159]: TRC-240720-018
+          - generic [ref=e160]: Road Test Mule A
+          - generic [ref=e161]:
+            - generic [ref=e162]: Delayed
+            - generic [ref=e164]: 36 sec ago
+      - button "TRC-240718-011 Cooling Unit Gen 2 Offline 7 min ago" [active] [pressed] [ref=e167] [cursor=pointer]:
+        - generic [ref=e170]:
+          - generic [ref=e171]: TRC-240718-011
+          - generic [ref=e172]: Cooling Unit Gen 2
+          - generic [ref=e173]:
+            - generic [ref=e174]: Offline
+            - generic [ref=e176]: 7 min ago
+      - button "TRC-240716-007 Validation Rig B Fault 8 sec ago" [ref=e179] [cursor=pointer]:
+        - generic [ref=e182]:
+          - generic [ref=e183]: TRC-240716-007
+          - generic [ref=e184]: Validation Rig B
+          - generic [ref=e185]:
+            - generic [ref=e186]: Fault
+            - generic [ref=e188]: 8 sec ago
+      - button "TRC-240714-003 Cooling Unit Gen 2 Online 5 sec ago" [ref=e191] [cursor=pointer]:
+        - generic [ref=e194]:
+          - generic [ref=e195]: TRC-240714-003
+          - generic [ref=e196]: Cooling Unit Gen 2
+          - generic [ref=e197]:
+            - generic [ref=e198]: Online
+            - generic [ref=e200]: 5 sec ago
+      - button "TRC-240710-016 Desert Test Vehicle Online 9 sec ago" [ref=e203] [cursor=pointer]:
+        - generic [ref=e206]:
+          - generic [ref=e207]: TRC-240710-016
+          - generic [ref=e208]: Desert Test Vehicle
+          - generic [ref=e209]:
+            - generic [ref=e210]: Online
+            - generic [ref=e212]: 9 sec ago
+      - button "TRC-240706-021 Cooling Unit Gen 2 Offline 30 min ago" [ref=e215] [cursor=pointer]:
+        - generic [ref=e218]:
+          - generic [ref=e219]: TRC-240706-021
+          - generic [ref=e220]: Cooling Unit Gen 2
+          - generic [ref=e221]:
+            - generic [ref=e222]: Offline
+            - generic [ref=e224]: 30 min ago
+    - generic [ref=e102]:
+      - generic [ref=e103]: Fleet availability
+      - strong [ref=e104]: 72.2%
+  - main "Cooling system dashboard" [ref=e107]:
+    - generic [ref=e829]:
+      - generic [ref=e830]:
+        - generic [ref=e831]:
+          - heading "Cooling System Overview" [level=1] [ref=e832]
+          - paragraph [ref=e833]: Real-time telemetry and vehicle cooling system status
+        - generic [ref=e834]:
+          - button "Last 24 hours" [ref=e835] [cursor=pointer]
+          - generic [ref=e838]:
+            - generic [ref=e839]: Last updated
+            - generic [ref=e840]: Today, 17:11:36
+          - button "Refresh telemetry" [ref=e841] [cursor=pointer]
+      - generic [ref=e856]:
+        - generic [ref=e857]: Device offline
+        - generic [ref=e858]: Showing last known telemetry. Last report 7 min ago.
+      - region "Fleet summary" [ref=e859]:
+        - article [ref=e860]:
+          - generic [ref=e861]:
+            - generic [ref=e862]: Total Devices
+            - generic [ref=e877]: "18"
+            - generic [ref=e878]: +3 this month
+        - article [ref=e880]:
+          - generic [ref=e881]:
+            - generic [ref=e882]: Online Devices
+            - generic [ref=e891]: "13"
+            - generic [ref=e892]: 72.2% availability
+        - article [ref=e896]:
+          - generic [ref=e897]:
+            - generic [ref=e898]: Selected Device
+            - generic [ref=e904]: TRC-240718-011
+            - generic [ref=e905]: Cooling Unit Gen 2
+        - article [ref=e907]:
+          - generic [ref=e908]:
+            - generic [ref=e909]: Last Report
+            - generic [ref=e915]: 17:11:36
+            - generic [ref=e916]: 7 min ago
+      - region "Realtime system telemetry" [ref=e918]:
+        - article [ref=e920]:
+          - generic [ref=e921]:
+            - generic [ref=e922]:
+              - generic [ref=e923]:
+                - generic [ref=e924]: System Health
+                - heading "Live health unavailable" [level=2] [ref=e928]
+                - paragraph [ref=e929]: The unit is offline. Values below are the last known telemetry.
+              - generic [ref=e930]: Offline
+            - generic [ref=e933]:
+              - generic [ref=e937]:
+                - generic [ref=e938]: 0%
+                - generic [ref=e939]: OFFLINE
+              - generic [ref=e940]:
+                - generic [ref=e941]:
+                  - generic [ref=e946]: Cooling Load
+                  - generic [ref=e947]: 74%
+                - generic [ref=e948]:
+                  - generic [ref=e953]: Power
+                  - generic [ref=e954]: Stable
+                - generic [ref=e955]:
+                  - generic [ref=e963]: Network
+                  - generic [ref=e964]: Good
+                - generic [ref=e965]:
+                  - generic [ref=e971]: GPS
+                  - generic [ref=e972]: Last known
+        - generic [ref=e973]:
+          - article [ref=e974]:
+            - generic [ref=e976]:
+              - generic [ref=e977]: RSSI
+              - generic [ref=e978]: "-70 dBm"
+            - generic [ref=e981]:
+              - generic [ref=e982]:
+                - generic [ref=e983]: Good
+                - generic [ref=e984]: Cellular signal
+              - img "Recent trend" [ref=e986]
+          - article [ref=e988]:
+            - generic [ref=e990]:
+              - generic [ref=e991]: Last Valid GPS
+              - generic [ref=e992]: 34.0576, -118.2388
+            - generic [ref=e999]:
+              - generic [ref=e1000]: GPS Signal Lost
+              - generic [ref=e1001]: Updated 84 sec ago
+          - article [ref=e1002]:
+            - generic [ref=e1004]:
+              - generic [ref=e1005]: 24V Bus Voltage
+              - generic [ref=e1006]: 24.34 V
+            - generic [ref=e1010]:
+              - generic [ref=e1011]:
+                - generic [ref=e1012]: Stable
+                - generic [ref=e1013]: Normal range 24.0-24.9 V
+              - img "Recent trend" [ref=e1015]
+          - article [ref=e1017]:
+            - generic [ref=e1019]:
+              - generic [ref=e1020]: 24V Bus Current
+              - generic [ref=e1021]: 3.06 A
+            - generic [ref=e1028]:
+              - generic [ref=e1029]: 74.5 W
+              - generic [ref=e1030]: Calculated load
+          - article [ref=e1031]:
+            - generic [ref=e1033]:
+              - generic [ref=e1034]: Vehicle Input
+              - generic [ref=e1035]: 13.78 V
+            - generic [ref=e1041]:
+              - generic [ref=e1042]: Not charging
+              - generic [ref=e1043]: 12V vehicle supply
+      - region "Location and voltage history" [ref=e1044]:
+        - article [ref=e1046]:
+          - generic [ref=e1047]:
+            - generic [ref=e1048]:
+              - heading "Vehicle Location" [level=2] [ref=e1050]
+              - paragraph [ref=e1051]: Live GPS and recent route
+            - generic [ref=e1052]:
+              - button "Live" [ref=e1053] [cursor=pointer]
+              - button "1H" [ref=e1054] [cursor=pointer]
+              - button "6H" [ref=e1055] [cursor=pointer]
+              - button "24H" [ref=e1056] [cursor=pointer]
+              - button "Custom" [ref=e1057] [cursor=pointer]
+          - generic [ref=e1058]:
+            - generic [ref=e1059]:
+              - generic:
+                - generic:
+                  - button [ref=e1061] [cursor=pointer]
+                  - button [ref=e1063] [cursor=pointer]
+                  - button [ref=e1065] [cursor=pointer]
+              - generic [ref=e1067]:
+                - link "Leaflet" [ref=e1068] [cursor=pointer]:
+                  - /url: https://leafletjs.com
+                - text: "| ©"
+                - link "OpenStreetMap" [ref=e1073] [cursor=pointer]:
+                  - /url: https://www.openstreetmap.org/copyright
+                - text: © CARTO
+            - generic [ref=e1074]:
+              - button "Center map on device" [ref=e1075] [cursor=pointer]
+              - button "Toggle map layer" [ref=e1082] [cursor=pointer]
+              - button "Fullscreen map" [ref=e1087] [cursor=pointer]
+            - button "Replay route" [ref=e1093] [cursor=pointer]
+            - generic [ref=e1097]:
+              - generic [ref=e1098]: GPS Signal Lost
+              - generic [ref=e1102]: Showing last valid position
+          - generic [ref=e1103]:
+            - generic [ref=e1104]:
+              - generic [ref=e1105]: Distance
+              - generic [ref=e1106]: 28.4 km
+            - generic [ref=e1107]:
+              - generic [ref=e1108]: Duration
+              - generic [ref=e1109]: 52 min
+            - generic [ref=e1110]:
+              - generic [ref=e1111]: Average Speed
+              - generic [ref=e1112]: 32.7 km/h
+            - generic [ref=e1113]:
+              - generic [ref=e1114]: GPS Accuracy
+              - generic [ref=e1115]: ±12 m
+        - article [ref=e1117]:
+          - generic [ref=e1118]:
+            - generic [ref=e1119]:
+              - heading "24V Bus History" [level=2] [ref=e1120]
+              - paragraph [ref=e1121]: Voltage stability and alarm thresholds
+            - generic [ref=e1122]:
+              - button "5 min" [ref=e1123] [cursor=pointer]
+              - button "30 min" [ref=e1124] [cursor=pointer]
+              - button "1 h" [ref=e1125] [cursor=pointer]
+              - button "6 h" [ref=e1126] [cursor=pointer]
+              - button "24 h" [ref=e1127] [cursor=pointer]
+          - generic [ref=e1128]:
+            - generic [ref=e1129]:
+              - generic [ref=e1130]: Current
+              - generic [ref=e1131]: 24.34 V
+            - generic [ref=e1132]:
+              - generic [ref=e1133]: Average
+              - generic [ref=e1134]: 24.53 V
+            - generic [ref=e1135]:
+              - generic [ref=e1136]: Minimum
+              - generic [ref=e1137]: 24.20 V
+            - generic [ref=e1138]:
+              - generic [ref=e1139]: Maximum
+              - generic [ref=e1140]: 24.81 V
+          - img "24 volt bus history chart" [ref=e1141]
+      - article [ref=e1144]:
+        - generic [ref=e1146]:
+          - heading "Actuator Status" [level=2] [ref=e1147]
+          - paragraph [ref=e1148]: Read-only operating states from the selected unit
+        - generic [ref=e1152]:
+          - generic [ref=e1153]:
+            - generic [ref=e1158]:
+              - generic [ref=e1159]: BOOST CONVERTER
+              - generic [ref=e1160]: Last known state before disconnect
+            - generic [ref=e1161]: "Off"
+          - generic [ref=e1163]:
+            - generic [ref=e1167]:
+              - generic [ref=e1168]: LOAD OUTPUT
+              - generic [ref=e1169]: Last known state before disconnect
+            - generic [ref=e1170]: "Off"
+          - generic [ref=e1172]:
+            - generic [ref=e1176]:
+              - generic [ref=e1177]: CONDENSER FAN
+              - generic [ref=e1178]: Last known state before disconnect
+            - generic [ref=e1179]: "Off"
+          - generic [ref=e1181]:
+            - generic [ref=e1187]:
+              - generic [ref=e1188]: COOLANT PUMP
+              - generic [ref=e1189]: Last known state before disconnect
+            - generic [ref=e1190]: "Off"
+          - generic [ref=e1192]:
+            - generic [ref=e1197]:
+              - generic [ref=e1198]: COMPRESSOR
+              - generic [ref=e1199]: Last known state before disconnect
+            - generic [ref=e1200]: "Off"
+      - article [ref=e1202]:
+        - generic [ref=e1203]:
+          - generic [ref=e1204]:
+            - heading "NTC Sensor Channels" [level=2] [ref=e1205]
+            - paragraph [ref=e1206]: Eight-channel sampler input with raw and calibrated views
+          - tablist [ref=e1211]:
+            - tab "Raw ADC" [selected] [ref=e1212] [cursor=pointer]
+            - tab "Temperature" [ref=e1213] [cursor=pointer]
+        - generic [ref=e1214]:
+          - button "NTC 1 Coolant Outlet Raw ADC 2636 Reserved °C Not calibrated 0 4095 Normal 4 sec ago" [ref=e1215] [cursor=pointer]:
+            - generic [ref=e1216]:
+              - generic [ref=e1220]:
+                - generic [ref=e1221]: NTC 1
+                - generic [ref=e1222]: Coolant Outlet
+              - generic [ref=e1223]:
+                - generic [ref=e1224]: Raw ADC
+                - generic [ref=e1225]: "2636"
+              - generic [ref=e1226]:
+                - generic [ref=e1227]: Reserved °C
+                - generic [ref=e1228]: Not calibrated
+              - generic [ref=e1233]:
+                - generic [ref=e1234]: "0"
+                - generic [ref=e1235]: "4095"
+              - generic [ref=e1236]:
+                - generic [ref=e1237]: Normal
+                - generic [ref=e1239]: 4 sec ago
+          - button "NTC 2 Coolant Return Raw ADC 2527 Reserved °C Not calibrated 0 4095 Normal 5 sec ago" [ref=e1242] [cursor=pointer]:
+            - generic [ref=e1243]:
+              - generic [ref=e1247]:
+                - generic [ref=e1248]: NTC 2
+                - generic [ref=e1249]: Coolant Return
+              - generic [ref=e1250]:
+                - generic [ref=e1251]: Raw ADC
+                - generic [ref=e1252]: "2527"
+              - generic [ref=e1253]:
+                - generic [ref=e1254]: Reserved °C
+                - generic [ref=e1255]: Not calibrated
+              - generic [ref=e1260]:
+                - generic [ref=e1261]: "0"
+                - generic [ref=e1262]: "4095"
+              - generic [ref=e1263]:
+                - generic [ref=e1264]: Normal
+                - generic [ref=e1266]: 5 sec ago
+          - button "NTC 3 Compressor Shell Raw ADC 2281 Reserved °C Not calibrated 0 4095 Normal 6 sec ago" [ref=e1269] [cursor=pointer]:
+            - generic [ref=e1270]:
+              - generic [ref=e1274]:
+                - generic [ref=e1275]: NTC 3
+                - generic [ref=e1276]: Compressor Shell
+              - generic [ref=e1277]:
+                - generic [ref=e1278]: Raw ADC
+                - generic [ref=e1279]: "2281"
+              - generic [ref=e1280]:
+                - generic [ref=e1281]: Reserved °C
+                - generic [ref=e1282]: Not calibrated
+              - generic [ref=e1287]:
+                - generic [ref=e1288]: "0"
+                - generic [ref=e1289]: "4095"
+              - generic [ref=e1290]:
+                - generic [ref=e1291]: Normal
+                - generic [ref=e1293]: 6 sec ago
+          - button "NTC 4 Evaporator Raw ADC 2811 Reserved °C Not calibrated 0 4095 Normal 7 sec ago" [ref=e1296] [cursor=pointer]:
+            - generic [ref=e1297]:
+              - generic [ref=e1301]:
+                - generic [ref=e1302]: NTC 4
+                - generic [ref=e1303]: Evaporator
+              - generic [ref=e1304]:
+                - generic [ref=e1305]: Raw ADC
+                - generic [ref=e1306]: "2811"
+              - generic [ref=e1307]:
+                - generic [ref=e1308]: Reserved °C
+                - generic [ref=e1309]: Not calibrated
+              - generic [ref=e1314]:
+                - generic [ref=e1315]: "0"
+                - generic [ref=e1316]: "4095"
+              - generic [ref=e1317]:
+                - generic [ref=e1318]: Normal
+                - generic [ref=e1320]: 7 sec ago
+          - button "NTC 5 Condenser Raw ADC 2462 Reserved °C Not calibrated 0 4095 Warning 8 sec ago" [ref=e1323] [cursor=pointer]:
+            - generic [ref=e1324]:
+              - generic [ref=e1328]:
+                - generic [ref=e1329]: NTC 5
+                - generic [ref=e1330]: Condenser
+              - generic [ref=e1331]:
+                - generic [ref=e1332]: Raw ADC
+                - generic [ref=e1333]: "2462"
+              - generic [ref=e1334]:
+                - generic [ref=e1335]: Reserved °C
+                - generic [ref=e1336]: Not calibrated
+              - generic [ref=e1341]:
+                - generic [ref=e1342]: "0"
+                - generic [ref=e1343]: "4095"
+              - generic [ref=e1344]:
+                - generic [ref=e1345]: Warning
+                - generic [ref=e1347]: 8 sec ago
+          - button "NTC 6 Battery Raw ADC 2761 Reserved °C Not calibrated 0 4095 Normal 9 sec ago" [ref=e1350] [cursor=pointer]:
+            - generic [ref=e1351]:
+              - generic [ref=e1355]:
+                - generic [ref=e1356]: NTC 6
+                - generic [ref=e1357]: Battery
+              - generic [ref=e1358]:
+                - generic [ref=e1359]: Raw ADC
+                - generic [ref=e1360]: "2761"
+              - generic [ref=e1361]:
+                - generic [ref=e1362]: Reserved °C
+                - generic [ref=e1363]: Not calibrated
+              - generic [ref=e1368]:
+                - generic [ref=e1369]: "0"
+                - generic [ref=e1370]: "4095"
+              - generic [ref=e1371]:
+                - generic [ref=e1372]: Normal
+                - generic [ref=e1374]: 9 sec ago
+          - button "NTC 7 Power Board Raw ADC 2612 Reserved °C Not calibrated 0 4095 Normal 10 sec ago" [ref=e1377] [cursor=pointer]:
+            - generic [ref=e1378]:
+              - generic [ref=e1382]:
+                - generic [ref=e1383]: NTC 7
+                - generic [ref=e1384]: Power Board
+              - generic [ref=e1385]:
+                - generic [ref=e1386]: Raw ADC
+                - generic [ref=e1387]: "2612"
+              - generic [ref=e1388]:
+                - generic [ref=e1389]: Reserved °C
+                - generic [ref=e1390]: Not calibrated
+              - generic [ref=e1395]:
+                - generic [ref=e1396]: "0"
+                - generic [ref=e1397]: "4095"
+              - generic [ref=e1398]:
+                - generic [ref=e1399]: Normal
+                - generic [ref=e1401]: 10 sec ago
+          - button "NTC 8 Ambient Raw ADC 2997 Reserved °C Not calibrated 0 4095 Normal 11 sec ago" [ref=e1404] [cursor=pointer]:
+            - generic [ref=e1405]:
+              - generic [ref=e1409]:
+                - generic [ref=e1410]: NTC 8
+                - generic [ref=e1411]: Ambient
+              - generic [ref=e1412]:
+                - generic [ref=e1413]: Raw ADC
+                - generic [ref=e1414]: "2997"
+              - generic [ref=e1415]:
+                - generic [ref=e1416]: Reserved °C
+                - generic [ref=e1417]: Not calibrated
+              - generic [ref=e1422]:
+                - generic [ref=e1423]: "0"
+                - generic [ref=e1424]: "4095"
+              - generic [ref=e1425]:
+                - generic [ref=e1426]: Normal
+                - generic [ref=e1428]: 11 sec ago

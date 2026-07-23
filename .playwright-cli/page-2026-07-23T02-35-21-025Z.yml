@@ -1,0 +1,31 @@
+- main [ref=f1e3]:
+  - generic [ref=f1e4]:
+    - generic [ref=f1e7]:
+      - generic [ref=f1e12]:
+        - generic [ref=f1e13]: THERMORIDE
+        - generic [ref=f1e14]: Motorcycle Cooling Intelligence
+      - generic [ref=f1e15]:
+        - heading "Live cooling telemetry, secured at the source." [level=1] [ref=f1e16]
+        - paragraph [ref=f1e17]: Sign in to inspect registered units, power history, GPS routes and actuator state.
+      - generic [ref=f1e18]:
+        - generic [ref=f1e19]:
+          - generic [ref=f1e26]: SSE
+          - generic [ref=f1e27]: Live updates
+        - generic [ref=f1e28]:
+          - generic [ref=f1e32]: Cookie
+          - generic [ref=f1e33]: HttpOnly session
+        - generic [ref=f1e34]:
+          - generic [ref=f1e39]: Read only
+          - generic [ref=f1e40]: Telemetry access
+    - generic [ref=f1e42]:
+      - heading "Administrator sign in" [level=2] [ref=f1e47]
+      - paragraph [ref=f1e48]: Use the credentials configured on the Upboard IoT server.
+      - generic [ref=f1e49]:
+        - generic [ref=f1e50]:
+          - generic [ref=f1e51]: Username
+          - textbox "Username" [disabled] [ref=f1e52]
+        - generic [ref=f1e53]:
+          - generic [ref=f1e54]: Password
+          - textbox "Password" [disabled] [ref=f1e55]
+        - alert [ref=f1e56]: The API is unavailable. Confirm the FastAPI service is running, then retry.
+        - button "Retry connection" [ref=f1e57] [cursor=pointer]

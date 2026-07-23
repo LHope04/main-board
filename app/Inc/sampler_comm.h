@@ -28,9 +28,18 @@
 #define SAMPLER_CMD_SELFTEST  0x12U
 #define SAMPLER_CMD_HEARTBEAT 0x20U
 
+typedef struct {
+    uint8_t  fix;
+    int32_t  lat_e6;
+    int32_t  lon_e6;
+    int32_t  speed_milli_knots;
+    uint32_t last_update_ms;
+} SamplerComm_GpsSnapshot;
+
 void SamplerComm_Init(UART_HandleTypeDef *huart);
 void SamplerComm_RxISR(void);                  /* USART3_IRQHandler 调用 */
 void SamplerComm_Poll(void);                   /* 主循环调; dispatch 已收完整帧 */
 void SamplerComm_SendHeartbeat(uint8_t seq);   /* 0x20 帧 */
+void SamplerComm_GetGpsSnapshot(SamplerComm_GpsSnapshot *out);
 
 #endif /* __SAMPLER_COMM_H */

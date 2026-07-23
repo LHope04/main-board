@@ -6,6 +6,21 @@
 >   3. `app/Src/power_ctrl.c` + `app/Src/fan_ctrl.c` 等模块注释 — 已对齐 V6
 > 修改前必须对照原理图确认。**V3 旧引脚映射已全部移植,不要相信任何 PB5/PB3/PB9/PC6/PC7/PC8/PB13/PB14/PB15 跟风扇/水泵/压缩机相关的旧描述**。
 
+## V7 压缩机接口变更（2026-07-23 用户确认，修订原理图待入库）
+
+| 功能 | MCU 引脚 | 模式 | 当前确认状态 |
+|------|----------|------|--------------|
+| 压缩机速度 PWM | PA15 | TIM2_CH1 / AF1 | MCU 复用正确；PWM 频率、极性、占空比语义待驱动器规格确认 |
+| 压缩机正反转 NET14 | PC9 | GPIO output | 主控网表确认 U9.66 → R10 0Ω → FPC2.14；高低电平对应方向、驱动板上下拉待确认 |
+| 压缩机停转 NET15 | PA8 | GPIO output | 主控网表确认 U9.67 → R11 0Ω → FPC2.15；STOP 有效电平、上电安全默认态待确认 |
+
+**必须处理的固件冲突**：
+- PA15 当前仍属于 `fan_ctrl`，`FanCtrl_SetDuty()` 会直接改变压缩机 PWM；旧固件不可用于 V7 硬件。
+- PA8/PC9 当前属于 I2C3 SCL/SDA，`MX_I2C3_Init()`、I2C3 总线恢复和 MCF8329A 周期任务都会覆盖 GPIO 配置；V7 必须停用整条 I2C3/MCF8329A 控制路径。
+- PA15 不与当前蜂鸣器冲突：蜂鸣器实际使用 PB14 / TIM1_CH2N。
+- 风扇原 PWM 通道已被压缩机占用；风扇的新 PWM/使能方案尚未提供。
+- 当前 V6 主控板网表已确认 NET14/NET15 到 PC9/PA8 的排线通路；新版驱动板上这两个网络改接 DIR/STOP 的修订图尚未入库，因此有效电平、输入电压和外部上下拉仍未确认。
+
 ## 芯片信息
 
 | 字段 | 值 |
@@ -69,7 +84,7 @@ ADC1 + DMA **当前未初始化** (`HAL_ADC_*` 未在固件中调用)。8 路 NT
 PA0-PA7 当前角色:
 - PA0 = SYS_WKUP (KEYWAKE 输入)
 - PA1 = 未分配
-- PA2/PA3 = USART2 (IOT BC260Y)
+- PA2/PA3 = USART2 (IOT EC801E)
 - PA4/PA5/PA6 = 未分配
 - PA7 = TIM14_CH1 EXT_CLK (留作 MCF8329A 时钟,目前未启用)
 
@@ -86,7 +101,7 @@ cal_val/Current_LSB 见 main.c 初始化,**注意 sensors[0] 和 [1] 共享 I2C1
 | USART | TX/RX 引脚 | AF | 用途 | 模块 |
 |---|---|---|---|---|
 | USART1 | PA9 / PA10 | AF7 | 有线遥控 (stub) | `RemoteCtrl_*` |
-| USART2 | PA2 / PA3 | AF7 | BC260Y 物联网 (stub),经 R15/R18 100Ω | `IotCtrl_*` |
+| USART2 | PA2 / PA3 | AF7 | EC801E 物联网 (115200 8N1),经 R15/R18 100Ω；PA3 RX 内部上拉 | `IotCtrl_*` |
 | USART3 | PD8 / PD9 | AF7 | 综合采样板 (NTC 数据上行) | `SamplerComm_*` |
 | **USART6** | **PC6 / PC7** | AF8 | **ESP32-C3 BLE OTA + Gear/Status**, 经 R6/R8 100Ω | `EspComm_*` |
 
@@ -130,7 +145,7 @@ BLE OTA 通路:Web Bluetooth → ESP32-C3 BLE↔UART → STM32 USART6 (帧协议
 | TIM8_CH2 | 输入捕获 | PSC=167→1MHz，ARR=65535 | — | TIM8_UP_TIM13_IRQn + TIM8_CC_IRQn 1-0 | 风扇 FG（双中断向量，见 known-bugs.md） |
 | ADC1 | 扫描+连续+DMA 循环 | 12 bit，480 周期，8 通道 | DMA2 Stream0 | — | NTC |
 | I2C1/2/3 | Master 标准 | 100 kHz | — | — | INA226，HAL 阻塞读取 |
-| USART2 | 异步 | 115200 8N1 | — | — | ESP32 透传通道（不打明文） |
+| USART2 | 异步 | 115200 8N1；PA3 RX pull-up | — | USART2_IRQn 2-0 | EC801E AT 通道 |
 | IWDG | — | /256，RLR=500，约 4 s | — | — | Bootloader 启用，App 主循环+长任务内部喂狗 |
 | RTC BKP0R | — | 备份寄存器，软复位不清 | — | — | Bootloader→App 槽位标记（0xA0A0A0A0=A，0xB0B0B0B0=B） |
 

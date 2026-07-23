@@ -8,6 +8,7 @@
 /* 业务模块的 ISR 入口 (各模块 RxISR 直接在 USARTx_IRQHandler 里调) */
 #include "esp_comm.h"
 #include "led_rgb.h"
+#include "power_ctrl.h"
 
 /* 阶段 7/10 新增模块的 ISR 入口 — 弱符号 stub, 模块实现后替换 */
 __attribute__((weak)) void SamplerComm_RxISR(void) {
@@ -53,6 +54,7 @@ void TIM7_IRQHandler(void)                                    /* LED 呼吸灯�
     if (__HAL_TIM_GET_FLAG(&htim7, TIM_FLAG_UPDATE)) {
         __HAL_TIM_CLEAR_IT(&htim7, TIM_IT_UPDATE);
         LedRgb_PwmTick();
+        PowerCtrl_PumpPwmTick2kHz();
     }
 }
 

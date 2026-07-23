@@ -1,0 +1,47 @@
+- generic [ref=e3]:
+  - complementary [ref=e4]:
+    - generic [ref=e5]: TR
+    - navigation "Section navigation" [ref=e7]:
+      - button "Overview" [ref=e8] [cursor=pointer]
+      - button "Devices" [ref=e14] [cursor=pointer]
+      - button "Map" [ref=e18] [cursor=pointer]
+      - button "Alerts" [ref=e21] [cursor=pointer]
+      - button "Reports" [ref=e25] [cursor=pointer]
+      - button "Settings" [ref=e29] [cursor=pointer]
+    - generic [ref=e33]:
+      - button "Help" [ref=e34] [cursor=pointer]
+      - button "Settings" [ref=e38] [cursor=pointer]
+  - banner [ref=e42]:
+    - generic [ref=e47]:
+      - generic [ref=e48]: THERMORIDE
+      - generic [ref=e49]: Motorcycle Cooling Intelligence
+    - navigation "Primary navigation" [ref=e50]:
+      - button "Overview" [ref=e51] [cursor=pointer]
+      - button "Telemetry" [ref=e52] [cursor=pointer]
+      - button "Map & Trips" [ref=e53] [cursor=pointer]
+      - button "Alerts" [ref=e54] [cursor=pointer]
+      - button "Devices" [ref=e55] [cursor=pointer]
+      - button "Settings" [ref=e56] [cursor=pointer]
+    - generic [ref=e57]:
+      - generic [ref=e58]: WebSocket Live
+      - button "Auto Refresh On" [ref=e63] [cursor=pointer]
+      - button "Notifications" [ref=e69] [cursor=pointer]
+      - button "AK" [ref=e74] [cursor=pointer]
+  - complementary [ref=e78]:
+    - generic [ref=e79]:
+      - generic [ref=e80]:
+        - heading "Devices" [level=2] [ref=e81]
+        - paragraph [ref=e82]: 18 registered units
+      - generic [ref=e83]: "18"
+    - generic [ref=e84]:
+      - generic [ref=e85]: Search SN or device
+      - textbox "Search SN or device" [ref=e89]
+    - generic [ref=e90]:
+      - button "all" [ref=e91] [cursor=pointer]
+      - button "online" [ref=e92] [cursor=pointer]
+      - button "offline" [ref=e93] [cursor=pointer]
+    - generic [ref=e102]:
+      - generic [ref=e103]: Fleet availability
+      - strong [ref=e104]: 72.2%
+  - main "Cooling system dashboard" [ref=e107]:
+    - generic "Loading dashboard" [ref=e108]

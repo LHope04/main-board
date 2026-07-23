@@ -21,6 +21,8 @@ void PowerCtrl_EnableBoost(uint8_t en);       /* PE6 */
 void PowerCtrl_EnableLoad(uint8_t en);        /* PE5 */
 void PowerCtrl_EnableChargeNtc(uint8_t en);   /* PC15 */
 void PowerCtrl_EnableFanVcc(uint8_t en);      /* PC10 */
-void PowerCtrl_EnablePump(uint8_t en);        /* PC11 */
+void PowerCtrl_EnablePump(uint8_t en);        /* PC11; 1s full-power start, then configured duty */
+void PowerCtrl_SetPumpDuty(uint8_t duty_pct); /* 0..100%; default 30% */
+void PowerCtrl_PumpPwmTick2kHz(void);          /* call only from TIM7 update ISR */
 
 #endif /* __POWER_CTRL_H */

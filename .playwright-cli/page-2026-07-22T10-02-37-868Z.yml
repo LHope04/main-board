@@ -1,0 +1,56 @@
+- generic [ref=e65]:
+  - complementary [ref=e66]:
+    - generic [ref=e67]: TR
+    - navigation "Section navigation" [ref=e69]:
+      - button "Overview" [ref=e70] [cursor=pointer]
+      - button "Devices" [ref=e76] [cursor=pointer]
+      - button "Map" [ref=e80] [cursor=pointer]
+      - button "Alerts" [ref=e83] [cursor=pointer]
+      - button "Reports" [ref=e87] [cursor=pointer]
+      - button "Settings" [ref=e91] [cursor=pointer]
+    - generic [ref=e95]:
+      - button "Help" [ref=e96] [cursor=pointer]
+      - button "Settings" [ref=e100] [cursor=pointer]
+  - banner [ref=e104]:
+    - generic [ref=e109]:
+      - generic [ref=e110]: THERMORIDE
+      - generic [ref=e111]: Motorcycle Cooling Intelligence
+    - generic [ref=e112]:
+      - generic [ref=e113]: SSE Live
+      - button "Auto Refresh On" [ref=e118] [cursor=pointer]
+      - button "Notifications" [ref=e124] [cursor=pointer]
+      - button "Account menu for admin" [ref=e130] [cursor=pointer]:
+        - generic [ref=e131]: A
+  - complementary [ref=e134]:
+    - generic [ref=e135]:
+      - generic [ref=e136]:
+        - heading "Devices" [level=2] [ref=e137]
+        - paragraph [ref=e138]: 2 registered units
+      - generic [ref=e139]: "2"
+    - generic [ref=e140]:
+      - generic [ref=e141]: Search SN or device
+      - textbox "Search SN or device" [ref=e145]
+    - generic [ref=e146]:
+      - button "all" [ref=e147] [cursor=pointer]
+      - button "online" [ref=e148] [cursor=pointer]
+      - button "offline" [ref=e149] [cursor=pointer]
+    - generic [ref=e150]:
+      - button "UPB-0B506761 UPB-0B506761 Offline 13191 min ago" [pressed] [ref=e151] [cursor=pointer]:
+        - generic [ref=e155]:
+          - generic [ref=e156]: UPB-0B506761
+          - generic [ref=e157]: UPB-0B506761
+          - generic [ref=e158]:
+            - generic [ref=e159]: Offline
+            - generic [ref=e161]: 13191 min ago
+      - button "UPB-DEMO-001 UPB-DEMO-001 Offline 50710 min ago" [ref=e164] [cursor=pointer]:
+        - generic [ref=e167]:
+          - generic [ref=e168]: UPB-DEMO-001
+          - generic [ref=e169]: UPB-DEMO-001
+          - generic [ref=e170]:
+            - generic [ref=e171]: Offline
+            - generic [ref=e173]: 50710 min ago
+    - generic [ref=e177]:
+      - generic [ref=e178]: Fleet availability
+      - strong [ref=e179]: 0.0%
+  - main "Cooling system dashboard" [ref=e181]:
+    - generic "Loading dashboard" [ref=e182]

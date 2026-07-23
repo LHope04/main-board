@@ -64,6 +64,12 @@ volatile uint32_t g_mcf_state_rc     = 0xFFU;
 volatile uint32_t g_mcf_kick_rc      = 0xFFU;
 volatile uint32_t g_mcf_clrflt_rc    = 0xFFU;
 volatile uint32_t g_mcf_cfg_rc       = 0xFFU;
+volatile uint32_t g_mcf_cfg_mismatch = 0xFFFFFFFFU; /* TI Table 8-1 read-back mismatch mask */
+volatile uint32_t g_mcf_cfg_verified = 0U;          /* exact matches; expected 24 */
+/* Runtime shadow parameter source (never commits EEPROM):
+ *   1 = TI SLLSFQ7 Table 8-1 recommended defaults
+ *   2 = compiled ZW50 / 3A / 200Hz compressor profile */
+volatile uint8_t  g_mcf_config_profile = 2U;
 volatile uint32_t g_mcf_vm_voltage   = 0;       /* VM_VOLTAGE @ 0x45C, 反映 motor 母线 24V 是否到位 */
 volatile uint32_t g_mcf_phase_a      = 0;       /* PHASE_VOLTAGE_VA @ 0x460 */
 volatile uint32_t g_mcf_motor_su1_rb = 0;       /* 读回 MOTOR_STARTUP1 (0x84) 验证 shadow 写持久 */
@@ -383,16 +389,35 @@ int main(void)
     if (!g_mcf_i2c_disable) {
         MCF8329A_Init(&s_mcf, &hi2c3, MCF8329A_HAL_ADDR_DEFAULT);
         MCF8329A_SetDir(g_mcf_dir_cw);  /* 应用方向, Init 内部默认 CW=0 */
-        MCF8329A_DRVOff(1);             /* boot 默认 DRVOFF=HIGH 切断驱动, 等 C3 on 命令 */
+        MCF8329A_DRVOff(1);             /* 参数装载期间硬切栅极驱动 */
+        (void)MCF8329A_Stop(&s_mcf);    /* 清除上次 MCU 复位前可能残留的 speed override */
+        HAL_Delay(300);                 /* 等算法回到 IDLE 后再写 EEPROM-image shadow */
+        IWDG->KR = 0xAAAAU;
+
+        /* 每次开机覆盖 runtime shadow，不发 EEPROM_WRT，因此不会修改用户
+         * 曾用 Motor Studio 烧录的 EEPROM，也不会继续用 EEPROM 旧参数运行。 */
+        if (g_mcf_config_profile == 1U) {
+            g_mcf_cfg_rc = (uint32_t)MCF8329A_LoadRecommendedDefaults(
+                &s_mcf,
+                (uint32_t *)&g_mcf_cfg_mismatch,
+                (uint32_t *)&g_mcf_cfg_verified);
+        } else {
+            g_mcf_config_profile = 2U;
+            g_mcf_cfg_rc = (uint32_t)MCF8329A_LoadCompressorProfile(
+                &s_mcf,
+                (uint32_t *)&g_mcf_cfg_mismatch,
+                (uint32_t *)&g_mcf_cfg_verified);
+        }
+        IWDG->KR = 0xAAAAU;
+
         HAL_Delay(20);
         g_mcf_clrflt_rc = (uint32_t)MCF8329A_ClearFault(&s_mcf);
         HAL_Delay(20);
         g_mcf_kick_rc   = (uint32_t)MCF8329A_KickWatchdog(&s_mcf);
         HAL_Delay(20);
 
-        /* 等同 Motor Studio "I2C Speed Command Percentage" 滑块模式:
-         * 不覆盖 shadow 寄存器, 只用 EEPROM 里的出厂/已固化配置 + SPEED_OVERRIDE。 */
-        g_mcf_cfg_rc = HAL_OK;
+        /* 当前 profile shadow 已装载并逐项校验；以下保留常用字段镜像，
+         * 便于 J-Link/VSCode Watch 直接确认实际运行参数。 */
         (void)MCF8329A_Read32(&s_mcf, 0x000084U, (uint32_t *)&g_mcf_motor_su1_rb);
         (void)MCF8329A_Read32(&s_mcf, 0x000086U, (uint32_t *)&g_mcf_motor_su2_rb);
         (void)MCF8329A_Read32(&s_mcf, 0x000090U, (uint32_t *)&g_mcf_fault_cfg1_rb);
@@ -431,6 +456,33 @@ int main(void)
     }
 
     Buzzer_PlayHajimi();                    /* 开机大疆音; 内部喂狗 */
+
+    uint8_t s_iot_fan_on = 0U;
+    uint8_t s_iot_pump_on = 0U;
+
+    /* 开机自动启动制冷链路。
+     * 放在阻塞式开机音之后，避免压缩机已启动但 MCF8329A watchdog 数秒无人 tickle。
+     * Motor Studio 独占模式仍保持关闭，不抢占外部 I2C 主机。 */
+    if (!g_mcf_i2c_disable) {
+        s_iot_fan_on = 1U;
+        s_iot_pump_on = 1U;
+        FanCtrl_Enable(1);
+        FanCtrl_SetDuty(100);
+        PowerCtrl_EnablePump(1);
+
+        /* 水泵/风扇先行，再清除上次锁存故障并发起压缩机启动。 */
+        HAL_Delay(500);
+        IWDG->KR = 0xAAAAU;
+        g_mcf_clrflt_rc = (uint32_t)MCF8329A_ClearFault(&s_mcf);
+        HAL_Delay(200);
+        IWDG->KR = 0xAAAAU;
+        g_mcf_kick_rc = (uint32_t)MCF8329A_KickWatchdog(&s_mcf);
+
+        MCF8329A_DRVOff(0);                 /* PC12=LOW，使能栅极驱动 */
+        g_mcf_spin_duty = 0x7FFFU;          /* 100% 启动指令 */
+        g_compressor_on = 1U;
+        g_mcf_spin_rc = (uint32_t)MCF8329A_SpinDuty(&s_mcf, g_mcf_spin_duty);
+    }
 
     while (1) {
         /* IWDG 喂狗 — Bootloader 启了, App 必须续 */
@@ -506,6 +558,8 @@ int main(void)
                      * DRVOFF (PC12) 硬件切断 MOSFET 驱动 — GPIO 直连不依赖 I2C, 可靠. */
                     g_compressor_on = cmd->on;       /* 镜像状态给水温模拟 */
                     if (cmd->on) {
+                        s_iot_fan_on = 1U;
+                        s_iot_pump_on = 1U;
                         FanCtrl_Enable(1);
                         FanCtrl_SetDuty(100);
                         PowerCtrl_EnablePump(1);
@@ -515,6 +569,8 @@ int main(void)
                         FanCtrl_Enable(0);
                         FanCtrl_SetDuty(0);
                         PowerCtrl_EnablePump(0);
+                        s_iot_fan_on = 0U;
+                        s_iot_pump_on = 0U;
                         g_mcf_spin_duty = 0U;        /* I2C SpinDuty(0) (尽力优雅停) */
                         MCF8329A_DRVOff(1);          /* PC12=HIGH 硬切 MOSFET — 可靠停转 */
                     }
@@ -700,9 +756,9 @@ int main(void)
                 g_mcf_gate_fault  = s_mcf.last_gate_fault;
                 g_mcf_ctrl_fault  = s_mcf.last_ctrl_fault;
                 g_mcf_state_rc    = (uint32_t)MCF8329A_ReadAlgoState(&s_mcf, (uint32_t *)&g_mcf_algo_state);
-                /* MAX_SPEED 提升后 ramp 期间会偶发触发 ABNORMAL_SPEED/BEMF latched fault.
-                 * 故障 latch 会让 chip 进 IDLE 不再启动. 这里:有 ctrl_fault 且 motor 不在
-                 * CLOSED_LOOP_ALIGNED (state != 9) 时, 周期性清 fault 让它重试. */
+                /* MAX_SPEED 提升后 ramp 期间可能触发 controller fault，允许周期重试。
+                 * GVDD/BST/VDS 等 gate fault 属于驱动硬件故障，不在主循环无限清除，
+                 * 避免欠压/过流未排除时反复冲击功率级。 */
                 if (g_mcf_ctrl_fault != 0U && (g_mcf_algo_state & 0x1FU) != 0x09U) {
                     (void)MCF8329A_ClearFault(&s_mcf);
                 }
@@ -768,6 +824,27 @@ int main(void)
                 if (!OtaProto_IsBusy()) {
                     EspComm_SendStatus(&st);
                 }
+
+                IotCtrl_TelemetrySnapshot iot = {0};
+                for (uint8_t i = 0; i < 8U; i++) {
+                    iot.ntc_raw[i] = SensorAcq_GetNTC(i);
+                }
+                iot.bat24_mv = (int32_t)(INA226_GetVoltage(&sensors[0]) * 1000.0f);
+                iot.bat24_ma = (int32_t)(INA226_GetCurrent(&sensors[0]) * 1000.0f);
+                iot.v12_mv = (int32_t)(INA226_GetVoltage(&sensors[2]) * 1000.0f);
+                iot.boost_on = 1U;
+                iot.load_on = 1U;
+                iot.fan_on = s_iot_fan_on;
+                iot.pump_on = s_iot_pump_on;
+                iot.compressor_on = g_compressor_on;
+                iot.sampler_stale = SensorAcq_IsStale();
+                SamplerComm_GpsSnapshot gps = {0};
+                SamplerComm_GetGpsSnapshot(&gps);
+                iot.gps_fix = gps.fix;
+                iot.gps_lat_e6 = gps.lat_e6;
+                iot.gps_lon_e6 = gps.lon_e6;
+                iot.gps_speed_milli_knots = gps.speed_milli_knots;
+                IotCtrl_SetTelemetrySnapshot(&iot);
             }
         }
 
